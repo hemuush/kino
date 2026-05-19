@@ -2,69 +2,73 @@
 
 import { MediaEntry } from '@/lib/db';
 import { motion } from 'framer-motion';
-import { Star, Calendar, Trash2 } from 'lucide-react';
-import styles from './MediaCard.module.css';
+import { Star, X } from 'lucide-react';
 
 interface MediaCardProps {
   entry: MediaEntry;
   onDelete?: (id: number) => void;
+  index?: number;
 }
 
-const typeColors: Record<string, string> = {
-  Movie: '#6366f1',
-  Series: '#ec4899',
-  Anime: '#10b981',
+const typeLabels: Record<string, string> = {
+  Movie: 'MOVIE',
+  Series: 'SERIES',
+  Anime: 'ANIME',
 };
 
-export function MediaCard({ entry, onDelete }: MediaCardProps) {
+export function MediaCard({ entry, onDelete, index = 0 }: MediaCardProps) {
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.3 }}
-      className={styles.cardWrapper}
+      exit={{ opacity: 0, scale: 0.97 }}
+      transition={{ duration: 0.4, delay: index * 0.04, ease: [0.16, 1, 0.3, 1] }}
+      className="group relative w-full rounded-2xl overflow-hidden cursor-pointer flex-shrink-0 interactive-lift"
     >
-      <div className={styles.container}>
-        <div className={styles.actions}>
-          <span
-            className={styles.typeBadge}
-            style={{ background: typeColors[entry.type] || '#6366f1' }}
-          >
-            {entry.type}
+      {/* Poster */}
+      <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-muted">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={entry.coverImage || `https://placehold.co/300x450/1a1a1a/333333?text=${encodeURIComponent(entry.title.substring(0, 8))}`}
+          alt={entry.title}
+          className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
+          loading="lazy"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = `https://placehold.co/300x450/1a1a1a/333333?text=${encodeURIComponent(entry.title.substring(0, 8))}`;
+          }}
+        />
+        
+        {/* Gradient Overlay — softer */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-90" />
+
+        {/* Type Label — clean text, no emoji */}
+        <div className="absolute top-3 left-3 z-10">
+          <span className="text-[9px] font-semibold tracking-[0.12em] text-white/60 uppercase">
+            {typeLabels[entry.type]}
           </span>
-          {onDelete && entry.id && (
-            <button
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(entry.id!); }}
-              className={styles.deleteBtn}
-              title="Delete"
-            >
-              <Trash2 size={13} />
-            </button>
-          )}
         </div>
 
-        <div className={styles.imageContainer}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={entry.coverImage || 'https://via.placeholder.com/300x450?text=No+Image'}
-            alt={entry.title}
-            className={styles.image}
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x450?text=No+Image';
-            }}
-          />
-          <div className={styles.overlay}>
-            <h3 className={styles.title}>{entry.title}</h3>
-            <div className={styles.meta}>
-              <span className={styles.metaItem}>
-                <Star size={12} fill="#fbbf24" color="#fbbf24" /> {entry.rating}/10
-              </span>
-              <span className={styles.metaItem}>
-                <Calendar size={12} /> {new Date(entry.watchDate).toLocaleDateString()}
-              </span>
-            </div>
+        {/* Delete — minimal × */}
+        {onDelete && entry.id && (
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(entry.id!); }}
+            className="absolute top-2.5 right-2.5 z-10 w-7 h-7 rounded-full bg-black/40 backdrop-blur-sm text-white/50 flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-500/80 hover:text-white transition-all duration-200 focus-ring"
+            title="Remove"
+          >
+            <X size={13} strokeWidth={2.5} />
+          </button>
+        )}
+        
+        {/* Info Overlay */}
+        <div className="absolute inset-x-0 bottom-0 z-10 p-3 flex flex-col gap-1.5">
+          <h3 className="text-white font-semibold text-[13px] leading-tight line-clamp-1 drop-shadow-md">
+            {entry.title}
+          </h3>
+          
+          {/* Compact rating */}
+          <div className="flex items-center gap-1">
+            <Star size={11} className="text-amber-400 fill-amber-400" />
+            <span className="text-[11px] text-white/60 font-medium">{entry.rating}/10</span>
           </div>
         </div>
       </div>

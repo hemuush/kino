@@ -1,8 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { clearAllMedia, importData } from '@/lib/db';
-import { downloadBackupFromDrive } from '@/lib/googleDrive';
 import { useRouter, usePathname } from 'next/navigation';
 
 interface AuthContextType {
@@ -50,16 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAccessToken(token);
     localStorage.setItem('kino_access_token', token);
     
-    // Automatically fetch from drive on login
-    try {
-      const data = await downloadBackupFromDrive(token);
-      if (data) {
-        await importData(JSON.stringify(data));
-      }
-    } catch (e) {
-      console.error("Failed to sync on login", e);
-    }
-    
+    // Data fetching is now purely handled by the useMedia hook on the Dashboard
     setIsLoading(false);
     router.push('/');
   };
@@ -69,9 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAccessToken(null);
     localStorage.removeItem('kino_access_token');
     
-    // Wipe local DB for privacy
-    await clearAllMedia();
-    
+    // No local database to wipe anymore
     setIsLoading(false);
     router.push('/login');
   };

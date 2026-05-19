@@ -1,16 +1,22 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMedia } from '@/hooks/useMedia';
-import { Download, Upload, AlertCircle, CheckCircle2, ShieldCheck } from 'lucide-react';
-import { importData } from '@/lib/db';
-import { Button } from '@/components/ui/Button';
-import styles from './settings.module.css';
+import { Download, Upload, AlertCircle, CheckCircle2, Cloud, Sun, Moon } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { uploadBackupToDrive } from '@/lib/googleDrive';
+import { useTheme } from 'next-themes';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Settings() {
   const { entries, refresh } = useMedia();
+  const { accessToken, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const showStatus = (type: 'success' | 'error', message: string) => {
     setStatus({ type, message });
@@ -26,26 +32,32 @@ export default function Settings() {
     a.download = `kino-backup-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showStatus('success', 'Data exported successfully!');
+    showStatus('success', 'Backup exported successfully!');
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !accessToken) return;
 
     setIsImporting(true);
     setStatus(null);
 
     const reader = new FileReader();
-    reader.onload = async (e) => {
-      const text = e.target?.result;
+    reader.onload = async (ev) => {
+      const text = ev.target?.result;
       if (typeof text === 'string') {
-        const success = await importData(text);
-        if (success) {
-          showStatus('success', 'Data imported successfully!');
-          await refresh();
-        } else {
-          showStatus('error', 'Failed to import data. Invalid format.');
+        try {
+          const data = JSON.parse(text);
+          const success = await uploadBackupToDrive(accessToken, data);
+          if (success) {
+            showStatus('success', 'Data restored to cloud successfully!');
+            await refresh();
+          } else {
+            showStatus('error', 'Failed to upload to Google Drive.');
+          }
+        } catch (err) {
+          console.error('Import failed', err);
+          showStatus('error', 'Invalid file format.');
         }
       }
       setIsImporting(false);
@@ -56,49 +68,108 @@ export default function Settings() {
   };
 
   return (
-    <div className={`animate-in ${styles.container}`}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Settings</h1>
-        <p className={styles.subtitle}>Manage your application data.</p>
-      </div>
+    <div className="flex flex-col min-h-screen">
+      {/* Header */}
+      <header className="sticky top-0 z-40 glass border-b border-border">
+        <div className="flex items-center px-6 h-14 max-w-2xl mx-auto w-full">
+          <h1 className="font-display text-[17px] font-semibold tracking-tight">Settings</h1>
+        </div>
+      </header>
 
-      <div className={`glass-card ${styles.card}`}>
-        
-        {/* Status Section */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '0.75rem', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-          <ShieldCheck size={24} color="#10b981" />
-          <div>
-            <h3 style={{ margin: 0, fontSize: '1rem', color: '#10b981' }}>Live Cloud Sync Active</h3>
-            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--muted-foreground)' }}>Your data is securely backing up to Google Drive in the background.</p>
-          </div>
+      <div className="flex-1 px-4 sm:px-6 py-6 max-w-2xl mx-auto w-full space-y-6 animate-fade-up">
+
+        {/* Cloud Status — inline, minimal */}
+        <div className="flex items-center gap-3 px-1">
+          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+          <span className="text-[13px] text-muted-foreground font-medium">
+            <span className="text-emerald-500 font-semibold">Synced</span> · {entries.length} titles on Google Drive
+          </span>
         </div>
 
-        <div className={styles.divider} />
-
-        <div>
-          <h2 className={styles.cardTitle}>Local File Backup</h2>
-          <p className={styles.cardText}>
-            Export your database to a JSON file to store locally on your hard drive, or manually import a previous backup file.
-          </p>
-        </div>
-
-        <div className={styles.actionsRow}>
-          <Button variant="secondary" onClick={handleExport} style={{ flex: 1 }}>
-            <Download size={18} /> Export JSON
-          </Button>
-
-          <label className={`${styles.uploadLabel} ${isImporting ? styles.loading : ''}`}>
-            <Upload size={18} /> {isImporting ? 'Importing...' : 'Import JSON'}
-            <input type="file" id="import-file" accept=".json" onChange={handleImport} style={{ display: 'none' }} disabled={isImporting} />
-          </label>
-        </div>
-
-        {status && (
-          <div className={`${styles.statusMessage} ${styles[status.type]}`}>
-            {status.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-            <span className={styles.statusText}>{status.message}</span>
+        {/* Appearance */}
+        {mounted && (
+          <div className="surface-elevated rounded-2xl overflow-hidden">
+            <div className="px-5 py-3.5">
+              <h2 className="text-[13px] font-semibold text-muted-foreground">Appearance</h2>
+            </div>
+            <div className="px-3 pb-3">
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="w-full flex items-center justify-between px-3 py-3 rounded-xl hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-muted rounded-xl flex items-center justify-center">
+                    {theme === 'dark' ? <Moon size={16} strokeWidth={1.8} /> : <Sun size={16} strokeWidth={1.8} />}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[13px] font-medium">Theme</p>
+                    <p className="text-[11px] text-muted-foreground">{theme === 'dark' ? 'Dark mode' : 'Light mode'}</p>
+                  </div>
+                </div>
+                <div className={`w-10 h-[22px] rounded-full relative transition-colors duration-300 ${theme === 'dark' ? 'bg-primary' : 'bg-muted-foreground/25'}`}>
+                  <div className={`absolute top-[3px] w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-300 ${theme === 'dark' ? 'left-[21px]' : 'left-[3px]'}`} />
+                </div>
+              </button>
+            </div>
           </div>
         )}
+
+        {/* Data Management */}
+        <div className="surface-elevated rounded-2xl overflow-hidden">
+          <div className="px-5 py-3.5">
+            <h2 className="text-[13px] font-semibold text-muted-foreground">Data</h2>
+          </div>
+          <div className="px-5 pb-5 space-y-3">
+            <p className="text-[12px] text-muted-foreground/70">
+              Export a local backup or restore from a JSON file.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleExport}
+                className="flex-1 flex items-center justify-center gap-2 border border-border hover:bg-muted/50 py-2.5 rounded-xl text-[13px] font-medium transition-colors"
+              >
+                <Download size={15} strokeWidth={1.8} /> Export
+              </button>
+              <label className={`flex-1 flex items-center justify-center gap-2 border border-border hover:bg-muted/50 py-2.5 rounded-xl text-[13px] font-medium transition-colors cursor-pointer ${isImporting ? 'opacity-50 pointer-events-none' : ''}`}>
+                <Upload size={15} strokeWidth={1.8} /> {isImporting ? 'Restoring...' : 'Restore'}
+                <input type="file" id="import-file" accept=".json" onChange={handleImport} className="hidden" disabled={isImporting} />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Status Toast */}
+        <AnimatePresence>
+          {status && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className={`flex items-center gap-3 p-4 rounded-xl text-[13px] font-medium ${
+                status.type === 'success'
+                  ? 'bg-emerald-500/10 text-emerald-500'
+                  : 'bg-red-500/10 text-red-400'
+              }`}
+            >
+              {status.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+              <span>{status.message}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Sign Out — minimal */}
+        <div className="pt-4">
+          <button
+            onClick={logout}
+            className="text-[13px] font-medium text-red-400 hover:text-red-500 transition-colors px-1"
+          >
+            Sign Out
+          </button>
+        </div>
+
+        <p className="text-[11px] text-muted-foreground/30 px-1 pb-8">
+          Kino v1.0
+        </p>
       </div>
     </div>
   );
