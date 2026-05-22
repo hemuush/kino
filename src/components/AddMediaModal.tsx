@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react';
 import { MediaType, WatchStatus, AVAILABLE_GENRES, EpisodeInfo } from '@/lib/db';
 import { X, Check, Image as ImageIcon, Star, Heart, ArrowLeft, Tv, Calendar, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { searchWithPuter, waitForPuter } from '@/lib/puter-ai';
 
 interface AddMediaModalProps {
   onClose: () => void;
@@ -81,17 +80,17 @@ export function AddMediaModal({ onClose, onSave }: AddMediaModalProps) {
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [hoveredStar, setHoveredStar] = useState<number | null>(null);
-  
+
   // Progress states
   const [episodesWatched, setEpisodesWatched] = useState(0);
   const [episodesTotal, setEpisodesTotal] = useState<number | ''>('');
-  
+
   // Release date, seasons, and episodes states
   const [releaseDate, setReleaseDate] = useState(new Date().toISOString().split('T')[0]);
   const [seasonsCount, setSeasonsCount] = useState<number>(1);
   const [episodes, setEpisodes] = useState<EpisodeInfo[]>([]);
   const [imdbId, setImdbId] = useState('');
-  
+
   // Preview / confirmation states
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [previewData, setPreviewData] = useState<FetchedDetails | null>(null);
@@ -99,7 +98,6 @@ export function AddMediaModal({ onClose, onSave }: AddMediaModalProps) {
   const [expandedPreviewSeasons, setExpandedPreviewSeasons] = useState<Record<number, boolean>>({ 1: true });
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchApiResult[] | null>(null);
-  const [searchEngine, setSearchEngine] = useState<'gemini' | 'puter'>('gemini');
 
   const titleRef = useRef<HTMLInputElement>(null);
 
@@ -204,7 +202,7 @@ export function AddMediaModal({ onClose, onSave }: AddMediaModalProps) {
       const eps = [...(finalEpisodes || [])];
       if (eps.length < finalEpisodesTotal) {
         for (let i = eps.length; i < finalEpisodesTotal; i++) {
-          const estSeason = seasonsCount > 1 
+          const estSeason = seasonsCount > 1
             ? Math.min(seasonsCount, Math.floor((i / finalEpisodesTotal) * seasonsCount) + 1)
             : 1;
           eps.push({ name: `Episode ${i + 1}`, season: estSeason, number: i + 1 });
@@ -215,13 +213,13 @@ export function AddMediaModal({ onClose, onSave }: AddMediaModalProps) {
       }
     }
 
-    await onSave({ 
+    await onSave({
       title: previewData.title,
-      type, 
+      type,
       status,
-      coverImage: previewData.coverImage || coverImage, 
+      coverImage: previewData.coverImage || coverImage,
       releaseDate: releaseDate || undefined,
-      rating: finalRating, 
+      rating: finalRating,
       review,
       favorite,
       genre: selectedGenres,
@@ -240,7 +238,6 @@ export function AddMediaModal({ onClose, onSave }: AddMediaModalProps) {
 
     setIsSearching(true);
     setSearchResults(null);
-    setSearchEngine('gemini');
 
     try {
       const params = new URLSearchParams({
@@ -254,36 +251,16 @@ export function AddMediaModal({ onClose, onSave }: AddMediaModalProps) {
       const results = searchData.results || [];
       setSearchResults(results);
     } catch (err) {
-      console.warn('[Search] Server API failed, trying Puter.js fallback:', err);
-
-      // --- Puter.js browser-side fallback ---
-      try {
-        setSearchEngine('puter');
-        await waitForPuter(5000);
-        const { results: puterResults } = await searchWithPuter(queryTerm, type);
-        // Normalize to SearchApiResult format
-        const normalized: SearchApiResult[] = puterResults.map((r) => ({
-          trackName: r.trackName,
-          artworkUrl100: r.artworkUrl100 || '',
-          genres: r.genres || [],
-          primaryGenreName: (r.genres || []).join(', '),
-          episodesTotal: r.episodesTotal ?? null,
-          releaseDate: r.releaseDate || '',
-          imdbId: r.imdbId || '',
-        }));
-        setSearchResults(normalized);
-      } catch (puterErr) {
-        console.error('[Search] Puter.js fallback also failed:', puterErr);
-        // Final fallback: directly fetch details using manual title
-        await fetchDetailsPreview({
-          title: queryTerm,
-          coverImage,
-          genres: selectedGenres,
-          episodesTotal: episodesTotal === '' ? null : Number(episodesTotal),
-          releaseDate,
-          imdbId,
-        });
-      }
+      console.warn('[Search] Server API failed, falling back to manual entry:', err);
+      // Fallback: directly fetch details using manual title without secondary AI search
+      await fetchDetailsPreview({
+        title: queryTerm,
+        coverImage,
+        genres: selectedGenres,
+        episodesTotal: episodesTotal === '' ? null : Number(episodesTotal),
+        releaseDate,
+        imdbId,
+      });
     } finally {
       setIsSearching(false);
     }
@@ -314,10 +291,7 @@ export function AddMediaModal({ onClose, onSave }: AddMediaModalProps) {
             <div className="text-center">
               <h3 className="font-display text-[15px] font-bold mb-1">Searching AI</h3>
               <p className="text-[12px] text-muted-foreground leading-relaxed">
-                {searchEngine === 'puter'
-                  ? <>Quota exceeded — trying <strong className="text-foreground">Puter.js</strong> (free fallback)…</>
-                  : <>Finding matches for <strong className="text-foreground">{title}</strong></>
-                }
+                Finding matches for <strong className="text-foreground">{title}</strong>
               </p>
             </div>
             <div className="flex gap-1 mt-1">
@@ -330,11 +304,6 @@ export function AddMediaModal({ onClose, onSave }: AddMediaModalProps) {
                 />
               ))}
             </div>
-            {searchEngine === 'puter' && (
-              <div className="text-[10px] text-muted-foreground/60 text-center">
-                Using Puter.js (OpenAI / Claude / DeepSeek)
-              </div>
-            )}
           </motion.div>
         </div>
       </AnimatePresence>
@@ -363,7 +332,7 @@ export function AddMediaModal({ onClose, onSave }: AddMediaModalProps) {
             <div className="text-center">
               <h3 className="font-display text-[15px] font-bold mb-1">AI Search</h3>
               <p className="text-[12px] text-muted-foreground leading-relaxed">
-                Searching the web and collecting details for<br/>
+                Searching the web and collecting details for<br />
                 <strong className="text-foreground">{title}</strong>
               </p>
             </div>
@@ -465,7 +434,7 @@ export function AddMediaModal({ onClose, onSave }: AddMediaModalProps) {
                           <h4 className="font-display text-[13px] font-bold text-foreground group-hover:text-primary transition-colors truncate">
                             {result.trackName}
                           </h4>
-                          
+
                           <div className="flex items-center gap-2 mt-0.5 text-[10px] text-muted-foreground">
                             {year && <span>{year}</span>}
                             {year && (result.genres || result.primaryGenreName) && <span className="text-border">·</span>}
@@ -568,7 +537,7 @@ export function AddMediaModal({ onClose, onSave }: AddMediaModalProps) {
                   <h2 className="font-display text-lg font-extrabold tracking-tight leading-tight mb-1.5">
                     {previewData.title}
                   </h2>
-                  
+
                   {/* Genres */}
                   {previewData.genres.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-2.5">
@@ -610,11 +579,10 @@ export function AddMediaModal({ onClose, onSave }: AddMediaModalProps) {
                       key={st.value}
                       type="button"
                       onClick={() => setStatus(st.value)}
-                      className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold transition-all duration-200 cursor-pointer border ${
-                        status === st.value
-                          ? 'bg-primary text-white shadow-md shadow-primary/25 border-primary/20 scale-[1.02]'
-                          : 'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border-border/50'
-                      }`}
+                      className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold transition-all duration-200 cursor-pointer border ${status === st.value
+                        ? 'bg-primary text-white shadow-md shadow-primary/25 border-primary/20 scale-[1.02]'
+                        : 'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border-border/50'
+                        }`}
                     >
                       {st.label}
                     </button>
@@ -631,11 +599,10 @@ export function AddMediaModal({ onClose, onSave }: AddMediaModalProps) {
                 <button
                   type="button"
                   onClick={() => setFavorite(!favorite)}
-                  className={`p-2.5 rounded-xl transition-all active:scale-95 cursor-pointer border ${
-                    favorite 
-                      ? 'bg-red-500/10 text-red-500 border-red-500/20' 
-                      : 'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border-border/50'
-                  }`}
+                  className={`p-2.5 rounded-xl transition-all active:scale-95 cursor-pointer border ${favorite
+                    ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                    : 'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border-border/50'
+                    }`}
                 >
                   <Heart size={16} className={favorite ? 'fill-red-500' : ''} />
                 </button>
@@ -666,11 +633,10 @@ export function AddMediaModal({ onClose, onSave }: AddMediaModalProps) {
                           className="p-0.5 sm:p-1 transition-all hover:scale-125 active:scale-90 cursor-pointer shrink-0"
                         >
                           <Star
-                            className={`transition-colors duration-150 w-[17px] h-[17px] sm:w-[22px] sm:h-[22px] ${
-                              value <= displayRating
-                                ? 'text-amber-400 fill-amber-400'
-                                : 'text-muted-foreground/20'
-                            }`}
+                            className={`transition-colors duration-150 w-[17px] h-[17px] sm:w-[22px] sm:h-[22px] ${value <= displayRating
+                              ? 'text-amber-400 fill-amber-400'
+                              : 'text-muted-foreground/20'
+                              }`}
                           />
                         </button>
                       ))}
@@ -717,7 +683,7 @@ export function AddMediaModal({ onClose, onSave }: AddMediaModalProps) {
                           const isExpanded = expandedPreviewSeasons[seasonNum] !== undefined
                             ? expandedPreviewSeasons[seasonNum]
                             : (seasonNum === 1);
-                          
+
                           const totalInSeason = seasonEps.length;
 
                           return (
@@ -863,7 +829,7 @@ export function AddMediaModal({ onClose, onSave }: AddMediaModalProps) {
 
           {/* Body */}
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4 sm:space-y-5">
-            
+
             {/* Type Selector */}
             <div className="space-y-2">
               <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Type</label>
@@ -880,11 +846,10 @@ export function AddMediaModal({ onClose, onSave }: AddMediaModalProps) {
                       setSeasonsCount(1);
                       setImdbId('');
                     }}
-                    className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold transition-all duration-200 cursor-pointer border ${
-                      type === mt.value
-                        ? 'bg-primary text-white shadow-md shadow-primary/25 border-primary/20 scale-[1.02]'
-                        : 'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border-border/50'
-                    }`}
+                    className={`flex-1 py-2.5 rounded-xl text-[13px] font-bold transition-all duration-200 cursor-pointer border ${type === mt.value
+                      ? 'bg-primary text-white shadow-md shadow-primary/25 border-primary/20 scale-[1.02]'
+                      : 'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border-border/50'
+                      }`}
                   >
                     {mt.label}
                   </button>
