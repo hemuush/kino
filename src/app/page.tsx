@@ -5,12 +5,14 @@ import { useMedia } from '@/hooks/useMedia';
 import { MediaCard } from '@/components/MediaCard';
 import { AddMediaModal } from '@/components/AddMediaModal';
 import { MediaDetailModal } from '@/components/MediaDetailModal';
-import { Plus, Film, X, Heart, Shuffle, SlidersHorizontal } from 'lucide-react';
+import { Plus, Film, X, Heart, Shuffle, SlidersHorizontal, RefreshCw } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MediaEntry, AVAILABLE_GENRES } from '@/lib/db';
+import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 
 export default function Dashboard() {
-  const { entries, isLoading, addEntry, updateEntry, deleteEntry, syncStatus } = useMedia();
+  const { entries, isLoading, addEntry, updateEntry, deleteEntry, syncStatus, batchUpdateEntries } = useMedia();
+  const autoRefresh = useAutoRefresh({ entries, batchUpdateEntries, isLoading });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<MediaEntry | null>(null);
   const [filter, setFilter] = useState<'All' | 'Movie' | 'Series' | 'Anime'>('All');
@@ -98,6 +100,7 @@ export default function Dashboard() {
     if (total && nextWatched >= total) {
       const updated = {
         ...entry,
+        episodes: entry.episodes || [],
         episodesWatched: total,
         status: 'Completed' as const,
       };
@@ -106,6 +109,7 @@ export default function Dashboard() {
     } else {
       const updated = {
         ...entry,
+        episodes: entry.episodes || [],
         episodesWatched: nextWatched,
         status: entry.status === 'Plan to Watch' ? ('Watching' as const) : entry.status,
       };
@@ -191,6 +195,20 @@ export default function Dashboard() {
                   <span className="hidden sm:inline">
                     {syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'synced' ? 'Synced to Cloud' : 'Sync Error'}
                   </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            {/* Auto-refresh indicator */}
+            <AnimatePresence mode="wait">
+              {autoRefresh.isRefreshing && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border bg-cyan-500/5 text-cyan-500 border-cyan-500/20 transition-colors"
+                >
+                  <RefreshCw size={10} className="animate-spin" />
+                  <span className="hidden sm:inline">Refreshing {autoRefresh.refreshedCount}/{autoRefresh.totalToRefresh}</span>
                 </motion.div>
               )}
             </AnimatePresence>

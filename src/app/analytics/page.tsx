@@ -22,6 +22,7 @@ export default function Analytics() {
     if (total && nextWatched >= total) {
       const updated = {
         ...entry,
+        episodes: entry.episodes || [],
         episodesWatched: total,
         status: 'Completed' as const,
       };
@@ -30,6 +31,7 @@ export default function Analytics() {
     } else {
       const updated = {
         ...entry,
+        episodes: entry.episodes || [],
         episodesWatched: nextWatched,
         status: entry.status === 'Plan to Watch' ? ('Watching' as const) : entry.status,
       };

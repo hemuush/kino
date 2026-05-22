@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { MediaEntry, MediaType, WatchStatus, AVAILABLE_GENRES, EpisodeInfo } from '@/lib/db';
+import { MediaEntry, MediaType, WatchStatus, AVAILABLE_GENRES, EpisodeInfo, safeDateFormat, generateEpisodesList } from '@/lib/db';
 import { X, Edit2, Trash2, Calendar, Star, Check, ArrowLeft, Image as ImageIcon, Heart, Plus, Minus, ChevronDown, ChevronRight, Tv } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/Badge';
@@ -152,6 +152,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
       setIsEditing(true); // Open edit form immediately
       await onSave({
         ...entry,
+        episodes: displayEpisodes,
         episodesWatched: Number(episodesTotal),
         status: 'Completed',
       });
@@ -168,6 +169,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
     
     await onSave({
       ...entry,
+      episodes: displayEpisodes,
       episodesWatched: nextWatched,
       status: newStatus,
     });
@@ -179,6 +181,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
     setEpisodesWatched(nextWatched);
     await onSave({
       ...entry,
+      episodes: displayEpisodes,
       episodesWatched: nextWatched,
     });
   };
@@ -188,6 +191,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
     setFavorite(newFavorite);
     await onSave({
       ...entry,
+      episodes: displayEpisodes.length > 0 ? displayEpisodes : entry.episodes,
       favorite: newFavorite,
     });
   };
@@ -268,6 +272,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
     
     await onSave({
       ...entry,
+      episodes: displayEpisodes,
       episodesWatched: newWatched,
       status: newStatus,
     });
@@ -777,9 +782,9 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                               <span>
                                 Last Watched Ep: <strong className="text-foreground">S{activeEpisode.season}E{activeEpisode.number} - {activeEpisode.name}</strong>
                               </span>
-                              {activeEpisode.airDate && (
+                              {activeEpisode.airDate && safeDateFormat(activeEpisode.airDate) && (
                                 <span className="text-[11px] text-muted-foreground/80 mt-0.5">
-                                  Aired: {new Date(activeEpisode.airDate).toLocaleDateString(undefined, { dateStyle: 'medium' })}
+                                  Aired: {safeDateFormat(activeEpisode.airDate)}
                                 </span>
                               )}
                             </div>
@@ -989,9 +994,9 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                                               </div>
                                             </div>
 
-                                            {episode.airDate && (
+                                            {episode.airDate && safeDateFormat(episode.airDate, { dateStyle: 'short' }) && (
                                               <span className="text-[10px] text-muted-foreground/60 shrink-0">
-                                                Aired: {new Date(episode.airDate).toLocaleDateString(undefined, { dateStyle: 'short' })}
+                                                Aired: {safeDateFormat(episode.airDate, { dateStyle: 'short' })}
                                               </span>
                                             )}
                                           </button>

@@ -22,7 +22,7 @@ Kino is a premium, minimalist personal media tracker built to catalog and review
   - **Watchlist Statuses**: Detailed status distribution breakdowns.
   - **Genre Cloud**: Custom tag cloud indicating your most watched genres.
 - **💖 Favorites Showcase**: Pin entries to a dedicated showcase shelf with full click callback bindings.
-- **🌐 Metadata Suggestion Engine**: Auto-populates cover images, episode counts, and genre tags using iTunes, Jikan (MyAnimeList), and TVMaze APIs.
+- **🌐 Metadata Suggestion Engine**: Auto-populates cover images, episode counts, and genre tags using the Gemini LLM with Google Search grounding, complete with a multi-model fallback and image validator.
 - **☁️ Private Cloud Sync**: Seamlessly syncs your watchlist to your Google Drive (`drive.appdata` folder) using secure OAuth consent. No central database, no tracking, complete privacy.
 
 ---
