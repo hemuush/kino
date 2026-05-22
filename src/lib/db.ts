@@ -1,6 +1,6 @@
 export type MediaType = 'Movie' | 'Series' | 'Anime';
-
 export type WatchStatus = 'Completed' | 'Watching' | 'Plan to Watch';
+export type AnimeType = 'Show' | 'Movie'; // New for Anime classification
 
 export interface EpisodeInfo {
   name: string;
@@ -13,9 +13,12 @@ export interface MediaEntry {
   id?: number;
   title: string;
   type: MediaType;
+  animeType?: AnimeType; // New: To specify if anime is a show or movie
   status?: WatchStatus;
   coverImage: string;
   releaseDate?: string; // ISO or YYYY-MM-DD
+  runtime?: number; // New: Runtime in minutes
+  franchise?: string; // New: For grouping movie series (e.g., "Harry Potter")
   rating: number; // 1-10
   review?: string;
   favorite?: boolean;
@@ -30,39 +33,20 @@ export interface MediaEntry {
 }
 
 export const AVAILABLE_GENRES = [
-  'Action',
-  'Adventure',
-  'Comedy',
-  'Drama',
-  'Fantasy',
-  'Horror',
-  'Mystery',
-  'Romance',
-  'Sci-Fi',
-  'Thriller',
-  'Slice of Life',
-  'Supernatural'
+  'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Horror',
+  'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'Slice of Life', 'Supernatural', 'Documentary', 'Animation'
 ];
 
-/**
- * Safely format a date string. Returns formatted date or null if invalid.
- * Prevents RangeError crashes from invalid date strings like "unknown", "TBD", etc.
- */
 export function safeDateFormat(
   dateStr: string | undefined | null,
   options?: Intl.DateTimeFormatOptions
 ): string | null {
   if (!dateStr || typeof dateStr !== 'string') return null;
-
-  // Quick reject known bad values
   const lower = dateStr.trim().toLowerCase();
-  if (!lower || lower === 'unknown' || lower === 'tbd' || lower === 'n/a' || lower === 'null') {
-    return null;
-  }
+  if (!lower || lower === 'unknown' || lower === 'tbd' || lower === 'n/a' || lower === 'null') return null;
 
   try {
     const d = new Date(dateStr);
-    // Check for Invalid Date
     if (isNaN(d.getTime())) return null;
     return d.toLocaleDateString(undefined, options || { dateStyle: 'medium' });
   } catch {
@@ -70,10 +54,6 @@ export function safeDateFormat(
   }
 }
 
-/**
- * Generate placeholder episodes array from episodesTotal and seasonsCount.
- * Used to hydrate entries that have episodesTotal but no episodes array.
- */
 export function generateEpisodesList(
   episodesTotal: number,
   seasonsCount: number = 1
@@ -90,20 +70,12 @@ export function generateEpisodesList(
   });
 }
 
-/**
- * Ensure an entry always has a valid episodes array.
- * If episodes is empty but episodesTotal exists, generates placeholder episodes.
- * Use this before any save/update to prevent losing episode data.
- */
 export function hydrateEpisodes(entry: MediaEntry): MediaEntry {
-  if (entry.type === 'Movie') return entry;
-
+  if (entry.type === 'Movie' || (entry.type === 'Anime' && entry.animeType === 'Movie')) return entry;
   const episodes = entry.episodes || [];
   const total = entry.episodesTotal || 0;
-
   if (episodes.length > 0) return entry;
   if (total <= 0) return entry;
-
   return {
     ...entry,
     episodes: generateEpisodesList(total, entry.seasonsCount || 1),
