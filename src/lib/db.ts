@@ -10,7 +10,7 @@ export interface Tag {
 
 export interface EpisodeInfo {
   name: string;
-  airDate?: string;
+  airDate?: string; // Exactly when this episode aired
   season?: number;
   number?: number;
   runtime?: number; // Exact runtime of this specific episode
@@ -50,6 +50,16 @@ export const DEFAULT_GENRES = [
   'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Horror',
   'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'Slice of Life', 'Supernatural', 'Documentary', 'Animation'
 ];
+
+/**
+ * Architectural Helper: Determines if an entry should have episodes.
+ * Handles the edge case where Anime can be either a Show or a Movie.
+ */
+export function isEpisodic(entry: Partial<MediaEntry>): boolean {
+  if (entry.type === 'Series') return true;
+  if (entry.type === 'Anime' && entry.animeType === 'Show') return true;
+  return false;
+}
 
 export function safeDateFormat(
   dateStr: string | undefined | null,

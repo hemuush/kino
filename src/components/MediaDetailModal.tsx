@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { MediaEntry, EpisodeInfo } from '@/lib/db';
+import { MediaEntry, EpisodeInfo, safeDateFormat, isEpisodic } from '@/lib/db';
 import { X, Edit2, Trash2, Calendar, Star, Check, Heart, Plus, Minus, ChevronDown, ChevronRight, Tv, Clock, Film } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/Badge';
@@ -18,14 +18,13 @@ interface MediaDetailModalProps {
 export function MediaDetailModal({ entry, onClose, onSave, onDelete, onEditClick }: MediaDetailModalProps) {
   const { genres, franchises } = useMedia();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [expandedSeasons, setExpandedSeasons] = useState<Record<number, boolean>>({ 1: true });
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  const isEpisodic = entry.type === 'Series' || (entry.type === 'Anime' && entry.animeType === 'Show');
+  const currentIsEpisodic = isEpisodic(entry);
 
   // Resolve Relationships
   const entryFranchise = entry.franchiseId ? franchises.find(f => f.id === entry.franchiseId) : null;
@@ -35,15 +34,24 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete, onEditClick
     ? entry.episodes
     : (entry.episodesTotal ? Array.from({ length: Number(entry.episodesTotal) }, (_, i) => ({ name: `Episode ${i + 1}`, season: 1, number: i + 1 })) : []);
 
-  const episodesBySeason = displayEpisodes.reduce<Record<number, { episode: EpisodeInfo; globalIndex: number }[]>>((acc, ep, index) => {
-    const s = ep.season || 1;
-    if (!acc[s]) acc[s] = [];
-    acc[s].push({ episode: ep, globalIndex: index });
-    return acc;
-  }, {});
-
   const episodesWatched = entry.episodesWatched || 0;
-  const activeEpisode = isEpisodic && episodesWatched > 0 ? displayEpisodes[episodesWatched - 1] : null;
+
+  const handleIncrementEpisode = async () => {
+    if (!currentIsEpisodic) return;
+    const nextWatched = episodesWatched + 1;
+    if (entry.episodesTotal && nextWatched >= entry.episodesTotal) {
+      await onSave({ ...entry, episodesWatched: entry.episodesTotal, status: 'Completed' });
+      onEditClick();
+      return;
+    }
+    await onSave({ ...entry, episodesWatched: nextWatched, status: entry.status === 'Plan to Watch' ? 'Watching' : entry.status });
+  };
+
+  const handleDecrementEpisode = async () => {
+    if (!currentIsEpisodic) return;
+    const nextWatched = Math.max(0, episodesWatched - 1);
+    await onSave({ ...entry, episodesWatched: nextWatched });
+  };
 
   return (
     <AnimatePresence>
@@ -69,6 +77,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete, onEditClick
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row gap-6 md:gap-8">
+            {/* Visual Column */}
             <div className="w-[120px] sm:w-[220px] md:w-[260px] shrink-0 mx-auto sm:mx-0">
               <div className="aspect-[2/3] rounded-2xl overflow-hidden bg-muted border border-border/80 shadow-xl">
                 <img src={entry.coverImage || `https://placehold.co/300x450/0b0f19/1e293b?text=${encodeURIComponent(entry.title.substring(0, 10))}`} className="w-full h-full object-cover" />
@@ -77,39 +86,73 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete, onEditClick
               {entryFranchise && (
                 <div className="mt-4 w-full bg-primary/10 border border-primary/20 rounded-xl p-3 flex flex-col items-center text-center shadow-inner">
                   <Film size={14} className="text-primary mb-1" />
-                  <span className="text-[10px] font-bold tracking-widest text-primary/70 uppercase">Universe</span>
+                  <span className="text-[10px] font-bold tracking-widest text-primary/70 uppercase">Universe / Collection</span>
                   <span className="text-[12px] font-bold text-foreground mt-0.5">{entryFranchise.name}</span>
                 </div>
               )}
             </div>
 
+            {/* Data Column */}
             <div className="flex-1 flex flex-col space-y-6 w-full">
               <div>
                 <h2 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">{entry.title}</h2>
                 <div className="flex flex-wrap items-center gap-2 mb-4">
                   {entryGenres.map((g) => <span key={g} className="bg-muted border border-border/40 text-muted-foreground px-3 py-1 rounded-full text-[10px] font-bold uppercase">{g}</span>)}
-                  {!isEpisodic && entry.runtime && (
+                  {!currentIsEpisodic && entry.runtime && (
                     <span className="bg-muted/50 border border-border/40 text-foreground px-3 py-1 rounded-full text-[10px] font-bold uppercase flex items-center gap-1"><Clock size={10} /> {entry.runtime} min</span>
                   )}
                 </div>
+
+                {entry.releaseDate && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Calendar size={14} className="text-primary" />
+                    <span>Released: <strong className="text-foreground">{safeDateFormat(entry.releaseDate)}</strong></span>
+                  </div>
+                )}
               </div>
 
-              {isEpisodic && (
+              {currentIsEpisodic && (
                 <div className="bg-gradient-to-r from-muted/30 to-muted/10 border border-border/40 p-5 rounded-2xl shadow-sm">
                   <div className="flex justify-between items-center">
                     <div>
                       <span className="text-[10px] font-bold tracking-[0.1em] text-muted-foreground/75 uppercase block">Progress</span>
                       <span className="text-[18px] font-extrabold tabular-nums mt-1 block">{episodesWatched} / {entry.episodesTotal || '?'} <span className="text-xs text-muted-foreground uppercase">episodes</span></span>
                     </div>
+                    <div className="flex gap-2">
+                      <button onClick={handleDecrementEpisode} disabled={episodesWatched <= 0} className="w-8 h-8 rounded-full bg-card border border-border flex items-center justify-center disabled:opacity-40 cursor-pointer"><Minus size={13} /></button>
+                      <button onClick={handleIncrementEpisode} disabled={entry.episodesTotal ? episodesWatched >= entry.episodesTotal : false} className="w-8 h-8 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center disabled:opacity-40 cursor-pointer"><Plus size={13} /></button>
+                    </div>
                   </div>
                   {entry.episodesTotal && <div className="w-full bg-muted/60 mt-4 rounded-full h-2 overflow-hidden border border-border/20"><motion.div initial={{ width: 0 }} animate={{ width: `${(episodesWatched / Number(entry.episodesTotal)) * 100}%` }} className="bg-primary h-full rounded-full" /></div>}
                 </div>
               )}
 
-              {isEpisodic && displayEpisodes.length > 0 && (
+              {/* Rating Component */}
+              {(entry.status === 'Completed' || (entry.rating && entry.rating > 0)) && (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-0.5">
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((val) => (
+                      <Star key={val} size={16} className={val <= (entry.rating || 0) ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground/20'} />
+                    ))}
+                  </div>
+                  <span className="text-[14px] font-extrabold text-amber-500 font-display">{(entry.rating || 0)}/10</span>
+                </div>
+              )}
+
+              {/* Review Component */}
+              <div>
+                <span className="text-[10px] font-bold tracking-[0.1em] text-muted-foreground/75 uppercase mb-2 block">Review</span>
+                <div className="bg-muted/20 border border-border/40 rounded-2xl p-5 text-[13px] leading-relaxed relative group min-h-[100px]">
+                  {entry.review || <em className="text-muted-foreground/50">No review added.</em>}
+                  <button onClick={onEditClick} className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 flex items-center gap-1 px-3 py-1.5 bg-muted/80 text-[10px] font-bold rounded-lg transition-all cursor-pointer"><Edit2 size={10} /> Edit</button>
+                </div>
+              </div>
+
+              {/* Advanced Episodic List Viewer */}
+              {currentIsEpisodic && displayEpisodes.length > 0 && (
                 <div className="border border-border/40 rounded-2xl overflow-hidden bg-muted/10">
                   <div className="px-5 py-3 bg-muted/20 border-b border-border/40 flex items-center gap-2">
-                    <Tv size={14} className="text-primary" /><span className="text-[10px] font-bold tracking-[0.1em] text-muted-foreground/75 uppercase">Episodes</span>
+                    <Tv size={14} className="text-primary" /><span className="text-[10px] font-bold tracking-[0.1em] text-muted-foreground/75 uppercase">Episode Log</span>
                   </div>
                   <div className="max-h-[250px] overflow-y-auto divide-y divide-border/20">
                     {displayEpisodes.map((ep, idx) => {
@@ -121,7 +164,10 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete, onEditClick
                           </div>
                           <div className="flex flex-col flex-1 min-w-0">
                             <span className={`text-[12px] font-bold truncate ${isWatched ? 'text-foreground' : 'text-muted-foreground'}`}>{ep.season ? `S${ep.season}E${ep.number || idx + 1}` : `Ep ${idx + 1}`}: {ep.name}</span>
-                            {ep.runtime && <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5"><Clock size={9} /> {ep.runtime} min</span>}
+                            <div className="flex gap-3 text-[10px] text-muted-foreground mt-0.5">
+                              {ep.runtime && <span className="flex items-center gap-1"><Clock size={9} /> {ep.runtime} min</span>}
+                              {ep.airDate && <span className="flex items-center gap-1"><Calendar size={9} /> Aired: {safeDateFormat(ep.airDate)}</span>}
+                            </div>
                           </div>
                         </div>
                       );

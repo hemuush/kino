@@ -7,19 +7,17 @@ import { AddMediaModal } from '@/components/AddMediaModal';
 import { MediaDetailModal } from '@/components/MediaDetailModal';
 import { Plus, Film, X, Heart, Shuffle, SlidersHorizontal, RefreshCw } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { MediaEntry } from '@/lib/db';
+import { MediaEntry, isEpisodic } from '@/lib/db';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 
 export default function Dashboard() {
-  const { entries, isLoading, addEntry, updateEntry, deleteEntry, syncStatus, batchUpdateEntries } = useMedia();
+  const { entries, isLoading, addEntry, updateEntry, deleteEntry, syncStatus, batchUpdateEntries, genres } = useMedia();
   const autoRefresh = useAutoRefresh({ entries, batchUpdateEntries, isLoading });
 
-  // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<MediaEntry | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<MediaEntry | null>(null);
 
-  // Filter States
   const [filter, setFilter] = useState<'All' | 'Movie' | 'Series' | 'Anime'>('All');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Completed' | 'Watching' | 'Plan to Watch'>('All');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
@@ -42,16 +40,20 @@ export default function Dashboard() {
     .filter(e => e.status === 'Watching' || e.status === 'Completed' || !e.status)
     .slice(0, 10);
 
-  const usedGenres = Array.from(
-    new Set(entries.flatMap(e => e.genre || []))
-  ).sort();
+  // Derive used genres purely from normalized IDs
+  const usedGenreIds = new Set<string>();
+  entries.forEach(e => (e.genreIds || []).forEach(id => usedGenreIds.add(id)));
+  const usedGenresList = Array.from(usedGenreIds)
+    .map(id => genres.find(g => g.id === id))
+    .filter(Boolean)
+    .sort((a, b) => a!.name.localeCompare(b!.name));
 
   const filteredEntries = entries.filter(e => {
     if (filter !== 'All' && e.type !== filter) return false;
     const currentStatus = e.status || 'Completed';
     if (statusFilter !== 'All' && currentStatus !== statusFilter) return false;
     if (showFavoritesOnly && !e.favorite) return false;
-    if (selectedGenreFilter && (!e.genre || !e.genre.includes(selectedGenreFilter))) return false;
+    if (selectedGenreFilter && (!e.genreIds || !e.genreIds.includes(selectedGenreFilter))) return false;
     if (searchQuery.trim() !== '') {
       return e.title.toLowerCase().includes(searchQuery.toLowerCase().trim());
     }
@@ -79,7 +81,7 @@ export default function Dashboard() {
 
   const handleIncrementWatched = (entry: MediaEntry, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (entry.type === 'Movie') return;
+    if (!isEpisodic(entry)) return;
     const nextWatched = (entry.episodesWatched || 0) + 1;
     const total = entry.episodesTotal;
 
@@ -214,11 +216,11 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {usedGenres.length > 0 && (
+                  {usedGenresList.length > 0 && (
                     <div className="flex gap-1.5 overflow-x-auto hide-scrollbar py-1 -mx-1 px-1">
                       <button onClick={() => setSelectedGenreFilter(null)} className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all border shrink-0 cursor-pointer ${selectedGenreFilter === null ? 'bg-primary/10 border-primary/30 text-primary font-bold shadow-sm' : 'bg-muted/40 border-border/40 hover:bg-muted text-muted-foreground hover:text-foreground'}`}>All Genres</button>
-                      {usedGenres.map((genre) => (
-                        <button key={genre} onClick={() => setSelectedGenreFilter(selectedGenreFilter === genre ? null : genre)} className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all border shrink-0 cursor-pointer ${selectedGenreFilter === genre ? 'bg-primary/15 border-primary/45 text-primary font-bold shadow-sm' : 'bg-muted/40 border-border/40 hover:bg-muted text-muted-foreground hover:text-foreground'}`}>{genre}</button>
+                      {usedGenresList.map((genre) => (
+                        <button key={genre!.id} onClick={() => setSelectedGenreFilter(selectedGenreFilter === genre!.id ? null : genre!.id)} className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all border shrink-0 cursor-pointer ${selectedGenreFilter === genre!.id ? 'bg-primary/15 border-primary/45 text-primary font-bold shadow-sm' : 'bg-muted/40 border-border/40 hover:bg-muted text-muted-foreground hover:text-foreground'}`}>{genre!.name}</button>
                       ))}
                     </div>
                   )}
@@ -285,7 +287,6 @@ export default function Dashboard() {
           onClose={() => setSelectedEntry(null)}
           onEditClick={() => {
             setEditingEntry(selectedEntry);
-            // Note: We don't nullify selectedEntry so it stays mounted underneath the Edit popover
           }}
           onSave={async (updatedEntry) => {
             updateEntry(updatedEntry);

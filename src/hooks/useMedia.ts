@@ -20,7 +20,6 @@ export function useMedia() {
       let parsedGenres: Tag[] = storedGenres ? JSON.parse(storedGenres) : [];
       let parsedFranchises: Tag[] = storedFranchises ? JSON.parse(storedFranchises) : [];
 
-      // Initialize default genres if absolutely empty
       if (parsedGenres.length === 0) {
         parsedGenres = DEFAULT_GENRES.map(name => ({
           id: crypto.randomUUID(),
@@ -45,7 +44,7 @@ export function useMedia() {
             newGenreIds.push(existing.id);
           });
           entry.genreIds = newGenreIds;
-          delete entry.genre; // Clean up old data
+          delete entry.genre;
           modified = true;
         }
 
@@ -82,7 +81,6 @@ export function useMedia() {
   }, []);
 
   // --- Entries Methods ---
-  // Changed to async to satisfy Promise<void> requirement
   const saveEntries = async (newEntries: MediaEntry[]) => {
     setEntries(newEntries);
     localStorage.setItem('kino_entries', JSON.stringify(newEntries));

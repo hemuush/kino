@@ -1,6 +1,7 @@
 "use client";
 
 import { useMedia } from "@/hooks/useMedia";
+import { isEpisodic } from "@/lib/db";
 import { Film, Tv, Clock, Trophy, BarChart3, Popcorn } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -13,9 +14,9 @@ export default function AnalyticsPage() {
   let totalMinutesWatched = 0;
 
   entries.forEach(entry => {
-    const isEpisodic = entry.type === 'Series' || (entry.type === 'Anime' && entry.animeType === 'Show');
+    const episodic = isEpisodic(entry);
 
-    if (!isEpisodic) {
+    if (!episodic) {
       if (entry.status === 'Completed' && entry.runtime) {
         totalMinutesWatched += entry.runtime;
       }
@@ -79,7 +80,7 @@ export default function AnalyticsPage() {
             <Film size={12} /> Movies Completed
           </div>
           <div className="font-display text-4xl font-extrabold tabular-nums">
-            {entries.filter(e => e.type === 'Movie' && e.status === 'Completed').length}
+            {entries.filter(e => !isEpisodic(e) && e.status === 'Completed').length}
           </div>
         </motion.div>
 
@@ -88,7 +89,7 @@ export default function AnalyticsPage() {
             <Tv size={12} /> Series Completed
           </div>
           <div className="font-display text-4xl font-extrabold tabular-nums">
-            {entries.filter(e => e.type !== 'Movie' && e.status === 'Completed').length}
+            {entries.filter(e => isEpisodic(e) && e.status === 'Completed').length}
           </div>
         </motion.div>
 

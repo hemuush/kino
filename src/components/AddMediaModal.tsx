@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { MediaType, WatchStatus, AnimeType, EpisodeInfo, MediaEntry, Tag } from '@/lib/db';
-// Added FolderPen to the imports below!
+import { MediaType, WatchStatus, AnimeType, EpisodeInfo, MediaEntry, Tag, isEpisodic } from '@/lib/db';
 import { X, Check, Image as ImageIcon, Star, Heart, Upload, Clock, Film, ListPlus, Search, FolderPen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMedia } from '@/hooks/useMedia';
@@ -41,7 +40,6 @@ export function AddMediaModal({ onClose, onSave, initialData }: AddMediaModalPro
   const [seasonsCount, setSeasonsCount] = useState<number | ''>(initialData?.seasonsCount ?? 1);
   const [episodes, setEpisodes] = useState<EpisodeInfo[]>(initialData?.episodes || []);
 
-  // UI State
   const [hoveredStar, setHoveredStar] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [imageInputMode, setImageInputMode] = useState<'url' | 'upload'>('url');
@@ -52,24 +50,41 @@ export function AddMediaModal({ onClose, onSave, initialData }: AddMediaModalPro
   const [showGenreDropdown, setShowGenreDropdown] = useState(false);
   const [showFranchiseDropdown, setShowFranchiseDropdown] = useState(false);
 
+  const titleRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    titleRef.current?.focus();
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  const currentIsEpisodic = isEpisodic({ type, animeType });
+
   // Synchronize dynamic episodes array length
   useEffect(() => {
-    const isEpisodic = type === 'Series' || (type === 'Anime' && animeType === 'Show');
-    if (isEpisodic && episodesTotal !== '') {
+    if (currentIsEpisodic && episodesTotal !== '') {
       const total = Number(episodesTotal);
       if (episodes.length !== total) {
         const newEps = [...episodes];
         if (newEps.length < total) {
           for (let i = newEps.length; i < total; i++) {
-            newEps.push({ name: `Episode ${i + 1}`, season: 1, number: i + 1, runtime: typeof runtime === 'number' ? runtime : undefined });
+            newEps.push({
+              name: `Episode ${i + 1}`,
+              season: 1,
+              number: i + 1,
+              runtime: typeof runtime === 'number' ? runtime : undefined,
+              airDate: ''
+            });
           }
         } else {
           newEps.length = total;
         }
         setEpisodes(newEps);
       }
+    } else if (!currentIsEpisodic && episodes.length > 0) {
+      setEpisodes([]); // Clear if switched to movie
     }
-  }, [episodesTotal, type, animeType, runtime, episodes]);
+  }, [episodesTotal, type, animeType, runtime, episodes.length, currentIsEpisodic]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -113,7 +128,6 @@ export function AddMediaModal({ onClose, onSave, initialData }: AddMediaModalPro
     if (!title.trim() || isSaving) return;
     setIsSaving(true);
 
-    const isEpisodic = type === 'Series' || (type === 'Anime' && animeType === 'Show');
     const totalEps = episodesTotal === '' ? undefined : Number(episodesTotal);
 
     const payload = {
@@ -130,22 +144,24 @@ export function AddMediaModal({ onClose, onSave, initialData }: AddMediaModalPro
       rating: status === 'Completed' ? rating : 0,
       review: review.trim(),
       favorite,
-      episodesWatched: isEpisodic ? (status === 'Completed' && totalEps ? totalEps : Number(episodesWatched)) : undefined,
-      episodesTotal: isEpisodic ? totalEps : undefined,
-      seasonsCount: isEpisodic ? Number(seasonsCount) : undefined,
-      episodes: isEpisodic ? episodes : undefined,
+      episodesWatched: currentIsEpisodic ? (status === 'Completed' && totalEps ? totalEps : Number(episodesWatched)) : undefined,
+      episodesTotal: currentIsEpisodic ? totalEps : undefined,
+      seasonsCount: currentIsEpisodic ? Number(seasonsCount) : undefined,
+      episodes: currentIsEpisodic ? episodes : undefined,
     };
 
     await onSave(payload);
     setIsSaving(false);
   };
 
+  const displayRating = hoveredStar !== null ? hoveredStar : rating;
+
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center text-foreground">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-        <motion.div initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }} className="relative w-full max-w-2xl max-h-[90vh] bg-card rounded-t-[28px] sm:rounded-2xl overflow-hidden z-[111] flex flex-col shadow-2xl border border-border/80">
+        <motion.div initial={{ opacity: 0, y: 60 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 60 }} className="relative w-full max-w-3xl max-h-[90vh] bg-card rounded-t-[28px] sm:rounded-2xl overflow-hidden z-[111] flex flex-col shadow-2xl border border-border/80">
 
           <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/60 shrink-0">
             <h2 className="font-display text-[18px] font-bold tracking-tight">{isEditMode ? 'Edit Media' : 'Add to Collection'}</h2>
@@ -158,7 +174,7 @@ export function AddMediaModal({ onClose, onSave, initialData }: AddMediaModalPro
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-[2] space-y-2">
                 <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Title</label>
-                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="e.g. Inception" className="w-full bg-muted/40 hover:bg-muted/60 focus:bg-card rounded-xl px-4 py-3 text-foreground text-[14px] border border-border/80 outline-none transition-all" />
+                <input ref={titleRef} type="text" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="e.g. Inception" className="w-full bg-muted/40 hover:bg-muted/60 focus:bg-card rounded-xl px-4 py-3 text-foreground text-[14px] border border-border/80 outline-none transition-all" />
               </div>
               <div className="flex-[1] space-y-2">
                 <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Type</label>
@@ -287,13 +303,13 @@ export function AddMediaModal({ onClose, onSave, initialData }: AddMediaModalPro
               </div>
             </div>
 
-            {/* Advanced Episodes Tracker */}
-            {(type === 'Series' || (type === 'Anime' && animeType === 'Show')) && (
-              <div className="bg-muted/20 border border-border/60 rounded-xl overflow-hidden">
+            {/* Advanced Episodes Tracker (Data Grid style) */}
+            {currentIsEpisodic && (
+              <div className="bg-muted/20 border border-border/60 rounded-xl overflow-hidden shadow-sm">
                 <div className="p-4 bg-muted/30 border-b border-border/40 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <ListPlus size={16} className="text-primary" />
-                    <span className="font-bold text-[13px] uppercase tracking-wider">Episodes Architecture</span>
+                    <span className="font-bold text-[13px] uppercase tracking-wider">Episode Data Matrix</span>
                   </div>
                 </div>
                 <div className="p-4 space-y-4">
@@ -303,18 +319,16 @@ export function AddMediaModal({ onClose, onSave, initialData }: AddMediaModalPro
                     <div className="flex-1 space-y-1.5"><label className="text-[10px] text-muted-foreground font-semibold">Seasons</label><input type="number" min="1" value={seasonsCount} onChange={(e) => setSeasonsCount(e.target.value ? Number(e.target.value) : '')} className="w-full bg-card rounded-lg px-3 py-2 text-[13px] border border-border/80 outline-none" /></div>
                   </div>
 
-                  {episodes.length > 0 && episodes.length <= 150 && (
-                    <div className="mt-4 border border-border/40 rounded-lg overflow-hidden max-h-[220px] overflow-y-auto">
-                      <div className="sticky top-0 bg-muted/90 backdrop-blur-md px-3 py-2 border-b border-border/40 flex items-center gap-2">
-                        <FolderPen size={12} className="text-muted-foreground" /> <span className="text-[10px] font-bold text-muted-foreground uppercase">Detailed Episode Data</span>
-                      </div>
-                      <table className="w-full text-left text-[11px]">
-                        <thead className="bg-muted/30">
+                  {episodes.length > 0 && episodes.length <= 200 && (
+                    <div className="mt-4 border border-border/40 rounded-lg overflow-hidden max-h-[260px] overflow-x-auto overflow-y-auto">
+                      <table className="w-full text-left text-[11px] min-w-[500px]">
+                        <thead className="bg-muted/80 backdrop-blur-md sticky top-0 z-10 border-b border-border/40">
                           <tr>
-                            <th className="px-3 py-1.5 font-semibold text-muted-foreground w-12">Ep</th>
-                            <th className="px-3 py-1.5 font-semibold text-muted-foreground">Title</th>
-                            <th className="px-3 py-1.5 font-semibold text-muted-foreground w-20">Season</th>
-                            <th className="px-3 py-1.5 font-semibold text-muted-foreground w-24">Runtime (m)</th>
+                            <th className="px-3 py-2 font-bold text-muted-foreground uppercase tracking-wider w-10">Ep</th>
+                            <th className="px-3 py-2 font-bold text-muted-foreground uppercase tracking-wider">Title</th>
+                            <th className="px-3 py-2 font-bold text-muted-foreground uppercase tracking-wider w-16">Season</th>
+                            <th className="px-3 py-2 font-bold text-muted-foreground uppercase tracking-wider w-20">Time (m)</th>
+                            <th className="px-3 py-2 font-bold text-muted-foreground uppercase tracking-wider w-[120px]">Air Date</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/20">
@@ -322,13 +336,16 @@ export function AddMediaModal({ onClose, onSave, initialData }: AddMediaModalPro
                             <tr key={idx} className="hover:bg-muted/30 transition-colors">
                               <td className="px-3 py-1.5 text-muted-foreground font-mono">{idx + 1}</td>
                               <td className="px-3 py-1.5">
-                                <input type="text" value={ep.name} onChange={(e) => { const n = [...episodes]; n[idx].name = e.target.value; setEpisodes(n); }} className="w-full bg-transparent outline-none focus:text-primary transition-colors font-medium text-[12px]" />
+                                <input type="text" value={ep.name} onChange={(e) => { const n = [...episodes]; n[idx].name = e.target.value; setEpisodes(n); }} className="w-full bg-card border border-transparent focus:border-primary/40 rounded px-2 py-1 outline-none focus:text-primary transition-colors font-medium text-[12px]" />
                               </td>
                               <td className="px-3 py-1.5">
-                                <input type="number" min="1" value={ep.season || 1} onChange={(e) => { const n = [...episodes]; n[idx].season = Number(e.target.value); setEpisodes(n); }} className="w-full bg-card border border-border/50 rounded px-2 py-0.5 outline-none text-center" />
+                                <input type="number" min="1" value={ep.season || 1} onChange={(e) => { const n = [...episodes]; n[idx].season = Number(e.target.value); setEpisodes(n); }} className="w-full bg-card border border-border/50 rounded px-2 py-1 outline-none text-center" />
                               </td>
                               <td className="px-3 py-1.5">
-                                <input type="number" min="1" value={ep.runtime || ''} onChange={(e) => { const n = [...episodes]; n[idx].runtime = e.target.value ? Number(e.target.value) : undefined; setEpisodes(n); }} placeholder="Global" className="w-full bg-card border border-border/50 rounded px-2 py-0.5 outline-none text-center" />
+                                <input type="number" min="1" value={ep.runtime || ''} onChange={(e) => { const n = [...episodes]; n[idx].runtime = e.target.value ? Number(e.target.value) : undefined; setEpisodes(n); }} placeholder="Auto" className="w-full bg-card border border-border/50 rounded px-2 py-1 outline-none text-center" />
+                              </td>
+                              <td className="px-3 py-1.5">
+                                <input type="date" value={ep.airDate || ''} onChange={(e) => { const n = [...episodes]; n[idx].airDate = e.target.value; setEpisodes(n); }} className="w-full bg-card border border-border/50 rounded px-2 py-1 outline-none text-muted-foreground text-[10px]" />
                               </td>
                             </tr>
                           ))}
@@ -352,11 +369,11 @@ export function AddMediaModal({ onClose, onSave, initialData }: AddMediaModalPro
                   <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="flex-[1.5] w-full flex items-center justify-between bg-muted/20 border border-border/60 px-4 py-3 rounded-xl">
                     <span className="text-[12px] font-bold uppercase tracking-wider text-muted-foreground">Rating</span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[14px] font-bold text-primary tabular-nums mr-2">{hoveredStar !== null ? hoveredStar : rating}/10</span>
+                      <span className="text-[14px] font-bold text-primary tabular-nums mr-2">{displayRating}/10</span>
                       <div className="flex items-center">
                         {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
                           <button key={value} type="button" onClick={() => setRating(value)} onMouseEnter={() => setHoveredStar(value)} onMouseLeave={() => setHoveredStar(null)} className="p-0.5 transition-all hover:scale-125 cursor-pointer">
-                            <Star className={`w-[16px] h-[16px] transition-colors ${value <= (hoveredStar !== null ? hoveredStar : rating) ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground/20'}`} />
+                            <Star className={`w-[16px] h-[16px] transition-colors ${value <= displayRating ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground/20'}`} />
                           </button>
                         ))}
                       </div>
@@ -376,7 +393,7 @@ export function AddMediaModal({ onClose, onSave, initialData }: AddMediaModalPro
             <button type="button" onClick={onClose} className="flex-1 py-3 rounded-xl text-[13px] font-bold bg-muted hover:bg-muted-hover text-foreground transition-all cursor-pointer">Cancel</button>
             <button type="submit" form="media-form" disabled={!title.trim() || isSaving} className="flex-[2] py-3 rounded-xl text-[13px] font-bold bg-primary text-white flex items-center justify-center gap-2 transition-all disabled:opacity-40 cursor-pointer">
               {isSaving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={16} strokeWidth={2.5} />}
-              {isSaving ? 'Saving...' : 'Save Media'}
+              {isSaving ? 'Saving...' : 'Save Data'}
             </button>
           </div>
         </motion.div>
