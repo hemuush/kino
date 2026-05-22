@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Settings, LogOut, Sun, Moon } from "lucide-react";
+import { LayoutDashboard, BarChart2, Settings, LogOut, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { KinoLogo } from "@/components/KinoLogo";
 
 export function Sidebar() {
   const { logout } = useAuth();
@@ -19,6 +20,7 @@ export function Sidebar() {
 
   const links = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "Analytics", href: "/analytics", icon: BarChart2 },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
 
@@ -27,15 +29,8 @@ export function Sidebar() {
       
       {/* Logo */}
       <div className="h-16 flex items-center gap-2.5 px-6">
-        <div className="w-8 h-8 bg-gradient-to-br from-primary to-purple-400 rounded-lg flex items-center justify-center">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
-            <line x1="7" y1="2" x2="7" y2="22" />
-            <line x1="17" y1="2" x2="17" y2="22" />
-            <line x1="2" y1="12" x2="22" y2="12" />
-          </svg>
-        </div>
-        <span className="font-display text-[17px] font-bold tracking-tight">Kino</span>
+        <KinoLogo size={32} />
+        <span className="font-display text-[17px] font-bold tracking-tight bg-gradient-to-r from-primary via-blue-400 to-purple-400 bg-clip-text text-transparent">Kino</span>
       </div>
 
       {/* Navigation */}
