@@ -1,7 +1,7 @@
 "use client";
 
 import { MediaForm } from '@/components/MediaForm';
-import { useMedia } from '@/hooks/useMedia';
+import { useMedia } from '@/context/MediaContext';
 import { useRouter } from 'next/navigation';
 import { MediaEntry } from '@/lib/db';
 

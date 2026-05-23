@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { MediaType, WatchStatus, AnimeType, EpisodeInfo, MediaEntry, Tag, isEpisodic } from '@/lib/db';
 import { X, Check, Image as ImageIcon, Star, Heart, Upload, Clock, Film, ListPlus, Search, FolderPen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useMedia } from '@/hooks/useMedia';
+import { useMedia } from '@/context/MediaContext';
 import { toast } from 'sonner';
 
 interface MediaFormProps {
@@ -52,6 +52,21 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
   const [formTab, setFormTab] = useState<'General' | 'Details' | 'Episodes'>('General');
 
   const titleRef = useRef<HTMLInputElement>(null);
+  const genreRef = useRef<HTMLDivElement>(null);
+  const franchiseRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (genreRef.current && !genreRef.current.contains(event.target as Node)) {
+        setShowGenreDropdown(false);
+      }
+      if (franchiseRef.current && !franchiseRef.current.contains(event.target as Node)) {
+        setShowFranchiseDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     titleRef.current?.focus();
@@ -189,7 +204,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
   const displayRating = hoveredStar !== null ? hoveredStar : rating;
 
   return (
-    <div className="w-full max-w-4xl bg-card rounded-2xl overflow-hidden flex flex-col border border-border/80 shadow-sm mx-auto h-full max-h-[800px]">
+    <div className="w-full max-w-4xl bg-card rounded-2xl overflow-hidden flex flex-col border border-border/80 shadow-sm mx-auto h-full max-h-[90vh] lg:max-h-[800px]">
       <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-muted/40 to-muted/10 border-b border-border/60 shrink-0">
         <h2 className="font-display text-[18px] font-bold tracking-tight">{isEditMode ? 'Edit Media' : 'Add to Collection'}</h2>
       </div>
@@ -257,7 +272,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
               </div>
 
               <div className="space-y-4">
-                <div className="space-y-2 relative">
+                <div className="space-y-2 relative" ref={franchiseRef}>
                   <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5"><Film size={12} /> Saga</label>
                   {selectedFranchiseId ? (
                     <div className="flex items-center justify-between bg-primary/10 border border-primary/20 px-3 py-2.5 rounded-xl">
@@ -291,7 +306,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
                     ))}
                   </div>
                 </div>
-                <div className="space-y-2 relative">
+                <div className="space-y-2 relative" ref={genreRef}>
                   <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Genres</label>
                   <div className="flex flex-wrap gap-1.5 mb-2">
                     {selectedGenreIds.map(id => {
@@ -426,7 +441,8 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
             </div>
 
             {(() => {
-              const availableSeasons = Array.from(new Set([...episodes.map(e => e.season || 1), activeSeasonTab])).sort((a, b) => a - b);
+              const maxSeasonNum = Math.max(Number(seasonsCount) || 1, activeSeasonTab, ...episodes.map(e => e.season || 1));
+              const availableSeasons = Array.from({ length: maxSeasonNum }, (_, i) => i + 1);
               const currentTab = activeSeasonTab;
               const seasonEpisodes = episodes.filter(e => e.season === currentTab);
 
@@ -476,20 +492,20 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
                     </button>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto">
+                  <div className="flex-1 overflow-y-auto overflow-x-auto">
                     {seasonEpisodes.length === 0 ? (
                       <div className="h-full min-h-[250px] flex flex-col items-center justify-center p-6">
                         <span className="text-muted-foreground text-[12px] mb-5 font-medium">No episodes in Season {currentTab}.</span>
                         <div className="flex flex-col sm:flex-row gap-4 items-center">
-                          <button type="button" onClick={() => handleAddSingleEpisode(currentTab)} className="bg-primary/10 text-primary border border-primary/20 px-5 py-2.5 rounded-xl text-[12px] font-bold hover:bg-primary/20 transition-colors shadow-sm cursor-pointer">+ Add 1 Episode</button>
+                          <button type="button" onClick={() => handleAddSingleEpisode(currentTab)} className="bg-primary/10 text-primary border border-primary/20 px-5 py-2.5 rounded-xl text-[12px] font-bold hover:bg-primary/20 transition-colors shadow-sm cursor-pointer whitespace-nowrap">+ Add 1 Episode</button>
                           <span className="text-muted-foreground/40 text-[10px] font-bold uppercase tracking-widest">OR</span>
-                          <div className="flex bg-card border border-border/80 rounded-xl overflow-hidden focus-within:border-primary/50 transition-colors shadow-sm h-10">
-                            <input id={`bulk-${currentTab}`} type="number" min="1" placeholder="Generate multiple..." className="w-36 px-4 py-2 text-[12px] bg-transparent outline-none font-medium" />
+                          <div className="flex bg-card border border-border/80 rounded-xl overflow-hidden focus-within:border-primary/50 transition-colors shadow-sm h-10 shrink-0">
+                            <input id={`bulk-${currentTab}`} type="number" min="1" placeholder="Generate multiple..." className="w-28 sm:w-36 px-3 sm:px-4 py-2 text-[12px] bg-transparent outline-none font-medium" />
                             <button type="button" onClick={() => {
                               const input = document.getElementById(`bulk-${currentTab}`) as HTMLInputElement;
                               const count = Number(input.value);
                               if (count > 0) handleBulkGenerate(currentTab, count);
-                            }} className="bg-muted/80 px-4 text-[11px] font-bold border-l border-border/80 hover:bg-muted transition-colors text-foreground cursor-pointer">Generate</button>
+                            }} className="bg-muted/80 px-3 sm:px-4 text-[11px] font-bold border-l border-border/80 hover:bg-muted transition-colors text-foreground cursor-pointer">Generate</button>
                           </div>
                         </div>
                       </div>

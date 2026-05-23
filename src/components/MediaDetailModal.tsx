@@ -6,7 +6,7 @@ import { MediaEntry, EpisodeInfo, safeDateFormat, isEpisodic, formatRuntime } fr
 import { X, Edit2, Trash2, Calendar, Star, Check, Heart, Plus, Minus, ChevronDown, ChevronRight, Tv, Clock, Film } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/Badge';
-import { useMedia } from '@/hooks/useMedia';
+import { useMedia } from '@/context/MediaContext';
 import { useRouter } from 'next/navigation';
 
 interface MediaDetailModalProps {
@@ -251,7 +251,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                     {/* Quick Watch Status Selector */}
                     <div className="flex flex-col gap-1.5">
                       <span className="text-[10px] font-bold tracking-[0.1em] text-muted-foreground/75 uppercase block">Watch Status</span>
-                      <div className="flex bg-muted/60 p-1 rounded-xl border border-border/40 w-fit gap-1">
+                      <div className="flex flex-wrap bg-muted/60 p-1 rounded-xl border border-border/40 w-full sm:w-fit gap-1">
                         {(['Plan to Watch', 'Watching', 'Completed'] as const).map((status) => {
                           const isActive = entry.status === status;
                           return (

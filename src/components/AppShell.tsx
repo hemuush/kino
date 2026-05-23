@@ -4,33 +4,25 @@ import { useAuth } from "@/context/AuthContext";
 import { Sidebar } from "./Sidebar";
 import { BottomNav } from "./BottomNav";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Menu } from "lucide-react";
+import { KinoLogo } from "@/components/KinoLogo";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { accessToken, isLoading } = useAuth();
   const pathname = usePathname();
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   
   // Don't show shell on login page
   const isLoginPage = pathname === '/login';
   const showShell = !isLoading && accessToken && !isLoginPage;
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen lg:min-h-screen overflow-hidden lg:overflow-visible bg-background">
       {showShell && (
-        <Sidebar 
-          isMobileOpen={isMobileSidebarOpen} 
-          onMobileClose={() => setIsMobileSidebarOpen(false)} 
-        />
+        <Sidebar />
       )}
-      <main className={`flex-1 min-h-screen ${showShell ? 'pb-24 lg:pb-0' : ''} flex flex-col`}>
+      <main className={`flex-1 ${showShell ? 'h-[100dvh] lg:h-auto lg:min-h-screen overflow-hidden lg:overflow-visible' : 'min-h-screen'} flex flex-col`}>
         {showShell && (
-          <div className="lg:hidden sticky top-0 z-30 glass border-b border-border h-14 flex items-center px-4 shrink-0">
-             <button onClick={() => setIsMobileSidebarOpen(true)} className="p-2 -ml-2 text-foreground hover:bg-muted/50 rounded-xl">
-               <Menu size={22} />
-             </button>
-             {/* If we need search on mobile top, we can add it here too */}
+          <div className="lg:hidden sticky top-0 z-30 glass border-b border-border h-14 flex items-center justify-center px-4 shrink-0">
+             <KinoLogo />
           </div>
         )}
         <div className="flex-1 w-full relative">

@@ -78,7 +78,7 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
           {user ? (
             <>
               {user.picture ? (
-                <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-full object-cover border border-background shadow-sm" />
+                <img src={user.picture} alt={user.name} referrerPolicy="no-referrer" className="w-8 h-8 rounded-full object-cover border border-background shadow-sm" />
               ) : (
                 <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm border border-background shadow-sm">
                   {user.name.charAt(0).toUpperCase()}

@@ -109,3 +109,26 @@ export async function downloadBackupFromDrive(accessToken: string): Promise<Back
 
   return await response.json();
 }
+
+export async function deleteBackupFromDrive(accessToken: string): Promise<boolean> {
+  const fileId = await findBackupFileId(accessToken);
+  if (!fileId) {
+    return true; // Already doesn't exist
+  }
+
+  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (response.status === 401) {
+    throw new TokenExpiredError();
+  }
+
+  if (!response.ok) {
+    throw new Error(`Delete failed: ${response.statusText}`);
+  }
+
+  clearDriveCache();
+  return true;
+}

@@ -30,10 +30,10 @@ export default function MediaCard({
       style={{ animationDelay: `${index * 50}ms` }}
     >
       {/* 
-        Poster Container - Hardcoded to Rectangle (aspect-[2/3])
+        Poster Container - Hardcoded to Square (aspect-square)
         Appearance Preference Context has been completely removed.
       */}
-      <div className="relative w-full aspect-[2/3] bg-card rounded-xl overflow-hidden border border-border/50 shadow-[0_4px_20px_rgba(0,0,0,0.1)] transition-all duration-300 group-hover:scale-[1.03] group-hover:shadow-cyan-500/10 group-hover:border-cyan-500/30">
+      <div className="relative w-full aspect-square bg-card rounded-xl overflow-hidden border border-border/50 shadow-[0_4px_20px_rgba(0,0,0,0.1)] transition-all duration-300 group-hover:scale-[1.03] group-hover:shadow-cyan-500/10 group-hover:border-cyan-500/30">
         {entry.coverImage && !imgError ? (
           <img
             src={entry.coverImage}

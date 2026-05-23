@@ -2,8 +2,8 @@
 "use client";
 
 import { useState, useEffect, Suspense, useMemo, useRef } from 'react';
-import { useMedia } from '@/hooks/useMedia';
-import { MediaCard } from '@/components/MediaCard';
+import { useMedia } from '@/context/MediaContext';
+import MediaCard from '@/components/MediaCard';
 import { MediaDetailModal } from '@/components/MediaDetailModal';
 import { Plus, Film, X, Heart, Shuffle, SlidersHorizontal, Search, Settings, Sparkles, Terminal, BookOpen, Compass } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -64,8 +64,7 @@ function CollectionContent() {
         });
     }, [entries, filter, statusFilter, searchQuery, favoritesOnly, sortBy]);
 
-    const handleIncrementWatched = (entry: MediaEntry, e: React.MouseEvent) => {
-        e.stopPropagation();
+    const handleIncrementWatched = (entry: MediaEntry) => {
         if (!isEpisodic(entry)) return;
 
         const max = entry.episodesTotal || 9999;
@@ -155,7 +154,7 @@ function CollectionContent() {
             opt.title.toLowerCase().includes(cmdSearch.toLowerCase()) ||
             opt.description.toLowerCase().includes(cmdSearch.toLowerCase())
         );
-    }, [cmdSearch, entries]);
+    }, [cmdSearch, entries, router]);
 
     // Handle Keyboard events inside Command Menu
     const handleCmdKeyDown = (e: React.KeyboardEvent) => {
@@ -174,9 +173,13 @@ function CollectionContent() {
     };
 
     return (
-        <div className="min-h-screen bg-background pb-20 lg:pb-8 relative">
+        <div className="absolute inset-0 flex flex-col bg-background pb-4 lg:pb-6 pt-4 lg:pt-6 px-4 sm:px-8 lg:px-10 overflow-hidden w-full max-w-[1600px] mx-auto animate-fade-in animate-fade-up">
+            {/* Ambient background glow orbs */}
+            <div className="absolute top-[15%] left-[25%] w-[400px] h-[400px] bg-cyan-500/5 rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute top-[40%] right-[20%] w-[350px] h-[350px] bg-purple-500/5 rounded-full blur-[110px] pointer-events-none" />
+
             {/* Header Area */}
-            <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-black/5 dark:border-white/5 px-6 sm:px-8 lg:px-10 py-5">
+            <div className="shrink-0 pb-4 border-b border-border/40">
                 <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
                     <div className="flex flex-col text-left">
                         <h1 className="text-3xl font-display font-bold tracking-tight text-foreground flex items-center gap-2">
@@ -227,76 +230,81 @@ function CollectionContent() {
                             exit={{ height: 0, opacity: 0 }}
                             className="overflow-hidden"
                         >
-                            <div className="max-w-[1600px] mx-auto pt-5 flex flex-wrap gap-4 items-center">
-                                {/* Search Bar */}
-                                <div className="relative flex-1 min-w-[240px] max-w-[340px]">
-                                    <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search collection..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full bg-card/70 dark:bg-neutral-950/65 focus:bg-muted/80 rounded-full pl-11 pr-4 py-2 text-[13.5px] outline-none border border-border/80 dark:border-white/5 focus:border-cyan-400/35 transition-all text-foreground shadow-inner"
-                                    />
-                                    {searchQuery && (
-                                        <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                                            <X size={15} />
+                            <div className="max-w-[1600px] mx-auto pt-5 flex flex-col gap-4">
+                                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                                    {/* Search Bar */}
+                                    <div className="relative w-full md:max-w-[340px] shrink-0">
+                                        <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search collection..."
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            className="w-full bg-card/70 dark:bg-neutral-950/65 focus:bg-muted/80 rounded-full pl-11 pr-4 py-2 text-[13.5px] outline-none border border-border/80 dark:border-white/5 focus:border-cyan-400/35 transition-all text-foreground shadow-inner"
+                                        />
+                                        {searchQuery && (
+                                            <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                                                <X size={15} />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Horizontal scroll container for the rest of filters on mobile, normal flex on desktop */}
+                                    <div className="flex flex-nowrap items-center gap-3 overflow-x-auto md:overflow-x-visible hide-scrollbar pb-2 md:pb-0 w-full md:w-auto -mx-6 px-6 md:mx-0 md:px-0 shrink-0">
+                                        {/* Neon Cyan Filter Pills: Type */}
+                                        <div className="flex bg-card/70 dark:bg-neutral-950/65 p-1 rounded-full border border-border/80 dark:border-white/5 shadow-sm shrink-0">
+                                            {(['All', 'Movie', 'Series', 'Anime'] as const).map(f => {
+                                                const isActive = filter === f;
+                                                return (
+                                                    <button
+                                                        key={f}
+                                                        onClick={() => {
+                                                            setFilter(f);
+                                                            if (f === 'All') router.push('/collection');
+                                                            else router.push(`/collection?type=${f}`);
+                                                        }}
+                                                        className={`px-4.5 py-1.5 text-[12px] font-bold rounded-full transition-all duration-300 cursor-pointer whitespace-nowrap ${isActive ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.15)] font-bold' : 'text-muted-foreground border border-transparent hover:text-foreground'}`}
+                                                    >
+                                                        {f}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Neon Cyan Filter Pills: Status */}
+                                        <div className="flex bg-card/70 dark:bg-neutral-950/65 p-1 rounded-full border border-border/80 dark:border-white/5 shadow-sm shrink-0">
+                                            {(['All', 'Completed', 'Watching', 'Plan to Watch'] as const).map(s => {
+                                                const isActive = statusFilter === s;
+                                                return (
+                                                    <button
+                                                        key={s}
+                                                        onClick={() => setStatusFilter(s)}
+                                                        className={`px-4.5 py-1.5 text-[12px] font-bold rounded-full transition-all duration-300 cursor-pointer whitespace-nowrap ${isActive ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.15)] font-bold' : 'text-muted-foreground border border-transparent hover:text-foreground'}`}
+                                                    >
+                                                        {s}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        <select
+                                            value={sortBy}
+                                            onChange={(e: any) => setSortBy(e.target.value)}
+                                            className="bg-card/70 dark:bg-neutral-950/65 border border-border/80 dark:border-white/5 rounded-full px-4 py-2 text-[12.5px] font-semibold outline-none text-muted-foreground hover:text-foreground transition-colors cursor-pointer shadow-sm shrink-0"
+                                        >
+                                            <option value="Recent">Newest First</option>
+                                            <option value="Rating">Highest Rated</option>
+                                            <option value="Title">Alphabetical</option>
+                                        </select>
+
+                                        <button
+                                            onClick={() => setFavoritesOnly(!favoritesOnly)}
+                                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-[12.5px] font-semibold transition-all border cursor-pointer shadow-sm shrink-0 ${favoritesOnly ? 'bg-red-500/15 border-red-500/30 text-red-500' : 'bg-card/70 dark:bg-neutral-950/65 text-muted-foreground border-border/80 dark:border-white/5 hover:text-foreground hover:bg-muted dark:hover:bg-neutral-900'}`}
+                                        >
+                                            <Heart size={14} className={favoritesOnly ? "fill-red-500 text-red-500" : ""} /> Favorites
                                         </button>
-                                    )}
+                                    </div>
                                 </div>
-
-                                {/* Neon Cyan Filter Pills: Type */}
-                                <div className="flex bg-card/70 dark:bg-neutral-950/65 p-1 rounded-full border border-border/80 dark:border-white/5 shadow-sm">
-                                    {(['All', 'Movie', 'Series', 'Anime'] as const).map(f => {
-                                        const isActive = filter === f;
-                                        return (
-                                            <button
-                                                key={f}
-                                                onClick={() => {
-                                                    setFilter(f);
-                                                    if (f === 'All') router.push('/collection');
-                                                    else router.push(`/collection?type=${f}`);
-                                                }}
-                                                className={`px-4.5 py-1.5 text-[12px] font-bold rounded-full transition-all duration-300 cursor-pointer ${isActive ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.15)] font-bold' : 'text-muted-foreground border border-transparent hover:text-foreground'}`}
-                                            >
-                                                {f}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* Neon Cyan Filter Pills: Status */}
-                                <div className="flex bg-card/70 dark:bg-neutral-950/65 p-1 rounded-full border border-border/80 dark:border-white/5 shadow-sm">
-                                    {(['All', 'Completed', 'Watching', 'Plan to Watch'] as const).map(s => {
-                                        const isActive = statusFilter === s;
-                                        return (
-                                            <button
-                                                key={s}
-                                                onClick={() => setStatusFilter(s)}
-                                                className={`px-4.5 py-1.5 text-[12px] font-bold rounded-full transition-all duration-300 cursor-pointer ${isActive ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.15)] font-bold' : 'text-muted-foreground border border-transparent hover:text-foreground'}`}
-                                            >
-                                                {s}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                <select
-                                    value={sortBy}
-                                    onChange={(e: any) => setSortBy(e.target.value)}
-                                    className="bg-card/70 dark:bg-neutral-950/65 border border-border/80 dark:border-white/5 rounded-full px-4 py-2 text-[12.5px] font-semibold outline-none text-muted-foreground hover:text-foreground transition-colors cursor-pointer shadow-sm"
-                                >
-                                    <option value="Recent">Newest First</option>
-                                    <option value="Rating">Highest Rated</option>
-                                    <option value="Title">Alphabetical</option>
-                                </select>
-
-                                <button
-                                    onClick={() => setFavoritesOnly(!favoritesOnly)}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-full text-[12.5px] font-semibold transition-all border cursor-pointer shadow-sm ${favoritesOnly ? 'bg-red-500/15 border-red-500/30 text-red-500' : 'bg-card/70 dark:bg-neutral-950/65 text-muted-foreground border-border/80 dark:border-white/5 hover:text-foreground hover:bg-muted dark:hover:bg-neutral-900'}`}
-                                >
-                                    <Heart size={14} className={favoritesOnly ? "fill-red-500 text-red-500" : ""} /> Favorites
-                                </button>
                             </div>
                         </motion.div>
                     )}
@@ -304,7 +312,7 @@ function CollectionContent() {
             </div>
 
             {/* Main Content */}
-            <div className="px-6 sm:px-8 lg:px-10 pt-6 max-w-[1600px] mx-auto z-10 relative">
+            <div className="flex-1 min-h-0 overflow-y-auto hide-scrollbar pt-4 z-10 relative pb-28">
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-20 opacity-50">
                         <Film size={40} className="animate-pulse mb-4 text-cyan-400" />
@@ -338,7 +346,15 @@ function CollectionContent() {
                         <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-x-4 gap-y-6">
                             <AnimatePresence>
                                 {sortedEntries.map((entry, i) => (
-                                    <MediaCard key={entry.id} entry={entry} onClick={() => setSelectedEntry(entry)} onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })} onIncrementWatched={(e) => handleIncrementWatched(entry, e)} onStatusChange={(newStatus) => updateEntry({ ...entry, status: newStatus })} index={i} />
+                                    <MediaCard
+                                        key={entry.id}
+                                        entry={entry}
+                                        onClick={() => setSelectedEntry(entry)}
+                                        onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })}
+                                        onIncrementWatched={() => handleIncrementWatched(entry)}
+                                        onStatusChange={(newStatus) => updateEntry({ ...entry, status: newStatus })}
+                                        index={i}
+                                    />
                                 ))}
                             </AnimatePresence>
                         </div>
