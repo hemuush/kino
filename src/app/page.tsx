@@ -1,24 +1,34 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useMedia } from '@/hooks/useMedia';
 import { MediaCard } from '@/components/MediaCard';
-import { AddMediaModal } from '@/components/AddMediaModal';
 import { MediaDetailModal } from '@/components/MediaDetailModal';
-import { Plus, Film, X, Heart, Shuffle, SlidersHorizontal, RefreshCw } from 'lucide-react';
+import { Plus, Film, X, Heart, Shuffle, SlidersHorizontal, RefreshCw, Search } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MediaEntry, isEpisodic } from '@/lib/db';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 
-export default function Dashboard() {
+function DashboardContent() {
   const { entries, isLoading, addEntry, updateEntry, deleteEntry, syncStatus, batchUpdateEntries, genres } = useMedia();
   const autoRefresh = useAutoRefresh({ entries, batchUpdateEntries, isLoading });
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const typeParam = searchParams.get('type') as 'All' | 'Movie' | 'Series' | 'Anime' | null;
 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<MediaEntry | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<MediaEntry | null>(null);
 
-  const [filter, setFilter] = useState<'All' | 'Movie' | 'Series' | 'Anime'>('All');
+  const [filter, setFilter] = useState<'All' | 'Movie' | 'Series' | 'Anime'>(typeParam || 'All');
+
+  useEffect(() => {
+    if (typeParam) {
+      setFilter(typeParam);
+    } else {
+      setFilter('All');
+    }
+  }, [typeParam]);
   const [statusFilter, setStatusFilter] = useState<'All' | 'Completed' | 'Watching' | 'Plan to Watch'>('All');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [selectedGenreFilter, setSelectedGenreFilter] = useState<string | null>(null);
@@ -32,33 +42,43 @@ export default function Dashboard() {
     (showFavoritesOnly ? 1 : 0) +
     (selectedGenreFilter !== null ? 1 : 0);
 
-  const movies = entries.filter(e => e.type === 'Movie');
-  const series = entries.filter(e => e.type === 'Series');
-  const anime = entries.filter(e => e.type === 'Anime');
+  const { movies, series, anime } = useMemo(() => {
+    return {
+      movies: entries.filter(e => e.type === 'Movie'),
+      series: entries.filter(e => e.type === 'TV Show' || (e.type as string) === 'Series'),
+      anime: entries.filter(e => e.type === 'Anime')
+    };
+  }, [entries]);
 
-  const recentEntries = entries
-    .filter(e => e.status === 'Watching' || e.status === 'Completed' || !e.status)
-    .slice(0, 10);
+  const recentEntries = useMemo(() => {
+    return entries
+      .filter(e => e.status === 'Watching' || e.status === 'Completed' || !e.status)
+      .slice(0, 10);
+  }, [entries]);
 
   // Derive used genres purely from normalized IDs
-  const usedGenreIds = new Set<string>();
-  entries.forEach(e => (e.genreIds || []).forEach(id => usedGenreIds.add(id)));
-  const usedGenresList = Array.from(usedGenreIds)
-    .map(id => genres.find(g => g.id === id))
-    .filter(Boolean)
-    .sort((a, b) => a!.name.localeCompare(b!.name));
+  const usedGenresList = useMemo(() => {
+    const usedGenreIds = new Set<string>();
+    entries.forEach(e => (e.genreIds || []).forEach(id => usedGenreIds.add(id)));
+    return Array.from(usedGenreIds)
+      .map(id => genres.find(g => g.id === id))
+      .filter(Boolean)
+      .sort((a, b) => a!.name.localeCompare(b!.name));
+  }, [entries, genres]);
 
-  const filteredEntries = entries.filter(e => {
-    if (filter !== 'All' && e.type !== filter) return false;
-    const currentStatus = e.status || 'Completed';
-    if (statusFilter !== 'All' && currentStatus !== statusFilter) return false;
-    if (showFavoritesOnly && !e.favorite) return false;
-    if (selectedGenreFilter && (!e.genreIds || !e.genreIds.includes(selectedGenreFilter))) return false;
-    if (searchQuery.trim() !== '') {
-      return e.title.toLowerCase().includes(searchQuery.toLowerCase().trim());
-    }
-    return true;
-  });
+  const filteredEntries = useMemo(() => {
+    return entries.filter(e => {
+      if (filter !== 'All' && e.type !== filter) return false;
+      const currentStatus = e.status || 'Completed';
+      if (statusFilter !== 'All' && currentStatus !== statusFilter) return false;
+      if (showFavoritesOnly && !e.favorite) return false;
+      if (selectedGenreFilter && (!e.genreIds || !e.genreIds.includes(selectedGenreFilter))) return false;
+      if (searchQuery.trim() !== '') {
+        return e.title.toLowerCase().includes(searchQuery.toLowerCase().trim());
+      }
+      return true;
+    });
+  }, [entries, filter, statusFilter, showFavoritesOnly, selectedGenreFilter, searchQuery]);
 
   const handleDecideForMe = () => {
     if (filteredEntries.length === 0) return;
@@ -67,17 +87,19 @@ export default function Dashboard() {
     setSelectedEntry(pool[Math.floor(Math.random() * pool.length)]);
   };
 
-  const sortedEntries = [...filteredEntries].sort((a, b) => {
-    switch (sortBy) {
-      case 'date-desc': return b.createdAt - a.createdAt;
-      case 'date-asc': return a.createdAt - b.createdAt;
-      case 'rating-desc': return (b.rating || 0) - (a.rating || 0) || b.createdAt - a.createdAt;
-      case 'rating-asc': return (a.rating || 0) - (b.rating || 0) || b.createdAt - a.createdAt;
-      case 'title-asc': return a.title.localeCompare(b.title);
-      case 'title-desc': return b.title.localeCompare(a.title);
-      default: return 0;
-    }
-  });
+  const sortedEntries = useMemo(() => {
+    return [...filteredEntries].sort((a, b) => {
+      switch (sortBy) {
+        case 'date-desc': return b.createdAt - a.createdAt;
+        case 'date-asc': return a.createdAt - b.createdAt;
+        case 'rating-desc': return (b.rating || 0) - (a.rating || 0) || b.createdAt - a.createdAt;
+        case 'rating-asc': return (a.rating || 0) - (b.rating || 0) || b.createdAt - a.createdAt;
+        case 'title-asc': return a.title.localeCompare(b.title);
+        case 'title-desc': return b.title.localeCompare(a.title);
+        default: return 0;
+      }
+    });
+  }, [filteredEntries, sortBy]);
 
   const handleIncrementWatched = (entry: MediaEntry, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -88,7 +110,7 @@ export default function Dashboard() {
     if (total && nextWatched >= total) {
       const updated = { ...entry, episodesWatched: total, status: 'Completed' as const };
       updateEntry(updated);
-      setEditingEntry(updated); // Open Edit modal to rate immediately
+      router.push(`/edit/${entry.id}`); // Open Edit page to rate immediately
     } else {
       const updated = { ...entry, episodesWatched: nextWatched, status: entry.status === 'Plan to Watch' ? ('Watching' as const) : entry.status };
       updateEntry(updated);
@@ -120,12 +142,12 @@ export default function Dashboard() {
     <div className="flex flex-col min-h-screen">
       {/* Header */}
       <header className="sticky top-0 z-40 glass border-b border-border">
-        <div className="flex items-center justify-between px-4 sm:px-6 h-14 max-w-7xl mx-auto w-full">
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-center justify-between px-4 sm:px-6 h-14 max-w-7xl mx-auto w-full gap-4">
+          <div className="flex items-center gap-2.5 shrink-0">
             <h1 className="font-display text-[15px] sm:text-[17px] font-semibold tracking-tight">Dashboard</h1>
             <AnimatePresence mode="wait">
               {syncStatus !== 'idle' && (
-                <motion.div initial={{ opacity: 0, scale: 0.8, x: -5 }} animate={{ opacity: 1, scale: 1, x: 0 }} exit={{ opacity: 0, scale: 0.8 }} className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${syncStatus === 'syncing' ? 'bg-primary/5 text-primary border-primary/20' : syncStatus === 'synced' ? 'bg-emerald-500/5 text-emerald-500 border-emerald-500/20' : 'bg-red-500/5 text-red-400 border-red-500/20'}`}>
+                <motion.div initial={{ opacity: 0, scale: 0.8, x: -5 }} animate={{ opacity: 1, scale: 1, x: 0 }} exit={{ opacity: 0, scale: 0.8 }} className={`hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border transition-colors ${syncStatus === 'syncing' ? 'bg-primary/5 text-primary border-primary/20' : syncStatus === 'synced' ? 'bg-emerald-500/5 text-emerald-500 border-emerald-500/20' : 'bg-red-500/5 text-red-400 border-red-500/20'}`}>
                   {syncStatus === 'syncing' && <svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>}
                   {syncStatus === 'synced' && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
                   {syncStatus === 'error' && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>}
@@ -134,9 +156,25 @@ export default function Dashboard() {
               )}
             </AnimatePresence>
           </div>
-          <div className="flex items-center gap-2">
+          
+          <div className="flex-1 max-w-md relative hidden sm:block mx-4">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
+            <input type="text" placeholder="Search titles..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-muted/30 focus:bg-muted/50 rounded-xl px-4 py-1.5 pl-9 text-[13px] placeholder:text-muted-foreground/60 border border-border/40 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all" />
+            {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-2.5 flex items-center text-muted-foreground/45 hover:text-foreground transition-colors cursor-pointer"><X size={14} strokeWidth={2.5} /></button>}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
             {entries.length > 0 && <button onClick={handleDecideForMe} className="flex items-center justify-center w-9 h-9 rounded-xl border border-border bg-card hover:bg-card-hover text-muted-foreground hover:text-foreground transition-all active:scale-95 cursor-pointer animate-fade-in"><Shuffle size={15} strokeWidth={2} /></button>}
-            <button onClick={() => setIsAddModalOpen(true)} className="flex items-center justify-center w-9 h-9 rounded-xl border border-border bg-card hover:bg-card-hover text-foreground transition-all active:scale-95 cursor-pointer animate-fade-in"><Plus size={18} strokeWidth={2} /></button>
+            <Link href="/add" className="flex items-center justify-center w-9 h-9 rounded-xl border border-border bg-card hover:bg-card-hover text-foreground transition-all active:scale-95 cursor-pointer animate-fade-in"><Plus size={18} strokeWidth={2} /></Link>
+          </div>
+        </div>
+        
+        {/* Mobile Search Bar */}
+        <div className="sm:hidden px-4 pb-2">
+          <div className="relative w-full">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
+            <input type="text" placeholder="Search titles..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-muted/30 focus:bg-muted/50 rounded-xl px-4 py-2 pl-9 text-[13px] placeholder:text-muted-foreground/60 border border-border/40 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all" />
+            {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-2.5 flex items-center text-muted-foreground/45 hover:text-foreground transition-colors cursor-pointer"><X size={14} strokeWidth={2.5} /></button>}
           </div>
         </div>
       </header>
@@ -156,7 +194,7 @@ export default function Dashboard() {
             <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mb-5"><Film size={26} className="text-muted-foreground" strokeWidth={1.5} /></div>
             <h3 className="font-display text-xl font-bold mb-2 tracking-tight">Start your collection</h3>
             <p className="text-sm text-muted-foreground mb-8 max-w-[280px] leading-relaxed">Track every movie, series, and anime you watch.</p>
-            <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-2 bg-foreground text-background px-6 py-3 rounded-2xl text-sm font-semibold transition-all active:scale-[0.97] hover:opacity-90 cursor-pointer"><Plus size={16} strokeWidth={2} /> Add Your First</button>
+            <Link href="/add" className="flex items-center gap-2 bg-foreground text-background px-6 py-3 rounded-2xl text-sm font-semibold transition-all active:scale-[0.97] hover:opacity-90 cursor-pointer"><Plus size={16} strokeWidth={2} /> Add Your First</Link>
           </div>
         )}
 
@@ -165,16 +203,9 @@ export default function Dashboard() {
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex gap-2 flex-1">
-                <div className="relative flex-1">
-                  <input type="text" placeholder="Search titles..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-muted/50 rounded-xl px-4 py-2.5 pl-10 text-[13px] placeholder:text-muted-foreground/60 border border-border/40 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
-                  <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none text-muted-foreground/60">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
-                  </div>
-                  {searchQuery && <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-3.5 flex items-center text-muted-foreground/45 hover:text-foreground transition-colors cursor-pointer"><X size={14} strokeWidth={2.5} /></button>}
-                </div>
                 <button onClick={() => setShowFiltersPanel(!showFiltersPanel)} className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[13px] font-semibold border transition-all cursor-pointer ${showFiltersPanel || activeFiltersCount > 0 ? 'bg-primary/10 border-primary/30 text-primary shadow-sm shadow-primary/5' : 'bg-muted/50 border-border/40 hover:bg-muted hover:text-foreground text-muted-foreground'}`}>
                   <SlidersHorizontal size={14} strokeWidth={2.2} />
-                  <span className="hidden xs:inline">Filters</span>
+                  <span>Filters</span>
                   {activeFiltersCount > 0 && <span className="flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold bg-primary text-white rounded-full">{activeFiltersCount}</span>}
                 </button>
               </div>
@@ -238,7 +269,7 @@ export default function Dashboard() {
             </div>
             <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1 -mx-1 px-1">
               {recentEntries.map((entry, i) => (
-                <div key={entry.id} className="w-[115px] sm:w-[150px] shrink-0">
+                <div key={entry.id} className="w-[100px] xs:w-[115px] sm:w-[150px] shrink-0">
                   <MediaCard entry={entry} onClick={() => setSelectedEntry(entry)} onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })} onIncrementWatched={(e) => handleIncrementWatched(entry, e)} index={i} />
                 </div>
               ))}
@@ -248,7 +279,7 @@ export default function Dashboard() {
 
         {entries.length > 0 && (
           <section className="space-y-4">
-            <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 sm:gap-4">
+            <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-2 sm:gap-4">
               <AnimatePresence>
                 {sortedEntries.map((entry, i) => (
                   <MediaCard key={entry.id} entry={entry} onClick={() => setSelectedEntry(entry)} onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })} onIncrementWatched={(e) => handleIncrementWatched(entry, e)} index={i} />
@@ -259,35 +290,11 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Manual Entry or Edit Modal */}
-      {(isAddModalOpen || editingEntry) && (
-        <AddMediaModal
-          initialData={editingEntry}
-          onClose={() => {
-            setIsAddModalOpen(false);
-            setEditingEntry(null);
-          }}
-          onSave={async (entry) => {
-            if (editingEntry) {
-              updateEntry(entry as MediaEntry);
-              setSelectedEntry(entry as MediaEntry); // Update the active background view instantly
-            } else {
-              addEntry(entry as MediaEntry);
-            }
-            setIsAddModalOpen(false);
-            setEditingEntry(null);
-          }}
-        />
-      )}
-
       {/* View Detail Modal */}
-      {selectedEntry && !editingEntry && (
+      {selectedEntry && (
         <MediaDetailModal
           entry={selectedEntry}
           onClose={() => setSelectedEntry(null)}
-          onEditClick={() => {
-            setEditingEntry(selectedEntry);
-          }}
           onSave={async (updatedEntry) => {
             updateEntry(updatedEntry);
             setSelectedEntry(updatedEntry);
@@ -299,5 +306,13 @@ export default function Dashboard() {
         />
       )}
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={<div className="flex flex-col min-h-screen"><div className="w-full h-14 skeleton" /></div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }

@@ -1,16 +1,18 @@
 # 🎬 Kino — Cinematic Watch Tracker
 
-Kino is a premium, minimalist personal media tracker built to catalog and review your favorite Movies, Series, and Anime. With an elegant dark obsidian and electric blue theme, full Google Drive synchronization, and a custom analytics dashboard, Kino delivers a high-end tracking experience while maintaining 100% data privacy.
+Kino is a premium, minimalist personal media tracker built to catalog and review your favorite Movies, TV Shows, and Anime. With an elegant dark obsidian and electric blue theme, full Google Drive synchronization, and a custom analytics dashboard, Kino delivers a high-end tracking experience while maintaining 100% data privacy.
 
 ---
 
 ## ✨ Features
 
-- **📺 Comprehensive Media Cataloging**: Track Movies, Series, and Anime in one unified system.
+- **📺 Comprehensive Media Cataloging**: Track Movies, TV Shows, and Anime in one unified system.
 - **🏷️ Watch Statuses**: Categorize entries as *Watching*, *Plan to Watch*, or *Completed*.
 - **⚡ Advanced Watch Progress Tracker**:
-  - Detailed episode progress (e.g. `12 / 12` episodes watched) for Series and Anime.
+  - Detailed episode progress (e.g. `12 / 12` episodes watched) for TV Shows and Anime.
   - Interactive increment (`+`) and decrement (`-`) buttons and a visual progress bar inside the detail view modal.
+  - Built-in **Episode Log**: A tabbed viewer in the detail modal to browse individual episodes, titles, and air dates.
+  - **Quick-Add Episode Popup**: Click the `+` button when caught up to instantly log a new episode directly from the viewer modal!
   - Automatic completion status transition and edit mode redirection when watch progress reaches 100% of episodes.
 - **🚀 Dashboard Quick Actions**:
   - One-click `+1` episode increment hover overlay badge on Media Cards for active watch entries.
@@ -18,7 +20,7 @@ Kino is a premium, minimalist personal media tracker built to catalog and review
 - **📊 Interactive Analytics Dashboard**:
   - **Summary Stats**: Tracks overall watched titles, currently active watchlist items, total episodes watched, and average rating across all media.
   - **Ratings Distribution Chart**: A custom CSS-only vertical bar chart displaying the frequency of scores from 1 to 10 with hover tooltips and entrance stagger animations.
-  - **Type Breakdown**: Ratio meters displaying the proportion of Movies, Series, and Anime in your library.
+  - **Type Breakdown**: Ratio meters displaying the proportion of Movies, TV Shows, and Anime in your library.
   - **Watchlist Statuses**: Detailed status distribution breakdowns.
   - **Genre Cloud**: Custom tag cloud indicating your most watched genres.
 - **💖 Favorites Showcase**: Pin entries to a dedicated showcase shelf with full click callback bindings.

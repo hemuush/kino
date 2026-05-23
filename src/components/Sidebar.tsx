@@ -2,13 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, BarChart2, Settings, LogOut, Sun, Moon } from "lucide-react";
+import { LayoutDashboard, BarChart2, Settings, LogOut, Sun, Moon, Film, Tv, PlayCircle, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { KinoLogo } from "@/components/KinoLogo";
 
-export function Sidebar() {
+interface SidebarProps {
+  isMobileOpen?: boolean;
+  onMobileClose?: () => void;
+}
+
+export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
   const { logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -20,21 +25,28 @@ export function Sidebar() {
 
   const links = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "Sagas", href: "/sagas", icon: Film },
     { name: "Analytics", href: "/analytics", icon: BarChart2 },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
 
-  return (
-    <aside className="hidden lg:flex flex-col w-[240px] h-screen fixed left-0 top-0 z-50 bg-surface/50">
-      
-      {/* Logo */}
-      <div className="h-16 flex items-center gap-2.5 px-6">
-        <KinoLogo size={32} />
-        <span className="font-display text-[17px] font-bold tracking-tight bg-gradient-to-r from-primary via-blue-400 to-purple-400 bg-clip-text text-transparent">Kino</span>
+  const sidebarContent = (
+    <div className="flex flex-col h-full bg-surface/90 lg:bg-surface/50 backdrop-blur-3xl border-r border-border">
+      {/* Logo & Close */}
+      <div className="h-16 flex items-center justify-between px-6 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <KinoLogo size={32} />
+          <span className="font-display text-[17px] font-bold tracking-tight bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400 bg-clip-text text-transparent">Kino</span>
+        </div>
+        {onMobileClose && (
+          <button onClick={onMobileClose} className="lg:hidden p-2 -mr-2 text-muted-foreground hover:text-foreground">
+            <X size={20} />
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 pt-4 space-y-0.5">
+      <nav className="flex-1 px-3 pt-4 space-y-0.5 overflow-y-auto hide-scrollbar">
         {links.map((link) => {
           const isActive = pathname === link.href;
           const Icon = link.icon;
@@ -42,13 +54,13 @@ export function Sidebar() {
             <Link
               key={link.name}
               href={link.href}
+              onClick={onMobileClose}
               className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 ${
                 isActive
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               }`}
             >
-              {/* Active indicator pill */}
               {isActive && (
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-primary rounded-r-full" />
               )}
@@ -60,7 +72,7 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom Actions */}
-      <div className="px-3 py-4 space-y-1">
+      <div className="px-3 py-4 space-y-1 border-t border-border/50 shrink-0">
         {mounted && (
           <button
             onClick={toggleTheme}
@@ -68,7 +80,6 @@ export function Sidebar() {
           >
             {theme === 'dark' ? <Sun size={17} strokeWidth={1.8} /> : <Moon size={17} strokeWidth={1.8} />}
             <span className="flex-1 text-left">{theme === 'dark' ? "Light Mode" : "Dark Mode"}</span>
-            {/* Toggle indicator */}
             <div className={`w-8 h-[18px] rounded-full relative transition-colors duration-300 ${theme === 'dark' ? 'bg-primary/30' : 'bg-muted-foreground/20'}`}>
               <div className={`absolute top-[2px] w-[14px] h-[14px] bg-foreground rounded-full shadow-sm transition-all duration-300 ${theme === 'dark' ? 'left-[15px]' : 'left-[2px]'}`} />
             </div>
@@ -82,6 +93,31 @@ export function Sidebar() {
           <span className="flex-1 text-left">Log Out</span>
         </button>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:block w-[240px] h-screen fixed left-0 top-0 z-40">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobileOpen && (
+        <div className="lg:hidden fixed inset-0 z-[100] flex">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onMobileClose} />
+          <div className="relative w-[280px] max-w-[80vw] h-full shadow-2xl animate-fade-in" style={{ animation: 'slideRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes slideRight {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(0); }
+        }
+      `}} />
+    </>
   );
 }

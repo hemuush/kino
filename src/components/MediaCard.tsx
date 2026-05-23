@@ -14,7 +14,7 @@ interface MediaCardProps {
 
 const typeLabels: Record<string, string> = {
   Movie: 'MOVIE',
-  Series: 'SERIES',
+  'TV Show': 'TV SHOW',
   Anime: 'ANIME',
 };
 
@@ -34,16 +34,18 @@ export function MediaCard({ entry, onClick, onFavoriteToggle, onIncrementWatched
     >
       {/* Poster */}
       <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-muted">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={entry.coverImage || `https://placehold.co/300x450/0b0f19/1e293b?text=${encodeURIComponent(entry.title.substring(0, 10))}`}
-          alt={entry.title}
-          className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
-          loading="lazy"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = `https://placehold.co/300x450/0b0f19/1e293b?text=${encodeURIComponent(entry.title.substring(0, 10))}`;
-          }}
-        />
+        {entry.coverImage ? (
+          <img
+            src={entry.coverImage}
+            alt={entry.title}
+            className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-background/50 p-4">
+            <span className="text-[10px] text-muted-foreground/30 font-bold uppercase tracking-widest text-center leading-relaxed max-w-[80%] line-clamp-3">{entry.title}</span>
+          </div>
+        )}
         
         {/* Gradient Overlay — softer dark blue tone */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#030712] via-[#030712]/10 to-transparent opacity-95 group-hover:opacity-100 transition-opacity duration-300" />
@@ -85,7 +87,7 @@ export function MediaCard({ entry, onClick, onFavoriteToggle, onIncrementWatched
         {/* Type & Status Label */}
         <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 items-start">
           <span className="text-[8px] font-bold tracking-[0.15em] bg-black/60 backdrop-blur-md px-2 py-0.5 rounded text-white/80 uppercase border border-white/5">
-            {typeLabels[entry.type]}
+            {entry.type === 'Anime' && entry.animeType ? `ANIME / ${entry.animeType}` : typeLabels[entry.type]}
           </span>
           {!isCompleted && (
             <span className={`text-[8px] font-bold tracking-wider px-1.5 py-0.5 rounded shadow-sm uppercase ${

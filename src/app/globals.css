@@ -26,40 +26,40 @@
 /* ─── Light Mode ─── */
 @layer base {
   :root {
-    --bg: #f8fafc;
-    --fg: #0f172a;
+    --bg: #fafafa;
+    --fg: #09090b;
     --card: #ffffff;
-    --card-hover: #f1f5f9;
-    --surface: #e2e8f0;
-    --primary: #2563eb;
-    --primary-hover: #1d4ed8;
-    --accent: #3b82f6;
-    --muted: #f1f5f9;
-    --muted-fg: #64748b;
-    --border: rgba(15, 23, 42, 0.08);
+    --card-hover: #f4f4f5;
+    --surface: #f4f4f5;
+    --primary: #0055ff;
+    --primary-hover: #0044cc;
+    --accent: #00e5ff;
+    --muted: #f4f4f5;
+    --muted-fg: #71717a;
+    --border: rgba(0, 0, 0, 0.08);
     --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
-    --shadow-card-hover: 0 20px 25px -5px rgba(37, 99, 235, 0.08), 0 8px 10px -6px rgba(37, 99, 235, 0.08);
+    --shadow-card-hover: 0 20px 25px -5px rgba(0, 85, 255, 0.08), 0 8px 10px -6px rgba(0, 85, 255, 0.08);
     color-scheme: light;
   }
 
   .dark {
-    --bg: #030712;
-    --fg: #f8fafc;
-    --card: #0b0f19;
-    --card-hover: #111726;
-    --surface: #070b14;
-    --primary: #3b82f6;
-    --primary-hover: #60a5fa;
-    --accent: #00f0ff;
-    --muted: #111827;
-    --muted-fg: #94a3b8;
-    --border: rgba(59, 130, 246, 0.09);
-    --shadow-subtle: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3);
-    --shadow-lg: 0 8px 30px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4);
-    --shadow-card-hover: 0 12px 40px rgba(59,130,246,0.15), 0 4px 12px rgba(59,130,246,0.1);
+    --bg: #000000;
+    --fg: #ffffff;
+    --card: #09090b;
+    --card-hover: #18181b;
+    --surface: #09090b;
+    --primary: #00aaff;
+    --primary-hover: #33bbff;
+    --accent: #00e5ff;
+    --muted: #18181b;
+    --muted-fg: #a1a1aa;
+    --border: rgba(255, 255, 255, 0.1);
+    --shadow-subtle: 0 1px 3px rgba(0,0,0,0.5);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.6);
+    --shadow-lg: 0 8px 30px rgba(0,0,0,0.7);
+    --shadow-card-hover: 0 12px 40px rgba(0, 170, 255, 0.15), 0 4px 12px rgba(0, 170, 255, 0.1);
     color-scheme: dark;
   }
 }

@@ -7,14 +7,14 @@ interface AuthContextType {
   accessToken: string | null;
   isLoading: boolean;
   login: (token: string) => Promise<void>;
-  logout: () => Promise<void>;
+  logout: (forceWipe?: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   accessToken: null,
   isLoading: true,
   login: async () => {},
-  logout: async () => {},
+  logout: async (forceWipe?: boolean) => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -53,12 +53,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/');
   };
 
-  const logout = async () => {
+  const logout = async (forceWipe: boolean = true) => {
     setIsLoading(true);
     setAccessToken(null);
     localStorage.removeItem('kino_access_token');
     
-    // No local database to wipe anymore
+    if (forceWipe) {
+      localStorage.removeItem('kino_entries');
+      localStorage.removeItem('kino_genres');
+      localStorage.removeItem('kino_franchises');
+      // Import and clear Drive cache if possible, or just rely on hard reload
+      import('@/lib/googleDrive').then(({ clearDriveCache }) => clearDriveCache());
+      // Force a full page reload to wipe all React memory singletons
+      window.location.href = '/login';
+      return;
+    }
+
     setIsLoading(false);
     router.push('/login');
   };

@@ -10,8 +10,15 @@ export class TokenExpiredError extends Error {
   }
 }
 
+let cachedFileId: string | null = null;
+
+export function clearDriveCache() {
+  cachedFileId = null;
+}
+
 // Helper to find if the backup file already exists in the appDataFolder
 async function findBackupFileId(accessToken: string): Promise<string | null> {
+  if (cachedFileId) return cachedFileId;
   const query = encodeURIComponent(`name='${BACKUP_FILE_NAME}' and trashed=false`);
   const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}&spaces=appDataFolder&fields=files(id)`, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -29,7 +36,8 @@ async function findBackupFileId(accessToken: string): Promise<string | null> {
   
   const data = await response.json();
   if (data.files && data.files.length > 0) {
-    return data.files[0].id;
+    cachedFileId = data.files[0].id;
+    return cachedFileId;
   }
   return null;
 }

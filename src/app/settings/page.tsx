@@ -41,28 +41,28 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
         {/* Franchises Dictionary */}
-        <section className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-6">
-            <div className="p-2 bg-primary/10 rounded-lg text-primary"><Film size={18} /></div>
-            <h2 className="text-lg font-bold">Collections & Universes</h2>
+        <section className="bg-card glass border border-border/60 rounded-3xl p-8 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2.5 bg-primary/10 rounded-xl text-primary"><Film size={20} /></div>
+            <h2 className="text-xl font-bold font-display">Sagas</h2>
           </div>
-          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-            {franchises.length === 0 && <p className="text-xs text-muted-foreground">No collections mapped.</p>}
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 hide-scrollbar">
+            {franchises.length === 0 && <p className="text-xs text-muted-foreground">No sagas mapped.</p>}
             {franchises.map(f => (
-              <div key={f.id} className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border/40 hover:border-primary/20 transition-all">
+              <div key={f.id} className="flex items-center justify-between p-3.5 bg-muted/40 rounded-xl border border-border/40 hover:border-primary/20 transition-all">
                 {editingId === f.id ? (
                   <input autoFocus type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && saveFranchise(f.id)} className="bg-background px-3 py-1.5 rounded-lg text-sm border border-primary/50 outline-none w-full mr-2" />
                 ) : (
-                  <span className="text-[13px] font-bold text-foreground">{f.name}</span>
+                  <span className="text-[14px] font-bold text-foreground">{f.name}</span>
                 )}
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   {editingId === f.id ? (
-                    <><button onClick={() => saveFranchise(f.id)} className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-lg"><Check size={14} /></button>
-                      <button onClick={() => setEditingId(null)} className="p-1.5 text-muted-foreground hover:bg-muted rounded-lg"><X size={14} /></button></>
+                    <><button onClick={() => saveFranchise(f.id)} className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors cursor-pointer"><Check size={16} /></button>
+                      <button onClick={() => setEditingId(null)} className="p-1.5 text-muted-foreground hover:bg-muted rounded-lg transition-colors cursor-pointer"><X size={16} /></button></>
                   ) : (
-                    <><button onClick={() => startEdit(f)} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"><Edit2 size={14} /></button>
-                      <button onClick={() => setFranchises(franchises.filter(x => x.id !== f.id))} className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg"><Trash2 size={14} /></button></>
+                    <><button onClick={() => startEdit(f)} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors cursor-pointer"><Edit2 size={16} /></button>
+                      <button onClick={() => setFranchises(franchises.filter(x => x.id !== f.id))} className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"><Trash2 size={16} /></button></>
                   )}
                 </div>
               </div>
@@ -71,27 +71,27 @@ export default function SettingsPage() {
         </section>
 
         {/* Genres Dictionary */}
-        <section className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-6">
-            <div className="p-2 bg-primary/10 rounded-lg text-primary"><TagIcon size={18} /></div>
-            <h2 className="text-lg font-bold">Genres Matrix</h2>
+        <section className="bg-card glass border border-border/60 rounded-3xl p-8 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2.5 bg-primary/10 rounded-xl text-primary"><TagIcon size={20} /></div>
+            <h2 className="text-xl font-bold font-display">Genres Matrix</h2>
           </div>
-          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 hide-scrollbar">
             {genres.map(g => (
-              <div key={g.id} className="flex items-center justify-between p-3 bg-muted/40 rounded-xl border border-border/40 hover:border-primary/20 transition-all">
+              <div key={g.id} className="flex items-center justify-between p-3.5 bg-muted/40 rounded-xl border border-border/40 hover:border-primary/20 transition-all">
                 {editingId === g.id ? (
                   <input autoFocus type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && saveGenre(g.id)} className="bg-background px-3 py-1.5 rounded-lg text-sm border border-primary/50 outline-none w-full mr-2" />
                 ) : (
-                  <span className="text-[13px] font-bold text-foreground">{g.name}</span>
+                  <span className="text-[14px] font-bold text-foreground">{g.name}</span>
                 )}
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   {editingId === g.id ? (
-                    <><button onClick={() => saveGenre(g.id)} className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-lg"><Check size={14} /></button>
-                      <button onClick={() => setEditingId(null)} className="p-1.5 text-muted-foreground hover:bg-muted rounded-lg"><X size={14} /></button></>
+                    <><button onClick={() => saveGenre(g.id)} className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors cursor-pointer"><Check size={16} /></button>
+                      <button onClick={() => setEditingId(null)} className="p-1.5 text-muted-foreground hover:bg-muted rounded-lg transition-colors cursor-pointer"><X size={16} /></button></>
                   ) : (
-                    <><button onClick={() => startEdit(g)} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"><Edit2 size={14} /></button>
-                      <button onClick={() => setGenres(genres.filter(x => x.id !== g.id))} className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg"><Trash2 size={14} /></button></>
+                    <><button onClick={() => startEdit(g)} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors cursor-pointer"><Edit2 size={16} /></button>
+                      <button onClick={() => setGenres(genres.filter(x => x.id !== g.id))} className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"><Trash2 size={16} /></button></>
                   )}
                 </div>
               </div>

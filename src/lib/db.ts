@@ -1,10 +1,11 @@
-export type MediaType = 'Movie' | 'Series' | 'Anime';
+export type MediaType = 'Movie' | 'TV Show' | 'Anime';
 export type WatchStatus = 'Completed' | 'Watching' | 'Plan to Watch';
 export type AnimeType = 'Show' | 'Movie';
 
 export interface Tag {
   id: string;
   name: string;
+  coverImage?: string;
   color?: string; // Optional: for UI styling
 }
 
@@ -56,9 +57,18 @@ export const DEFAULT_GENRES = [
  * Handles the edge case where Anime can be either a Show or a Movie.
  */
 export function isEpisodic(entry: Partial<MediaEntry>): boolean {
-  if (entry.type === 'Series') return true;
-  if (entry.type === 'Anime' && entry.animeType === 'Show') return true;
+  if (entry.type === 'Anime') return entry.animeType === 'Show';
+  if (entry.type === 'TV Show') return true;
   return false;
+}
+
+export function formatRuntime(minutes: number | undefined): string {
+  if (!minutes || minutes <= 0) return '';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  return `${m}m`;
 }
 
 export function safeDateFormat(
