@@ -1,9 +1,9 @@
+// src/components/MediaCard.tsx
 "use client";
 
 import { MediaEntry, WatchStatus } from '@/lib/db';
 import { motion } from 'framer-motion';
 import { Star, Heart, CheckCircle2, Clock, PlayCircle } from 'lucide-react';
-import { useUI } from '@/context/UIContext';
 import { toast } from 'sonner';
 
 interface MediaCardProps {
@@ -24,25 +24,18 @@ const typeLabels: Record<string, string> = {
 const STATUS_CYCLE: WatchStatus[] = ['Plan to Watch', 'Watching', 'Completed'];
 
 export function MediaCard({ entry, onClick, onFavoriteToggle, onIncrementWatched, onStatusChange, index = 0 }: MediaCardProps) {
-  const { cardShape } = useUI();
   const isWatching = entry.status === 'Watching';
   const isPlanToWatch = entry.status === 'Plan to Watch';
   const isCompleted = entry.status === 'Completed' || !entry.status;
 
-  const shapeClasses = {
-    rectangle: 'aspect-[2/3] rounded-2xl',
-    square: 'aspect-square rounded-2xl',
-    circle: 'aspect-square rounded-full',
-  };
-
   const handleStatusClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!onStatusChange) return;
-    
+
     const currentStatus = entry.status || 'Completed';
     const currentIndex = STATUS_CYCLE.indexOf(currentStatus);
     const nextStatus = STATUS_CYCLE[(currentIndex + 1) % STATUS_CYCLE.length];
-    
+
     onStatusChange(nextStatus, e);
     toast.success(`Status changed to ${nextStatus}`, {
       description: entry.title,
@@ -58,8 +51,8 @@ export function MediaCard({ entry, onClick, onFavoriteToggle, onIncrementWatched
       onClick={onClick}
       className="group w-full flex flex-col cursor-pointer select-none"
     >
-      {/* Poster / Artwork Container */}
-      <div className={`relative w-full overflow-hidden border border-black/5 dark:border-white/10 bg-neutral-200/50 dark:bg-neutral-800/50 transition-all duration-300 group-hover:scale-[1.03] group-hover:shadow-lg group-hover:shadow-primary/5 group-hover:border-primary/30 ${shapeClasses[cardShape]}`}>
+      {/* Poster / Artwork Container (Fixed to Square) */}
+      <div className="relative w-full aspect-square rounded-2xl overflow-hidden border border-black/5 dark:border-white/10 bg-neutral-200/50 dark:bg-neutral-800/50 transition-all duration-300 group-hover:scale-[1.03] group-hover:shadow-lg group-hover:shadow-primary/5 group-hover:border-primary/30">
         {entry.coverImage ? (
           <img
             src={entry.coverImage}
@@ -114,10 +107,10 @@ export function MediaCard({ entry, onClick, onFavoriteToggle, onIncrementWatched
           <button
             type="button"
             onClick={handleStatusClick}
-            className={`text-[8.5px] font-bold tracking-wider px-2 py-0.5 rounded-full shadow-sm uppercase flex items-center gap-1 transition-all hover:scale-105 active:scale-95 border ${isWatching 
-              ? 'bg-primary/95 text-white border-primary/20 backdrop-blur-md' 
+            className={`text-[8.5px] font-bold tracking-wider px-2 py-0.5 rounded-full shadow-sm uppercase flex items-center gap-1 transition-all hover:scale-105 active:scale-95 border ${isWatching
+              ? 'bg-primary/95 text-white border-primary/20 backdrop-blur-md'
               : 'bg-black/45 backdrop-blur-md text-white/90 hover:bg-black/65 border-white/5'
-            }`}
+              }`}
             title="Click to change status"
           >
             {isWatching && <PlayCircle size={9} />}
@@ -128,30 +121,27 @@ export function MediaCard({ entry, onClick, onFavoriteToggle, onIncrementWatched
         </div>
 
         {/* Progress Bar at the absolute bottom border */}
-        {entry.type !== 'Movie' && entry.episodesTotal && entry.episodesTotal > 0 && cardShape !== 'circle' ? (
+        {entry.type !== 'Movie' && entry.episodesTotal && entry.episodesTotal > 0 && (
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40 z-20">
             <div
               className="bg-primary h-full transition-all duration-500 ease-out"
               style={{ width: `${Math.min(100, ((entry.episodesWatched || 0) / entry.episodesTotal) * 100)}%` }}
             />
           </div>
-        ) : null}
+        )}
       </div>
 
       {/* Metadata below artwork */}
-      <div className={`mt-2.5 px-1 flex flex-col select-none ${cardShape === 'circle' ? 'text-center items-center' : 'text-left'}`}>
-        {/* Type / Category tag */}
+      <div className="mt-2.5 px-1 flex flex-col select-none text-left">
         <span className="text-[9.5px] font-bold tracking-widest text-muted-foreground/75 uppercase leading-none truncate max-w-full">
           {entry.type === 'Anime' && entry.animeType ? `ANIME • ${entry.animeType}` : typeLabels[entry.type]}
         </span>
-        
-        {/* Title */}
+
         <h3 className="text-foreground font-semibold text-[13.5px] tracking-tight leading-tight mt-1 truncate max-w-full group-hover:text-primary transition-colors duration-200" title={entry.title}>
           {entry.title}
         </h3>
 
-        {/* Info row: Rating & Episode progress */}
-        <div className={`flex items-center w-full mt-1.5 min-h-[16px] ${cardShape === 'circle' ? 'justify-center gap-3.5' : 'justify-between'}`}>
+        <div className="flex items-center w-full mt-1.5 min-h-[16px] justify-between">
           {isCompleted ? (
             <div className="flex items-center gap-0.5">
               <Star size={11} className="text-amber-500 fill-amber-500 animate-fade-in" />

@@ -2,7 +2,6 @@ import { MediaEntry } from './db';
 
 const BACKUP_FILE_NAME = 'kino-backup.json';
 
-// Custom error for expired/invalid tokens
 export class TokenExpiredError extends Error {
   constructor() {
     super('Token expired or invalid');
@@ -16,7 +15,6 @@ export function clearDriveCache() {
   cachedFileId = null;
 }
 
-// Helper to find if the backup file already exists in the appDataFolder
 async function findBackupFileId(accessToken: string): Promise<string | null> {
   if (cachedFileId) return cachedFileId;
   const query = encodeURIComponent(`name='${BACKUP_FILE_NAME}' and trashed=false`);
@@ -33,7 +31,7 @@ async function findBackupFileId(accessToken: string): Promise<string | null> {
     console.error('Drive API Error:', response.status, errText);
     throw new Error(`Failed to query Drive files: Status ${response.status}`);
   }
-  
+
   const data = await response.json();
   if (data.files && data.files.length > 0) {
     cachedFileId = data.files[0].id;
@@ -46,6 +44,7 @@ export interface BackupData {
   entries: MediaEntry[];
   genres: any[];
   franchises: any[];
+  timestamp?: number;
 }
 
 export async function uploadBackupToDrive(accessToken: string, data: BackupData | MediaEntry[]): Promise<boolean> {
@@ -55,7 +54,6 @@ export async function uploadBackupToDrive(accessToken: string, data: BackupData 
     name: BACKUP_FILE_NAME,
   };
 
-  // You can only set parents on creation, not on update
   if (!fileId) {
     metadata.parents = ['appDataFolder'];
   }
@@ -67,7 +65,6 @@ export async function uploadBackupToDrive(accessToken: string, data: BackupData 
   let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
   let method = 'POST';
 
-  // If it exists, we update it via PATCH
   if (fileId) {
     url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`;
     method = 'PATCH';
@@ -95,7 +92,6 @@ export async function uploadBackupToDrive(accessToken: string, data: BackupData 
 export async function downloadBackupFromDrive(accessToken: string): Promise<BackupData | MediaEntry[] | null> {
   const fileId = await findBackupFileId(accessToken);
   if (!fileId) {
-    // File doesn't exist yet, nothing to restore
     return null;
   }
 
@@ -111,6 +107,5 @@ export async function downloadBackupFromDrive(accessToken: string): Promise<Back
     throw new Error(`Download failed: ${response.statusText}`);
   }
 
-  const data = await response.json();
-  return data;
+  return await response.json();
 }

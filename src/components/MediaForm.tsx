@@ -1,3 +1,4 @@
+// src/components/MediaForm.tsx
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -31,11 +32,9 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
   const [review, setReview] = useState(initialData?.review || '');
   const [favorite, setFavorite] = useState(initialData?.favorite || false);
 
-  // Normalized Data State
   const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>(initialData?.genreIds || []);
   const [selectedFranchiseId, setSelectedFranchiseId] = useState<string | null>(initialData?.franchiseId || null);
 
-  // Progress/Episodes
   const [episodesWatched, setEpisodesWatched] = useState<number | ''>(initialData?.episodesWatched ?? 0);
   const [episodesTotal, setEpisodesTotal] = useState<number | ''>(initialData?.episodesTotal ?? '');
   const [seasonsCount, setSeasonsCount] = useState<number | ''>(initialData?.seasonsCount ?? 1);
@@ -46,12 +45,10 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [imageInputMode, setImageInputMode] = useState<'url' | 'upload'>('url');
 
-  // Autocomplete Lookups
   const [genreSearch, setGenreSearch] = useState('');
   const [franchiseSearch, setFranchiseSearch] = useState('');
   const [showGenreDropdown, setShowGenreDropdown] = useState(false);
   const [showFranchiseDropdown, setShowFranchiseDropdown] = useState(false);
-  const [showAdvancedEpisodes, setShowAdvancedEpisodes] = useState(false);
   const [formTab, setFormTab] = useState<'General' | 'Details' | 'Episodes'>('General');
 
   const titleRef = useRef<HTMLInputElement>(null);
@@ -62,7 +59,6 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
 
   const currentIsEpisodic = isEpisodic({ type, animeType });
 
-  // Auto-fix broken episode numbering from old data
   useEffect(() => {
     if (episodes.length === 0) return;
     let needsFix = false;
@@ -86,7 +82,6 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
     if (needsFix) setEpisodes(newEps);
   }, []);
 
-  // Keep the stats synced with the actual episodes array
   useEffect(() => {
     if (currentIsEpisodic) {
       if (episodes.length > 0) {
@@ -100,7 +95,6 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
     }
   }, [episodes, currentIsEpisodic]);
 
-  // Auto-calculate series runtime based on episodes
   useEffect(() => {
     if (currentIsEpisodic) {
       if (episodes.length > 0) {
@@ -155,7 +149,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
     setIsSaving(true);
 
     if (!isEditMode) {
-      const duplicate = entries.find(e => e.title.toLowerCase() === title.trim().toLowerCase() && e.type === type);
+      const duplicate = entries.find(entry => entry.title.toLowerCase() === title.trim().toLowerCase() && entry.type === type);
       if (duplicate) {
         toast.error(`"${title.trim()}" already exists.`, {
           description: "You can edit the existing entry instead.",
@@ -168,7 +162,8 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
     const totalEps = episodesTotal === '' ? undefined : Number(episodesTotal);
 
     const payload = {
-      ...(isEditMode ? { id: initialData?.id, createdAt: initialData?.createdAt } : {}),
+      ...(isEditMode ? { id: initialData?.id, createdAt: initialData?.createdAt } : { createdAt: Date.now() }),
+      updatedAt: Date.now(), // DB modification time explicitly updated here
       title: title.trim(),
       type,
       animeType: type === 'Anime' ? animeType : undefined,

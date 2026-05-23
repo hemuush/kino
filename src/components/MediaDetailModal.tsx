@@ -1,3 +1,4 @@
+// src/components/MediaDetailModal.tsx
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -6,7 +7,6 @@ import { X, Edit2, Trash2, Calendar, Star, Check, Heart, Plus, Minus, ChevronDow
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/Badge';
 import { useMedia } from '@/hooks/useMedia';
-
 import { useRouter } from 'next/navigation';
 
 interface MediaDetailModalProps {
@@ -22,7 +22,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
   const [viewTab, setViewTab] = useState<'Details' | 'Episodes'>('Details');
-  
+
   const [showAddEpisode, setShowAddEpisode] = useState(false);
   const [newEpSeason, setNewEpSeason] = useState<number>(1);
   const [newEpNumber, setNewEpNumber] = useState<number>(1);
@@ -45,7 +45,6 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
 
   const currentIsEpisodic = isEpisodic(entry);
 
-  // Resolve Relationships
   const entryFranchise = entry.franchiseId ? franchises.find(f => f.id === entry.franchiseId) : null;
   const entryGenres = (entry.genreIds || []).map(id => genres.find(g => g.id === id)?.name).filter(Boolean);
 
@@ -54,7 +53,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
     : (entry.episodesTotal ? Array.from({ length: Number(entry.episodesTotal) }, (_, i) => ({ name: `Episode ${i + 1}`, season: 1, number: i + 1 })) : []);
 
   const seasons = Array.from(new Set(displayEpisodes.map(ep => ep.season || 1))).sort((a, b) => a - b);
-  
+
   useEffect(() => {
     if (seasons.length > 0 && !seasons.includes(selectedSeason)) {
       setSelectedSeason(seasons[0]);
@@ -62,9 +61,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
   }, [displayEpisodes, selectedSeason]);
 
   const filteredEpisodes = displayEpisodes.filter(ep => (ep.season || 1) === selectedSeason);
-
   const episodesWatched = entry.episodesWatched || 0;
-
 
   const handleOpenAddEpisode = () => {
     const currentSeason = selectedSeason || 1;
@@ -87,18 +84,19 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
       runtime: newEpRuntime ? Number(newEpRuntime) : undefined,
       airDate: newEpDate || undefined,
     };
-    
+
     const updatedEpisodes = [...(entry.episodes || []), newEpisode];
     const newTotal = updatedEpisodes.length;
-    
+
     await onSave({
       ...entry,
       episodes: updatedEpisodes,
       episodesTotal: newTotal,
-      episodesWatched: episodesWatched + 1, // Automatically mark the new episode as watched
-      status: entry.status === 'Plan to Watch' ? 'Watching' : entry.status
+      episodesWatched: episodesWatched + 1,
+      status: entry.status === 'Plan to Watch' ? 'Watching' : entry.status,
+      updatedAt: Date.now()
     });
-    
+
     setShowAddEpisode(false);
   };
 
@@ -109,13 +107,18 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
       return;
     }
     const nextWatched = episodesWatched + 1;
-    await onSave({ ...entry, episodesWatched: nextWatched, status: entry.status === 'Plan to Watch' ? 'Watching' : entry.status });
+    await onSave({
+      ...entry,
+      episodesWatched: nextWatched,
+      status: entry.status === 'Plan to Watch' ? 'Watching' : entry.status,
+      updatedAt: Date.now()
+    });
   };
 
   const handleDecrementEpisode = async () => {
     if (!currentIsEpisodic) return;
     const nextWatched = Math.max(0, episodesWatched - 1);
-    await onSave({ ...entry, episodesWatched: nextWatched });
+    await onSave({ ...entry, episodesWatched: nextWatched, updatedAt: Date.now() });
   };
 
   return (
@@ -123,13 +126,12 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
       <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center text-foreground">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
 
-        <motion.div 
-          initial={{ opacity: 0, y: 80, scale: 0.95 }} 
-          animate={{ opacity: 1, y: 0, scale: 1 }} 
-          exit={{ opacity: 0, y: 80, scale: 0.95 }} 
+        <motion.div
+          initial={{ opacity: 0, y: 80, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 80, scale: 0.95 }}
           className={`relative w-full ${currentIsEpisodic ? 'max-w-2xl md:max-w-4xl lg:max-w-5xl' : 'max-w-2xl'} h-[85vh] sm:h-[85vh] bg-card rounded-t-[28px] sm:rounded-2xl overflow-hidden z-[101] flex flex-col shadow-2xl border border-border/80`}
         >
-
           {entry.coverImage && <div className="absolute inset-0 h-[300px] overflow-hidden -z-10 pointer-events-none opacity-[0.06] blur-3xl"><img src={entry.coverImage} className="w-full h-full object-cover scale-150" /></div>}
 
           {/* Header */}
@@ -139,9 +141,19 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
               {entry.status && entry.status !== 'Completed' && <Badge variant={entry.status === 'Watching' ? 'accent' : 'muted'}>{entry.status}</Badge>}
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => onSave({ ...entry, favorite: !entry.favorite })} className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all border cursor-pointer ${entry.favorite ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-muted border-border/60 hover:text-foreground'}`}><Heart size={14} className={entry.favorite ? 'fill-red-500' : ''} /></button>
-              <button onClick={() => { onClose(); router.push(`/edit/${entry.id}`); }} className="w-8 h-8 rounded-xl bg-muted border border-border/60 flex items-center justify-center hover:bg-muted/80 transition-colors cursor-pointer hover:text-primary"><Edit2 size={14} strokeWidth={2} /></button>
-              <button 
+              <button onClick={() => onSave({ ...entry, favorite: !entry.favorite, updatedAt: Date.now() })} className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all border cursor-pointer ${entry.favorite ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-muted border-border/60 hover:text-foreground'}`}><Heart size={14} className={entry.favorite ? 'fill-red-500' : ''} /></button>
+
+              <button
+                onClick={() => {
+                  router.push(`/edit/${entry.id}`);
+                  onClose();
+                }}
+                className="w-8 h-8 rounded-xl bg-muted border border-border/60 flex items-center justify-center hover:bg-muted/80 transition-colors cursor-pointer hover:text-primary"
+              >
+                <Edit2 size={14} strokeWidth={2} />
+              </button>
+
+              <button
                 onClick={() => {
                   if (showDeleteConfirm) {
                     onDelete(entry.id!);
@@ -149,7 +161,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                     setShowDeleteConfirm(true);
                     setTimeout(() => setShowDeleteConfirm(false), 3000);
                   }
-                }} 
+                }}
                 className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${showDeleteConfirm ? 'bg-red-500 border-red-600 text-white animate-pulse' : 'bg-muted border-border/60 hover:text-red-400'}`}
               >
                 <Trash2 size={14} strokeWidth={2} />
@@ -159,21 +171,19 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
           </div>
 
           <div className="flex-1 overflow-hidden px-4 sm:px-6 py-6 flex flex-col sm:flex-row gap-6 md:gap-8">
-            {/* Visual Column */}
             <div className="w-[120px] sm:w-[220px] md:w-[260px] shrink-0 mx-auto sm:mx-0 overflow-y-auto hide-scrollbar pb-6">
               <div className="aspect-[2/3] rounded-[24px] overflow-hidden bg-card glass shadow-2xl shadow-black/20 border border-border/60 relative group ring-1 ring-white/5">
                 {entry.coverImage ? (
-                  <img 
-                    src={entry.coverImage} 
-                    alt={entry.title} 
-                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105" 
+                  <img
+                    src={entry.coverImage}
+                    alt={entry.title}
+                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center bg-background/50 p-6">
                     <span className="text-xs sm:text-sm text-muted-foreground/30 font-black uppercase tracking-widest text-center leading-relaxed max-w-[80%] line-clamp-4 shadow-sm">{entry.title}</span>
                   </div>
                 )}
-                {/* Subtle inner shadow for depth */}
                 <div className="absolute inset-0 shadow-[inset_0_0_20px_rgba(0,0,0,0.2)] pointer-events-none" />
               </div>
 
@@ -186,14 +196,13 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
               )}
             </div>
 
-            {/* Data Column */}
             <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
               {currentIsEpisodic && (
                 <div className="flex border-b border-border/60 shrink-0 mb-4 gap-6">
                   {(['Details', 'Episodes'] as const).map(tab => (
-                    <button 
-                      key={tab} 
-                      type="button" 
+                    <button
+                      key={tab}
+                      type="button"
                       onClick={() => setViewTab(tab)}
                       className={`pb-3 text-[12px] font-bold tracking-wider uppercase transition-all border-b-2 cursor-pointer ${viewTab === tab ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
                     >
@@ -250,17 +259,16 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                               key={status}
                               type="button"
                               onClick={async () => {
-                                let updated = { ...entry, status };
+                                let updated: MediaEntry = { ...entry, status, updatedAt: Date.now() };
                                 if (status === 'Completed' && isEpisodic(entry) && entry.episodesTotal) {
                                   updated.episodesWatched = entry.episodesTotal;
                                 }
                                 await onSave(updated);
                               }}
-                              className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
-                                isActive
-                                  ? 'bg-primary text-white shadow-sm'
-                                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-                              }`}
+                              className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${isActive
+                                ? 'bg-primary text-white shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                                }`}
                             >
                               {status}
                             </button>
@@ -281,13 +289,13 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                               onMouseEnter={() => setHoveredStar(val)}
                               onMouseLeave={() => setHoveredStar(null)}
                               onClick={async () => {
-                                await onSave({ ...entry, rating: val });
+                                await onSave({ ...entry, rating: val, updatedAt: Date.now() });
                               }}
                               className="cursor-pointer transition-transform active:scale-90 hover:scale-110"
                             >
-                              <Star 
-                                size={18} 
-                                className={val <= (hoveredStar !== null ? hoveredStar : (entry.rating || 0)) ? 'text-amber-405 fill-amber-400 text-amber-400' : 'text-muted-foreground/20'} 
+                              <Star
+                                size={18}
+                                className={val <= (hoveredStar !== null ? hoveredStar : (entry.rating || 0)) ? 'text-amber-405 fill-amber-400 text-amber-400' : 'text-muted-foreground/20'}
                               />
                             </button>
                           ))}
@@ -321,7 +329,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                             <button
                               type="button"
                               onClick={async () => {
-                                await onSave({ ...entry, review: reviewText.trim() || undefined });
+                                await onSave({ ...entry, review: reviewText.trim() || undefined, updatedAt: Date.now() });
                                 setIsEditingReview(false);
                               }}
                               className="px-3.5 py-1.5 text-[11px] font-bold rounded-lg bg-primary text-white cursor-pointer"
@@ -400,14 +408,14 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                   </div>
                 )}
               </div>
-              
+
               {/* Add Episode Overlay */}
               {showAddEpisode && (
                 <div className="absolute inset-0 z-50 bg-card/95 backdrop-blur-md rounded-2xl flex items-center justify-center p-6 animate-fade-in border border-border/50">
                   <div className="w-full max-w-sm bg-muted/30 border border-border/60 rounded-2xl p-6 shadow-xl relative">
                     <button onClick={() => setShowAddEpisode(false)} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"><X size={16} /></button>
                     <h3 className="text-lg font-display font-bold mb-4">Add Episode</h3>
-                    
+
                     <div className="space-y-4">
                       <div className="flex gap-4">
                         <div className="flex-1 space-y-1.5">
@@ -419,12 +427,12 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                           <input type="number" value={newEpNumber} onChange={e => setNewEpNumber(Number(e.target.value))} className="w-full bg-card border border-border/60 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary transition-colors" />
                         </div>
                       </div>
-                      
+
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Title</label>
                         <input type="text" value={newEpName} onChange={e => setNewEpName(e.target.value)} placeholder="e.g. Pilot" className="w-full bg-card border border-border/60 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary transition-colors" />
                       </div>
-                      
+
                       <div className="flex gap-4">
                         <div className="flex-1 space-y-1.5">
                           <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Runtime (min)</label>
@@ -435,7 +443,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                           <input type="date" value={newEpDate} onChange={e => setNewEpDate(e.target.value)} className="w-full bg-card border border-border/60 rounded-xl px-3 py-2 text-sm outline-none focus:border-primary transition-colors" />
                         </div>
                       </div>
-                      
+
                       <button onClick={handleSaveNewEpisode} disabled={!newEpName.trim()} className="w-full mt-2 py-2.5 bg-primary text-primary-foreground font-bold rounded-xl disabled:opacity-50 hover:bg-primary-hover transition-colors">
                         Save Episode
                       </button>

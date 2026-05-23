@@ -3,6 +3,7 @@
 import { useState, Suspense, useMemo } from 'react';
 import { useMedia } from '@/hooks/useMedia';
 import { MediaCard } from '@/components/MediaCard';
+import MediaCardSkeleton from '@/components/MediaCardSkeleton';
 import { MediaDetailModal } from '@/components/MediaDetailModal';
 import { MediaEntry, isEpisodic, formatRuntime } from '@/lib/db';
 import { Clock, PlayCircle, Library, ArrowRight, Plus, Star, Info, Play } from 'lucide-react';
@@ -21,11 +22,11 @@ function DashboardContent() {
   const heroEntry = useMemo(() => {
     const watching = entries.filter(e => e.status === 'Watching');
     if (watching.length > 0) return watching[0];
-    
+
     if (entries.length > 0) {
       return [...entries].sort((a, b) => b.createdAt - a.createdAt)[0];
     }
-    
+
     return null;
   }, [entries]);
 
@@ -58,14 +59,53 @@ function DashboardContent() {
 
   const displayName = user?.name || "Hemant Sharma";
 
+  // Comprehensive Loading State matching the dashboard layout exactly
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background pb-20 pt-8 px-6 sm:px-8 lg:px-10 max-w-[1600px] mx-auto w-full">
-        <div className="flex flex-col gap-6">
-          <div className="w-48 h-8 skeleton rounded-xl mb-4" />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 h-[320px] skeleton rounded-[28px]" />
-            <div className="h-[320px] skeleton rounded-[28px]" />
+      <div className="min-h-screen bg-background pb-20 pt-8 px-6 sm:px-8 lg:px-10 max-w-[1600px] mx-auto w-full animate-pulse">
+        {/* Ambient background glow orbs */}
+        <div className="absolute top-[15%] left-[25%] w-[400px] h-[400px] bg-cyan-500/5 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute top-[40%] right-[20%] w-[350px] h-[350px] bg-purple-500/5 rounded-full blur-[110px] pointer-events-none" />
+
+        {/* Hero & Stats Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12 relative z-10">
+          {/* Hero Banner Skeleton */}
+          <div className="lg:col-span-2 h-[320px] bg-muted/20 border border-border/20 rounded-[28px]" />
+
+          {/* Stats Skeletons */}
+          <div className="flex flex-col gap-6">
+            <div className="grid grid-cols-2 gap-4 sm:gap-6">
+              <div className="h-[140px] bg-muted/20 border border-border/20 rounded-[24px]" />
+              <div className="h-[140px] bg-muted/20 border border-border/20 rounded-[24px]" />
+            </div>
+            <div className="flex-1 min-h-[140px] bg-muted/20 border border-border/20 rounded-[24px]" />
+          </div>
+        </div>
+
+        {/* Currently Watching Skeleton Array */}
+        <div className="mb-12 relative z-10">
+          <div className="h-6 w-48 bg-muted/30 rounded-md mb-5" />
+          <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-x-4 gap-y-6">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <MediaCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+
+        {/* Recently Added List Skeletons */}
+        <div className="relative z-10">
+          <div className="h-6 w-48 bg-muted/30 rounded-md mb-5" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex gap-4 p-4 rounded-2xl border border-border/20 bg-muted/10 h-[149px]">
+                <div className="w-[80px] h-full bg-muted/40 rounded-xl shrink-0" />
+                <div className="flex-1 flex flex-col justify-center gap-3">
+                  <div className="h-4 w-3/4 bg-muted/40 rounded" />
+                  <div className="h-3 w-1/2 bg-muted/30 rounded" />
+                  <div className="h-2 w-1/3 bg-muted/20 rounded mt-2" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -80,28 +120,28 @@ function DashboardContent() {
 
       {/* Bento Grid layout with Hero (Column 1-2) and Stats (Column 3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12 relative z-10">
-        
+
         {/* Column 1 & 2: Featured Hero Banner */}
         <div className="lg:col-span-2 relative border border-cyan-400/25 shadow-[0_0_20px_rgba(34,211,238,0.08)] bg-card/70 dark:bg-neutral-950/65 backdrop-blur-xl rounded-[28px] p-6 sm:p-8 min-h-[320px] flex flex-col justify-center group overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_20px_35px_rgba(34,211,238,0.12)] hover:border-cyan-400/40">
           {/* Blurred ambient glow backdrop */}
           {heroEntry && (
-            <div 
-              className="absolute inset-0 bg-cover bg-center scale-105 blur-3xl opacity-25 dark:opacity-35 pointer-events-none transition-transform duration-700 group-hover:scale-110" 
-              style={{ backgroundImage: `url(${heroEntry.coverImage})` }} 
+            <div
+              className="absolute inset-0 bg-cover bg-center scale-105 blur-3xl opacity-25 dark:opacity-35 pointer-events-none transition-transform duration-700 group-hover:scale-110"
+              style={{ backgroundImage: `url(${heroEntry.coverImage})` }}
             />
           )}
-          
+
           {/* Solid gradient mask overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/50 to-transparent z-0" />
-          
+
           <div className="relative z-10 flex flex-col sm:flex-row items-start justify-between gap-6 sm:gap-8">
             {heroEntry ? (
               <>
                 {/* Poster Artwork Left */}
                 {heroEntry.coverImage && (
                   <div className="shrink-0 relative w-[140px] sm:w-[160px] aspect-[2/3] rounded-2xl overflow-hidden border border-white/10 shadow-xl transition-transform duration-500 group-hover:scale-[1.02] bg-neutral-800/80 dark:bg-neutral-900/80 flex items-center justify-center p-3 text-center text-[10px] font-bold uppercase text-muted-foreground tracking-wider leading-snug">
-                    <img 
-                      src={heroEntry.coverImage} 
+                    <img
+                      src={heroEntry.coverImage}
                       alt={heroEntry.title}
                       className="w-full h-full object-cover object-top"
                     />
@@ -113,11 +153,11 @@ function DashboardContent() {
                   <span className="text-[9px] font-bold tracking-[0.2em] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2.5 py-0.5 rounded uppercase mb-3">
                     FEATURED {heroEntry.type === 'TV Show' ? 'SERIES' : heroEntry.type.toUpperCase()}
                   </span>
-                  
+
                   <h2 className="text-3xl lg:text-4xl font-display font-bold tracking-tight text-white mb-2 line-clamp-2">
                     {heroEntry.title}
                   </h2>
-                  
+
                   {/* Rating & Status */}
                   <div className="flex flex-wrap items-center gap-2 text-[11px] text-white/80 font-bold mb-4">
                     {heroEntry.rating && (
@@ -182,10 +222,10 @@ function DashboardContent() {
 
         {/* Column 3: Stacked Stats Widgets */}
         <div className="flex flex-col gap-6">
-          
+
           {/* Top row subgrid: Total Collection & Episodes Watched */}
           <div className="grid grid-cols-2 gap-4 sm:gap-6">
-            
+
             {/* Total Collection */}
             <div className="border border-border/80 dark:border-cyan-400/25 shadow-[0_4px_20px_rgba(0,0,0,0.02)] dark:shadow-[0_0_15px_rgba(34,211,238,0.06)] bg-card/70 dark:bg-neutral-950/65 backdrop-blur-xl rounded-[24px] p-5 flex flex-col justify-between min-h-[140px] group transition-all duration-300 hover:-translate-y-1 hover:border-cyan-400/40 dark:hover:border-cyan-400/40 hover:shadow-lg">
               <div className="flex items-center justify-between">
@@ -224,7 +264,7 @@ function DashboardContent() {
                 <Clock size={15} />
               </div>
             </div>
-            
+
             <div className="flex items-baseline gap-1 mt-2.5">
               <p className="text-3xl sm:text-4xl font-display font-bold text-foreground tracking-tight leading-none">{formatHours(stats.totalTime)}</p>
               <span className="text-[11.5px] text-muted-foreground font-medium">hours</span>
@@ -245,24 +285,24 @@ function DashboardContent() {
                   </linearGradient>
                 </defs>
                 {/* Glow underlay path */}
-                <path 
-                  d="M 0 32 C 15 12, 28 35, 45 15 C 60 5, 75 32, 88 20 L 100 24" 
-                  fill="none" 
-                  stroke="url(#waveGrad)" 
-                  strokeWidth="2.5" 
+                <path
+                  d="M 0 32 C 15 12, 28 35, 45 15 C 60 5, 75 32, 88 20 L 100 24"
+                  fill="none"
+                  stroke="url(#waveGrad)"
+                  strokeWidth="2.5"
                   className="blur-[2px] opacity-75"
                 />
                 {/* Main line stroke */}
-                <path 
-                  d="M 0 32 C 15 12, 28 35, 45 15 C 60 5, 75 32, 88 20 L 100 24" 
-                  fill="none" 
-                  stroke="url(#waveGrad)" 
-                  strokeWidth="1.8" 
+                <path
+                  d="M 0 32 C 15 12, 28 35, 45 15 C 60 5, 75 32, 88 20 L 100 24"
+                  fill="none"
+                  stroke="url(#waveGrad)"
+                  strokeWidth="1.8"
                 />
                 {/* Fills beneath the curve */}
-                <path 
-                  d="M 0 32 C 15 12, 28 35, 45 15 C 60 5, 75 32, 88 20 L 100 24 L 100 40 L 0 40 Z" 
-                  fill="url(#waveFill)" 
+                <path
+                  d="M 0 32 C 15 12, 28 35, 45 15 C 60 5, 75 32, 88 20 L 100 24 L 100 40 L 0 40 Z"
+                  fill="url(#waveFill)"
                 />
               </svg>
               <div className="flex justify-between items-center text-[9px] text-muted-foreground/60 mt-1 font-mono px-1">
@@ -322,7 +362,7 @@ function DashboardContent() {
         {recentlyAdded.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {recentlyAdded.map((entry) => (
-              <div 
+              <div
                 key={entry.id}
                 onClick={() => setSelectedEntry(entry)}
                 className="flex gap-4 p-4 rounded-2xl border border-border/80 dark:border-cyan-400/20 hover:border-cyan-400/40 shadow-[0_4px_20px_rgba(0,0,0,0.02)] dark:shadow-[0_0_12px_rgba(34,211,238,0.06)] hover:shadow-lg bg-card/70 dark:bg-neutral-950/65 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer select-none group"
@@ -330,8 +370,8 @@ function DashboardContent() {
                 {/* Poster Left */}
                 <div className="shrink-0 relative w-[80px] h-[115px] rounded-xl overflow-hidden border border-white/5 shadow-md">
                   {entry.coverImage ? (
-                    <img 
-                      src={entry.coverImage} 
+                    <img
+                      src={entry.coverImage}
                       alt={entry.title}
                       className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
                     />

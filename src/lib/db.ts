@@ -1,3 +1,4 @@
+// src/lib/db.ts
 export type MediaType = 'Movie' | 'TV Show' | 'Anime';
 export type WatchStatus = 'Completed' | 'Watching' | 'Plan to Watch';
 export type AnimeType = 'Show' | 'Movie';
@@ -39,6 +40,7 @@ export interface MediaEntry {
   review?: string;
   favorite?: boolean;
   createdAt: number;
+  updatedAt?: number; // Tracking the last modification time
   episodesWatched?: number;
   episodesTotal?: number;
   seasonsCount?: number;
