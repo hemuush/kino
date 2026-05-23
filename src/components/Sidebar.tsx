@@ -55,11 +55,10 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
               key={link.name}
               href={link.href}
               onClick={onMobileClose}
-              className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 ${
-                isActive
+              className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 ${isActive
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              }`}
+                }`}
             >
               {isActive && (
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-primary rounded-r-full" />
@@ -86,7 +85,7 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
           </button>
         )}
         <button
-          onClick={logout}
+          onClick={() => logout()}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-muted-foreground hover:text-red-400 hover:bg-red-500/5 transition-all duration-200"
         >
           <LogOut size={17} strokeWidth={1.8} />
@@ -112,7 +111,8 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
           </div>
         </div>
       )}
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes slideRight {
           from { transform: translateX(-100%); }
           to { transform: translateX(0); }

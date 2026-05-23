@@ -67,12 +67,12 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
     let needsFix = false;
     const seasonCounts: Record<number, number> = {};
     const newEps = [...episodes];
-    
+
     for (let i = 0; i < newEps.length; i++) {
       const s = newEps[i].season || 1;
       if (!seasonCounts[s]) seasonCounts[s] = 0;
       seasonCounts[s]++;
-      
+
       const expectedNumber = seasonCounts[s];
       if (newEps[i].number !== expectedNumber) {
         needsFix = true;
@@ -87,19 +87,26 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
 
   // Keep the stats synced with the actual episodes array
   useEffect(() => {
-    if (currentIsEpisodic && episodes.length > 0) {
-      setEpisodesTotal(episodes.length);
-      const uniqueSeasons = new Set(episodes.map(e => e.season || 1));
-      setSeasonsCount(uniqueSeasons.size);
+    if (currentIsEpisodic) {
+      if (episodes.length > 0) {
+        setEpisodesTotal(episodes.length);
+        const uniqueSeasons = new Set(episodes.map(e => e.season || 1));
+        setSeasonsCount(uniqueSeasons.size);
+      } else {
+        setEpisodesTotal('');
+        setSeasonsCount(1);
+      }
     }
   }, [episodes, currentIsEpisodic]);
 
   // Auto-calculate series runtime based on episodes
   useEffect(() => {
-    if (currentIsEpisodic && episodes.length > 0) {
-      const totalRuntime = episodes.reduce((acc, ep) => acc + (ep.runtime || 0), 0);
-      if (totalRuntime > 0) {
-        setRuntime(totalRuntime);
+    if (currentIsEpisodic) {
+      if (episodes.length > 0) {
+        const totalRuntime = episodes.reduce((acc, ep) => acc + (ep.runtime || 0), 0);
+        setRuntime(totalRuntime > 0 ? totalRuntime : '');
+      } else {
+        setRuntime('');
       }
     }
   }, [episodes, currentIsEpisodic]);
@@ -182,9 +189,9 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
 
       <div className="flex border-b border-border/60 shrink-0 bg-muted/10 px-6 pt-3 gap-8">
         {(currentIsEpisodic ? ['General', 'Details', 'Episodes'] : ['General', 'Details']).map(tab => (
-          <button 
-            key={tab} 
-            type="button" 
+          <button
+            key={tab}
+            type="button"
             onClick={() => setFormTab(tab as any)}
             className={`pb-3 text-[12px] font-bold tracking-wider uppercase transition-all border-b-2 cursor-pointer ${formTab === tab ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
           >
@@ -313,8 +320,23 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
         {formTab === 'Details' && (
           <div className="space-y-6 animate-fade-in">
             <div className="flex gap-4">
-              <div className="flex-1 space-y-2"><label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Release Date</label><input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} className="w-full bg-muted/40 hover:bg-muted/60 focus:bg-card rounded-xl px-4 py-3 text-foreground text-[14px] border border-border/80 outline-none transition-all" /></div>
-              <div className="flex-1 space-y-2"><label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5"><Clock size={12} /> Runtime (min)</label><input type="number" min="1" value={runtime} onChange={(e) => setRuntime(e.target.value ? Number(e.target.value) : '')} placeholder={currentIsEpisodic && episodes.length > 0 ? "Auto" : "e.g. 120"} className="w-full bg-muted/40 hover:bg-muted/60 focus:bg-card rounded-xl px-4 py-3 text-foreground text-[14px] border border-border/80 outline-none transition-all" /></div>
+              <div className="flex-1 space-y-2">
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Release Date</label>
+                <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} className="w-full bg-muted/40 hover:bg-muted/60 focus:bg-card rounded-xl px-4 py-3 text-foreground text-[14px] border border-border/80 outline-none transition-all" />
+              </div>
+              <div className="flex-1 space-y-2">
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5"><Clock size={12} /> Runtime (min)</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={runtime}
+                  onChange={(e) => setRuntime(e.target.value ? Number(e.target.value) : '')}
+                  placeholder={currentIsEpisodic && episodes.length > 0 ? "Auto" : "e.g. 120"}
+                  readOnly={currentIsEpisodic && episodes.length > 0}
+                  disabled={currentIsEpisodic && episodes.length > 0}
+                  className={`w-full hover:bg-muted/60 focus:bg-card rounded-xl px-4 py-3 text-foreground text-[14px] border border-border/80 outline-none transition-all ${currentIsEpisodic && episodes.length > 0 ? 'bg-muted/50 text-muted-foreground cursor-not-allowed' : 'bg-muted/40'}`}
+                />
+              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 items-center">
@@ -352,123 +374,187 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
         {formTab === 'Episodes' && currentIsEpisodic && (
           <div className="flex flex-col h-full animate-fade-in space-y-4">
             <div className="flex gap-3 shrink-0">
-              <div className="flex-1 space-y-1.5"><label className="text-[10px] text-muted-foreground font-semibold">Total Eps</label><input type="number" min="1" value={episodesTotal} onChange={(e) => setEpisodesTotal(e.target.value ? Number(e.target.value) : '')} readOnly={episodes.length > 0} className={`w-full rounded-lg px-3 py-2 text-[13px] border border-border/80 outline-none ${episodes.length > 0 ? 'bg-muted/50 text-muted-foreground cursor-not-allowed' : 'bg-card'}`} title={episodes.length > 0 ? "Managed by Episode Tracker" : ""} /></div>
-              <div className="flex-1 space-y-1.5"><label className="text-[10px] text-muted-foreground font-semibold">Watched</label><input type="number" min="0" value={episodesWatched} onChange={(e) => setEpisodesWatched(e.target.value ? Number(e.target.value) : '')} className="w-full bg-card rounded-lg px-3 py-2 text-[13px] border border-border/80 outline-none" /></div>
-              <div className="flex-1 space-y-1.5"><label className="text-[10px] text-muted-foreground font-semibold">Seasons</label><input type="number" min="1" value={seasonsCount} onChange={(e) => setSeasonsCount(e.target.value ? Number(e.target.value) : '')} readOnly={episodes.length > 0} className={`w-full rounded-lg px-3 py-2 text-[13px] border border-border/80 outline-none ${episodes.length > 0 ? 'bg-muted/50 text-muted-foreground cursor-not-allowed' : 'bg-card'}`} title={episodes.length > 0 ? "Managed by Episode Tracker" : ""} /></div>
+              <div className="flex-1 space-y-1.5">
+                <label className="text-[10px] text-muted-foreground font-semibold">Total Eps</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={episodesTotal}
+                  onChange={(e) => setEpisodesTotal(e.target.value ? Number(e.target.value) : '')}
+                  readOnly={episodes.length > 0}
+                  disabled={episodes.length > 0}
+                  className={`w-full rounded-lg px-3 py-2 text-[13px] border border-border/80 outline-none ${episodes.length > 0 ? 'bg-muted/50 text-muted-foreground cursor-not-allowed' : 'bg-card'}`}
+                  title={episodes.length > 0 ? "Managed by Episode Tracker" : ""}
+                />
+              </div>
+              <div className="flex-1 space-y-1.5">
+                <label className="text-[10px] text-muted-foreground font-semibold">Watched</label>
+                <input type="number" min="0" value={episodesWatched} onChange={(e) => setEpisodesWatched(e.target.value ? Number(e.target.value) : '')} className="w-full bg-card rounded-lg px-3 py-2 text-[13px] border border-border/80 outline-none" />
+              </div>
+              <div className="flex-1 space-y-1.5">
+                <label className="text-[10px] text-muted-foreground font-semibold">Seasons</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={seasonsCount}
+                  onChange={(e) => setSeasonsCount(e.target.value ? Number(e.target.value) : '')}
+                  readOnly={episodes.length > 0}
+                  disabled={episodes.length > 0}
+                  className={`w-full rounded-lg px-3 py-2 text-[13px] border border-border/80 outline-none ${episodes.length > 0 ? 'bg-muted/50 text-muted-foreground cursor-not-allowed' : 'bg-card'}`}
+                  title={episodes.length > 0 ? "Managed by Episode Tracker" : ""}
+                />
+              </div>
+              <div className="flex-1 space-y-1.5">
+                <label className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1"><Clock size={10} /> Total Time</label>
+                <input
+                  type="text"
+                  value={runtime ? `${runtime} m` : ''}
+                  readOnly
+                  disabled
+                  placeholder="0 m"
+                  className="w-full bg-muted/50 text-muted-foreground cursor-not-allowed rounded-lg px-3 py-2 text-[13px] border border-border/80 outline-none"
+                  title="Calculated from episodes"
+                />
+              </div>
             </div>
 
             {(() => {
               const availableSeasons = Array.from(new Set([...episodes.map(e => e.season || 1), activeSeasonTab])).sort((a, b) => a - b);
               const currentTab = activeSeasonTab;
               const seasonEpisodes = episodes.filter(e => e.season === currentTab);
-              
+
               const handleAddSingleEpisode = (season: number) => {
-                const newEps = [...episodes];
-                const sEps = newEps.filter(e => e.season === season);
-                const nextNumber = sEps.length > 0 ? Math.max(...sEps.map(e => e.number || 1)) + 1 : 1;
-                newEps.push({ name: `Episode ${nextNumber}`, season, number: nextNumber, runtime: undefined, airDate: '' });
-                setEpisodes(newEps);
+                setEpisodes(prev => {
+                  const sEps = prev.filter(e => e.season === season);
+                  const nextNumber = sEps.length > 0 ? Math.max(...sEps.map(e => e.number || 1)) + 1 : 1;
+                  return [...prev, { name: `Episode ${nextNumber}`, season, number: nextNumber, runtime: undefined, airDate: '' }];
+                });
               };
 
               const handleBulkGenerate = (season: number, count: number) => {
-                const newEps = [...episodes];
-                const sEps = newEps.filter(e => e.season === season);
-                let nextNumber = sEps.length > 0 ? Math.max(...sEps.map(e => e.number || 1)) + 1 : 1;
-                for(let i=0; i<count; i++) {
-                  newEps.push({ name: `Episode ${nextNumber}`, season, number: nextNumber, runtime: undefined, airDate: '' });
-                  nextNumber++;
-                }
-                setEpisodes(newEps);
+                setEpisodes(prev => {
+                  const sEps = prev.filter(e => e.season === season);
+                  let nextNumber = sEps.length > 0 ? Math.max(...sEps.map(e => e.number || 1)) + 1 : 1;
+                  const newEps: EpisodeInfo[] = [];
+                  for (let i = 0; i < count; i++) {
+                    newEps.push({ name: `Episode ${nextNumber}`, season, number: nextNumber, runtime: undefined, airDate: '' });
+                    nextNumber++;
+                  }
+                  return [...prev, ...newEps];
+                });
               };
 
               const handleDeleteEpisode = (idx: number) => {
-                const newEps = [...episodes];
-                newEps.splice(idx, 1);
-                setEpisodes(newEps);
+                setEpisodes(prev => prev.filter((_, i) => i !== idx));
               };
-              
+
               return (
-              <div className="border border-border/40 rounded-xl overflow-hidden bg-muted/10 shadow-sm flex flex-col flex-1 min-h-[300px]">
-                <div className="flex items-center gap-2 p-2 bg-muted/30 overflow-x-auto hide-scrollbar border-b border-border/40 shrink-0">
-                  {availableSeasons.map(s => (
-                    <button 
-                      key={s} 
-                      type="button" 
-                      onClick={() => setActiveSeasonTab(s)} 
-                      className={`px-4 py-1.5 text-[11px] font-bold rounded-xl transition-colors whitespace-nowrap cursor-pointer ${currentTab === s ? 'bg-primary text-white shadow-sm' : 'bg-muted border border-border/40 text-muted-foreground hover:bg-muted/80 hover:text-foreground'}`}
-                    >
-                      Season {s}
+                <div className="border border-border/40 rounded-xl overflow-hidden bg-muted/10 shadow-sm flex flex-col flex-1 min-h-[300px]">
+                  <div className="flex items-center gap-2 p-2 bg-muted/30 overflow-x-auto hide-scrollbar border-b border-border/40 shrink-0">
+                    {availableSeasons.map(s => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setActiveSeasonTab(s)}
+                        className={`px-4 py-1.5 text-[11px] font-bold rounded-xl transition-colors whitespace-nowrap cursor-pointer ${currentTab === s ? 'bg-primary text-white shadow-sm' : 'bg-muted border border-border/40 text-muted-foreground hover:bg-muted/80 hover:text-foreground'}`}
+                      >
+                        Season {s}
+                      </button>
+                    ))}
+                    <button type="button" onClick={() => {
+                      const maxS = Math.max(...availableSeasons);
+                      setActiveSeasonTab(maxS + 1);
+                    }} className="px-3 py-1.5 text-[11px] font-bold rounded-xl bg-transparent border border-dashed border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors whitespace-nowrap ml-2 cursor-pointer">
+                      + Add Season
                     </button>
-                  ))}
-                  <button type="button" onClick={() => {
-                    const maxS = Math.max(...availableSeasons);
-                    setActiveSeasonTab(maxS + 1);
-                  }} className="px-3 py-1.5 text-[11px] font-bold rounded-xl bg-transparent border border-dashed border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors whitespace-nowrap ml-2 cursor-pointer">
-                    + Add Season
-                  </button>
-                </div>
-                
-                <div className="flex-1 overflow-y-auto">
-                  {seasonEpisodes.length === 0 ? (
-                    <div className="h-full min-h-[250px] flex flex-col items-center justify-center p-6">
-                      <span className="text-muted-foreground text-[12px] mb-5 font-medium">No episodes in Season {currentTab}.</span>
-                      <div className="flex flex-col sm:flex-row gap-4 items-center">
-                        <button type="button" onClick={() => handleAddSingleEpisode(currentTab)} className="bg-primary/10 text-primary border border-primary/20 px-5 py-2.5 rounded-xl text-[12px] font-bold hover:bg-primary/20 transition-colors shadow-sm cursor-pointer">+ Add 1 Episode</button>
-                        <span className="text-muted-foreground/40 text-[10px] font-bold uppercase tracking-widest">OR</span>
-                        <div className="flex bg-card border border-border/80 rounded-xl overflow-hidden focus-within:border-primary/50 transition-colors shadow-sm h-10">
-                          <input id={`bulk-${currentTab}`} type="number" min="1" placeholder="Generate multiple..." className="w-36 px-4 py-2 text-[12px] bg-transparent outline-none font-medium" />
-                          <button type="button" onClick={() => {
-                            const input = document.getElementById(`bulk-${currentTab}`) as HTMLInputElement;
-                            const count = Number(input.value);
-                            if (count > 0) handleBulkGenerate(currentTab, count);
-                          }} className="bg-muted/80 px-4 text-[11px] font-bold border-l border-border/80 hover:bg-muted transition-colors text-foreground cursor-pointer">Generate</button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto">
+                    {seasonEpisodes.length === 0 ? (
+                      <div className="h-full min-h-[250px] flex flex-col items-center justify-center p-6">
+                        <span className="text-muted-foreground text-[12px] mb-5 font-medium">No episodes in Season {currentTab}.</span>
+                        <div className="flex flex-col sm:flex-row gap-4 items-center">
+                          <button type="button" onClick={() => handleAddSingleEpisode(currentTab)} className="bg-primary/10 text-primary border border-primary/20 px-5 py-2.5 rounded-xl text-[12px] font-bold hover:bg-primary/20 transition-colors shadow-sm cursor-pointer">+ Add 1 Episode</button>
+                          <span className="text-muted-foreground/40 text-[10px] font-bold uppercase tracking-widest">OR</span>
+                          <div className="flex bg-card border border-border/80 rounded-xl overflow-hidden focus-within:border-primary/50 transition-colors shadow-sm h-10">
+                            <input id={`bulk-${currentTab}`} type="number" min="1" placeholder="Generate multiple..." className="w-36 px-4 py-2 text-[12px] bg-transparent outline-none font-medium" />
+                            <button type="button" onClick={() => {
+                              const input = document.getElementById(`bulk-${currentTab}`) as HTMLInputElement;
+                              const count = Number(input.value);
+                              if (count > 0) handleBulkGenerate(currentTab, count);
+                            }} className="bg-muted/80 px-4 text-[11px] font-bold border-l border-border/80 hover:bg-muted transition-colors text-foreground cursor-pointer">Generate</button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-2 p-3 min-w-[500px]">
-                      <div className="flex px-3 pb-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                        <div className="w-10 text-center">Ep</div>
-                        <div className="flex-1 ml-2">Title</div>
-                        <div className="w-20 text-center">Time (m)</div>
-                        <div className="w-[110px] pl-2">Air Date</div>
-                        <div className="w-8"></div>
-                      </div>
-                      {episodes.map((ep, idx) => {
-                        if (ep.season !== currentTab) return null;
-                        return (
-                          <div key={idx} className="flex items-center gap-3 bg-card border border-border/40 rounded-xl p-2 hover:border-primary/30 transition-colors group">
-                            <div className="w-10 text-[11px] font-bold text-muted-foreground font-mono flex-shrink-0 text-center bg-muted/50 rounded-md py-1.5 cursor-default">
-                              {ep.number || 1}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <input type="text" value={ep.name} onChange={(e) => { const n = [...episodes]; n[idx].name = e.target.value; setEpisodes(n); }} className="w-full bg-transparent border-none outline-none focus:text-primary transition-colors font-medium text-[13px] px-2 py-1 placeholder:text-muted-foreground/30" placeholder="Episode Title" />
-                            </div>
-                            <div className="w-20 flex-shrink-0">
-                              <div className="flex items-center gap-1 bg-muted/30 rounded-lg px-2 py-1.5 focus-within:bg-card focus-within:border-primary/40 border border-transparent transition-colors">
-                                <Clock size={10} className="text-muted-foreground shrink-0" />
-                                <input type="number" min="1" value={ep.runtime || ''} onChange={(e) => { const n = [...episodes]; n[idx].runtime = e.target.value ? Number(e.target.value) : undefined; setEpisodes(n); }} placeholder="Auto" className="w-full bg-transparent border-none outline-none text-[11px] text-center" />
+                    ) : (
+                      <div className="flex flex-col gap-2 p-3 min-w-[500px]">
+                        <div className="flex px-3 pb-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                          <div className="w-10 text-center">Ep</div>
+                          <div className="flex-1 ml-2">Title</div>
+                          <div className="w-20 text-center">Time (m)</div>
+                          <div className="w-[110px] pl-2">Air Date</div>
+                          <div className="w-8"></div>
+                        </div>
+                        {episodes.map((ep, idx) => {
+                          if (ep.season !== currentTab) return null;
+                          return (
+                            <div key={idx} className="flex items-center gap-3 bg-card border border-border/40 rounded-xl p-2 hover:border-primary/30 transition-colors group">
+                              <div className="w-10 text-[11px] font-bold text-muted-foreground font-mono flex-shrink-0 text-center bg-muted/50 rounded-md py-1.5 cursor-default">
+                                {ep.number || 1}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <input
+                                  type="text"
+                                  value={ep.name}
+                                  onChange={(e) => {
+                                    setEpisodes(prev => prev.map((item, i) => i === idx ? { ...item, name: e.target.value } : item));
+                                  }}
+                                  className="w-full bg-transparent border-none outline-none focus:text-primary transition-colors font-medium text-[13px] px-2 py-1 placeholder:text-muted-foreground/30"
+                                  placeholder="Episode Title"
+                                />
+                              </div>
+                              <div className="w-20 flex-shrink-0">
+                                <div className="flex items-center gap-1 bg-muted/30 rounded-lg px-2 py-1.5 focus-within:bg-card focus-within:border-primary/40 border border-transparent transition-colors">
+                                  <Clock size={10} className="text-muted-foreground shrink-0" />
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={ep.runtime || ''}
+                                    onChange={(e) => {
+                                      setEpisodes(prev => prev.map((item, i) => i === idx ? { ...item, runtime: e.target.value ? Number(e.target.value) : undefined } : item));
+                                    }}
+                                    placeholder="Auto"
+                                    className="w-full bg-transparent border-none outline-none text-[11px] text-center"
+                                  />
+                                </div>
+                              </div>
+                              <div className="w-[110px] flex-shrink-0">
+                                <input
+                                  type="date"
+                                  value={ep.airDate || ''}
+                                  onChange={(e) => {
+                                    setEpisodes(prev => prev.map((item, i) => i === idx ? { ...item, airDate: e.target.value } : item));
+                                  }}
+                                  className="w-full bg-muted/30 hover:bg-muted/50 border-none outline-none text-muted-foreground text-[10px] rounded-lg px-2 py-1.5 transition-colors cursor-pointer"
+                                />
+                              </div>
+                              <div className="w-8 flex-shrink-0 flex justify-end">
+                                <button type="button" onClick={() => handleDeleteEpisode(idx)} className="text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all cursor-pointer p-1.5 rounded-md hover:bg-red-500/10">
+                                  <X size={14} />
+                                </button>
                               </div>
                             </div>
-                            <div className="w-[110px] flex-shrink-0">
-                              <input type="date" value={ep.airDate || ''} onChange={(e) => { const n = [...episodes]; n[idx].airDate = e.target.value; setEpisodes(n); }} className="w-full bg-muted/30 hover:bg-muted/50 border-none outline-none text-muted-foreground text-[10px] rounded-lg px-2 py-1.5 transition-colors cursor-pointer" />
-                            </div>
-                            <div className="w-8 flex-shrink-0 flex justify-end">
-                              <button type="button" onClick={() => handleDeleteEpisode(idx)} className="text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all cursor-pointer p-1.5 rounded-md hover:bg-red-500/10">
-                                <X size={14} />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      <button type="button" onClick={() => handleAddSingleEpisode(currentTab)} className="mt-1 w-full py-2.5 border-2 border-dashed border-border/60 rounded-xl text-muted-foreground font-bold text-[12px] hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
-                        <ListPlus size={14} /> Add Episode
-                      </button>
-                    </div>
-                  )}
+                          );
+                        })}
+                        <button type="button" onClick={() => handleAddSingleEpisode(currentTab)} className="mt-1 w-full py-2.5 border-2 border-dashed border-border/60 rounded-xl text-muted-foreground font-bold text-[12px] hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+                          <ListPlus size={14} /> Add Episode
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );})()}
+              );
+            })()}
           </div>
         )}
       </form>

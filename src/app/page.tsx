@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useMedia } from '@/hooks/useMedia';
 import { MediaCard } from '@/components/MediaCard';
 import { MediaDetailModal } from '@/components/MediaDetailModal';
-import { Plus, Film, X, Heart, Shuffle, SlidersHorizontal, RefreshCw, Search } from 'lucide-react';
+import { Plus, Film, X, Heart, Shuffle, SlidersHorizontal, Search } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MediaEntry, isEpisodic } from '@/lib/db';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
@@ -19,7 +19,6 @@ function DashboardContent() {
   const typeParam = searchParams.get('type') as 'All' | 'Movie' | 'Series' | 'Anime' | null;
 
   const [selectedEntry, setSelectedEntry] = useState<MediaEntry | null>(null);
-
   const [filter, setFilter] = useState<'All' | 'Movie' | 'Series' | 'Anime'>(typeParam || 'All');
 
   useEffect(() => {
@@ -29,6 +28,7 @@ function DashboardContent() {
       setFilter('All');
     }
   }, [typeParam]);
+
   const [statusFilter, setStatusFilter] = useState<'All' | 'Completed' | 'Watching' | 'Plan to Watch'>('All');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [selectedGenreFilter, setSelectedGenreFilter] = useState<string | null>(null);
@@ -56,7 +56,6 @@ function DashboardContent() {
       .slice(0, 10);
   }, [entries]);
 
-  // Derive used genres purely from normalized IDs
   const usedGenresList = useMemo(() => {
     const usedGenreIds = new Set<string>();
     entries.forEach(e => (e.genreIds || []).forEach(id => usedGenreIds.add(id)));
@@ -110,7 +109,7 @@ function DashboardContent() {
     if (total && nextWatched >= total) {
       const updated = { ...entry, episodesWatched: total, status: 'Completed' as const };
       updateEntry(updated);
-      router.push(`/edit/${entry.id}`); // Open Edit page to rate immediately
+      router.push(`/edit/${entry.id}`);
     } else {
       const updated = { ...entry, episodesWatched: nextWatched, status: entry.status === 'Plan to Watch' ? ('Watching' as const) : entry.status };
       updateEntry(updated);
@@ -128,8 +127,9 @@ function DashboardContent() {
         </header>
         <div className="flex-1 px-4 sm:px-6 py-8 max-w-7xl mx-auto w-full">
           <div className="w-48 h-3 skeleton mb-8" />
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
+          {/* Portrait Skeleton Grid */}
+          <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4 lg:gap-5">
+            {Array.from({ length: 14 }).map((_, i) => (
               <div key={i} className="aspect-[2/3] skeleton rounded-2xl" />
             ))}
           </div>
@@ -156,7 +156,7 @@ function DashboardContent() {
               )}
             </AnimatePresence>
           </div>
-          
+
           <div className="flex-1 max-w-md relative hidden sm:block mx-4">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
             <input type="text" placeholder="Search titles..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-muted/30 focus:bg-muted/50 rounded-xl px-4 py-1.5 pl-9 text-[13px] placeholder:text-muted-foreground/60 border border-border/40 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all" />
@@ -168,7 +168,7 @@ function DashboardContent() {
             <Link href="/add" className="flex items-center justify-center w-9 h-9 rounded-xl border border-border bg-card hover:bg-card-hover text-foreground transition-all active:scale-95 cursor-pointer animate-fade-in"><Plus size={18} strokeWidth={2} /></Link>
           </div>
         </div>
-        
+
         {/* Mobile Search Bar */}
         <div className="sm:hidden px-4 pb-2">
           <div className="relative w-full">
@@ -179,7 +179,7 @@ function DashboardContent() {
         </div>
       </header>
 
-      <div className="flex-1 px-3 sm:px-6 py-4 sm:py-6 max-w-7xl mx-auto w-full space-y-4 sm:space-y-6 animate-fade-up">
+      <div className="flex-1 px-3 sm:px-6 py-4 sm:py-6 max-w-[1600px] mx-auto w-full space-y-6 sm:space-y-8 animate-fade-up">
         {entries.length > 0 && (
           <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground font-medium">
             <span>{movies.length} movies</span><span className="text-border">·</span>
@@ -261,15 +261,15 @@ function DashboardContent() {
           </div>
         )}
 
-        {/* Lists */}
+        {/* Horizontal scroll list for 'Recently Added' */}
         {recentEntries.length > 0 && !searchQuery && sortBy === 'date-desc' && filter === 'All' && statusFilter === 'All' && !showFavoritesOnly && !selectedGenreFilter && (
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-[14px] font-bold tracking-tight text-muted-foreground uppercase">Recently Added</h2>
             </div>
-            <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1 -mx-1 px-1">
+            <div className="flex gap-3 sm:gap-4 lg:gap-5 overflow-x-auto hide-scrollbar pb-2 -mx-1 px-1">
               {recentEntries.map((entry, i) => (
-                <div key={entry.id} className="w-[100px] xs:w-[115px] sm:w-[150px] shrink-0">
+                <div key={entry.id} className="w-[120px] xs:w-[130px] sm:w-[150px] shrink-0">
                   <MediaCard entry={entry} onClick={() => setSelectedEntry(entry)} onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })} onIncrementWatched={(e) => handleIncrementWatched(entry, e)} index={i} />
                 </div>
               ))}
@@ -277,9 +277,16 @@ function DashboardContent() {
           </section>
         )}
 
+        {/* Main Grid View */}
         {entries.length > 0 && (
-          <section className="space-y-4">
-            <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-2 sm:gap-4">
+          <section className="space-y-4 pb-12">
+            <div className="flex items-center justify-between">
+              <h2 className="text-[14px] font-bold tracking-tight text-muted-foreground uppercase">
+                {searchQuery ? 'Search Results' : 'Your Collection'}
+              </h2>
+            </div>
+            {/* The exact grid layout logic as before */}
+            <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4 lg:gap-5">
               <AnimatePresence>
                 {sortedEntries.map((entry, i) => (
                   <MediaCard key={entry.id} entry={entry} onClick={() => setSelectedEntry(entry)} onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })} onIncrementWatched={(e) => handleIncrementWatched(entry, e)} index={i} />
