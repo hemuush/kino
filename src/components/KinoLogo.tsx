@@ -1,23 +1,27 @@
 "use client";
 
-import Image from "next/image";
+import { Film } from "lucide-react";
 
 interface KinoLogoProps {
   size?: number;
   className?: string;
+  showText?: boolean;
 }
 
-export function KinoLogo({ size = 32, className = "" }: KinoLogoProps) {
+export function KinoLogo({ size = 32, className = "", showText = true }: KinoLogoProps) {
   return (
-    <div 
-      className={`relative rounded-xl overflow-hidden flex-shrink-0 shadow-sm ${className}`}
-      style={{ width: size, height: size }}
-    >
-      <img 
-        src="/logo.png" 
-        alt="Kino Logo" 
-        className="w-full h-full object-cover"
-      />
+    <div className={`flex items-center gap-3 ${className}`}>
+      <div 
+        className="relative rounded-[10px] overflow-hidden flex-shrink-0 bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20"
+        style={{ width: size, height: size }}
+      >
+        <Film size={size * 0.55} className="text-white drop-shadow-md" />
+      </div>
+      {showText && (
+        <span className="font-display font-extrabold tracking-tight text-[22px] text-foreground">
+          Kino
+        </span>
+      )}
     </div>
   );
 }

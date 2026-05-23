@@ -5,6 +5,7 @@ import { MediaType, WatchStatus, AnimeType, EpisodeInfo, MediaEntry, Tag, isEpis
 import { X, Check, Image as ImageIcon, Star, Heart, Upload, Clock, Film, ListPlus, Search, FolderPen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMedia } from '@/hooks/useMedia';
+import { toast } from 'sonner';
 
 interface MediaFormProps {
   onCancel: () => void;
@@ -16,7 +17,7 @@ const mediaTypes = ['Movie', 'TV Show', 'Anime'];
 const statuses = ['Completed', 'Watching', 'Plan to Watch'];
 
 export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
-  const { genres: dbGenres, franchises: dbFranchises, setGenres, setFranchises } = useMedia();
+  const { entries, genres: dbGenres, franchises: dbFranchises, setGenres, setFranchises } = useMedia();
   const isEditMode = !!initialData;
 
   const [title, setTitle] = useState(initialData?.title || '');
@@ -152,6 +153,17 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
     e.preventDefault();
     if (!title.trim() || isSaving) return;
     setIsSaving(true);
+
+    if (!isEditMode) {
+      const duplicate = entries.find(e => e.title.toLowerCase() === title.trim().toLowerCase() && e.type === type);
+      if (duplicate) {
+        toast.error(`"${title.trim()}" already exists.`, {
+          description: "You can edit the existing entry instead.",
+        });
+        setIsSaving(false);
+        return;
+      }
+    }
 
     const totalEps = episodesTotal === '' ? undefined : Number(episodesTotal);
 

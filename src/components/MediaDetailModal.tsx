@@ -30,6 +30,14 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
   const [newEpRuntime, setNewEpRuntime] = useState<number | ''>('');
   const [newEpDate, setNewEpDate] = useState('');
 
+  const [hoveredStar, setHoveredStar] = useState<number | null>(null);
+  const [isEditingReview, setIsEditingReview] = useState(false);
+  const [reviewText, setReviewText] = useState(entry.review || '');
+
+  useEffect(() => {
+    setReviewText(entry.review || '');
+  }, [entry.review]);
+
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
@@ -115,7 +123,12 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
       <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center text-foreground">
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
 
-        <motion.div initial={{ opacity: 0, y: 80, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 80, scale: 0.95 }} className="relative w-full max-w-2xl md:max-w-4xl lg:max-w-5xl h-[85vh] sm:h-[85vh] bg-card rounded-t-[28px] sm:rounded-2xl overflow-hidden z-[101] flex flex-col shadow-2xl border border-border/80">
+        <motion.div 
+          initial={{ opacity: 0, y: 80, scale: 0.95 }} 
+          animate={{ opacity: 1, y: 0, scale: 1 }} 
+          exit={{ opacity: 0, y: 80, scale: 0.95 }} 
+          className={`relative w-full ${currentIsEpisodic ? 'max-w-2xl md:max-w-4xl lg:max-w-5xl' : 'max-w-2xl'} h-[85vh] sm:h-[85vh] bg-card rounded-t-[28px] sm:rounded-2xl overflow-hidden z-[101] flex flex-col shadow-2xl border border-border/80`}
+        >
 
           {entry.coverImage && <div className="absolute inset-0 h-[300px] overflow-hidden -z-10 pointer-events-none opacity-[0.06] blur-3xl"><img src={entry.coverImage} className="w-full h-full object-cover scale-150" /></div>}
 
@@ -226,25 +239,116 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                       </div>
                     )}
 
-                    {/* Rating Component */}
-                    {(entry.status === 'Completed' || (entry.rating && entry.rating > 0)) && (
+                    {/* Quick Watch Status Selector */}
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[10px] font-bold tracking-[0.1em] text-muted-foreground/75 uppercase block">Watch Status</span>
+                      <div className="flex bg-muted/60 p-1 rounded-xl border border-border/40 w-fit gap-1">
+                        {(['Plan to Watch', 'Watching', 'Completed'] as const).map((status) => {
+                          const isActive = entry.status === status;
+                          return (
+                            <button
+                              key={status}
+                              type="button"
+                              onClick={async () => {
+                                let updated = { ...entry, status };
+                                if (status === 'Completed' && isEpisodic(entry) && entry.episodesTotal) {
+                                  updated.episodesWatched = entry.episodesTotal;
+                                }
+                                await onSave(updated);
+                              }}
+                              className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                                isActive
+                                  ? 'bg-primary text-white shadow-sm'
+                                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                              }`}
+                            >
+                              {status}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Interactive Rating Component */}
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[10px] font-bold tracking-[0.1em] text-muted-foreground/75 uppercase block">Rating</span>
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-0.5">
                           {Array.from({ length: 10 }, (_, i) => i + 1).map((val) => (
-                            <Star key={val} size={16} className={val <= (entry.rating || 0) ? 'text-amber-400 fill-amber-400' : 'text-muted-foreground/20'} />
+                            <button
+                              key={val}
+                              type="button"
+                              onMouseEnter={() => setHoveredStar(val)}
+                              onMouseLeave={() => setHoveredStar(null)}
+                              onClick={async () => {
+                                await onSave({ ...entry, rating: val });
+                              }}
+                              className="cursor-pointer transition-transform active:scale-90 hover:scale-110"
+                            >
+                              <Star 
+                                size={18} 
+                                className={val <= (hoveredStar !== null ? hoveredStar : (entry.rating || 0)) ? 'text-amber-405 fill-amber-400 text-amber-400' : 'text-muted-foreground/20'} 
+                              />
+                            </button>
                           ))}
                         </div>
                         <span className="text-[14px] font-extrabold text-amber-500 font-display">{(entry.rating || 0)}/10</span>
                       </div>
-                    )}
+                    </div>
 
-                    {/* Review Component */}
+                    {/* Inline Review Note Component */}
                     <div>
-                      <span className="text-[10px] font-bold tracking-[0.1em] text-muted-foreground/75 uppercase mb-2 block">Review</span>
-                      <div className="bg-muted/20 border border-border/40 rounded-2xl p-5 text-[13px] leading-relaxed relative group min-h-[100px]">
-                        {entry.review || <em className="text-muted-foreground/50">No review added.</em>}
-                        <button onClick={() => { onClose(); router.push(`/edit/${entry.id}`); }} className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 flex items-center gap-1 px-3 py-1.5 bg-muted/80 text-[10px] font-bold rounded-lg transition-all cursor-pointer"><Edit2 size={10} /> Edit</button>
-                      </div>
+                      <span className="text-[10px] font-bold tracking-[0.1em] text-muted-foreground/75 uppercase mb-2 block">Review / Personal Note</span>
+                      {isEditingReview ? (
+                        <div className="space-y-3">
+                          <textarea
+                            value={reviewText}
+                            onChange={(e) => setReviewText(e.target.value)}
+                            placeholder="Write your review, rating thoughts or personal notes here..."
+                            className="w-full bg-muted/20 border border-border/60 rounded-2xl p-4 text-[13px] outline-none focus:border-primary transition-colors min-h-[100px] resize-y text-foreground"
+                          />
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsEditingReview(false);
+                                setReviewText(entry.review || '');
+                              }}
+                              className="px-3.5 py-1.5 text-[11px] font-bold rounded-lg border border-border/60 text-muted-foreground hover:text-foreground cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await onSave({ ...entry, review: reviewText.trim() || undefined });
+                                setIsEditingReview(false);
+                              }}
+                              className="px-3.5 py-1.5 text-[11px] font-bold rounded-lg bg-primary text-white cursor-pointer"
+                            >
+                              Save Note
+                            </button>
+                          </div>
+                        </div>
+                      ) : entry.review ? (
+                        <div className="bg-muted/20 border border-border/40 rounded-2xl p-5 text-[13px] leading-relaxed relative group min-h-[100px]">
+                          {entry.review}
+                          <button
+                            onClick={() => setIsEditingReview(true)}
+                            className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 flex items-center gap-1 px-3 py-1.5 bg-muted/80 text-[10px] font-bold rounded-lg transition-all cursor-pointer border border-border/40 text-foreground"
+                          >
+                            <Edit2 size={10} /> Edit
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setIsEditingReview(true)}
+                          className="w-full py-6 border border-dashed border-border/60 hover:border-primary/45 rounded-2xl text-center text-muted-foreground hover:text-primary transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer bg-muted/5"
+                        >
+                          <Plus size={16} />
+                          <span className="text-[12.5px] font-semibold">Add a personal note or review</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}

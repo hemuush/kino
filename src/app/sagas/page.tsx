@@ -1,193 +1,381 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useMedia } from '@/hooks/useMedia';
-import { MediaCard } from '@/components/MediaCard';
 import { MediaDetailModal } from '@/components/MediaDetailModal';
 import { MediaEntry } from '@/lib/db';
-import { Film, Edit2, Save, X, Plus, ChevronDown } from 'lucide-react';
+import { Film, Plus, Shuffle, ListFilter, Search, Star, Calendar, Clock, Tag, Orbit, HelpCircle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 
 export default function SagasPage() {
-  const { entries, franchises, updateEntry, deleteEntry, setFranchises } = useMedia();
+  const { entries, franchises, updateEntry, deleteEntry } = useMedia();
   const [selectedEntry, setSelectedEntry] = useState<MediaEntry | null>(null);
-  const [editingFranchiseId, setEditingFranchiseId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editCoverImage, setEditCoverImage] = useState('');
-  const [expandedFranchiseId, setExpandedFranchiseId] = useState<string | null>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
 
-  const toggleExpand = (id: string) => {
-    setExpandedFranchiseId(prev => prev === id ? null : id);
+  // Search query for sagas (helps filter list if there are 1000+ sagas)
+  const [sagaSearchQuery, setSagaSearchQuery] = useState('');
+
+  // Track focused franchise ID
+  const [activeFranchiseId, setActiveFranchiseId] = useState<string | number>('');
+  // Track active entry inside the focused franchise
+  const [activeEntryId, setActiveEntryId] = useState<string | number | undefined>('');
+
+  // Filter franchises based on search query
+  const filteredFranchises = useMemo(() => {
+    if (!sagaSearchQuery.trim()) return franchises;
+    return franchises.filter(f => 
+      f.name.toLowerCase().includes(sagaSearchQuery.toLowerCase().trim())
+    );
+  }, [franchises, sagaSearchQuery]);
+
+  // Set default active franchise on load or when list changes
+  useEffect(() => {
+    if (filteredFranchises.length > 0) {
+      if (!activeFranchiseId || !filteredFranchises.some(f => f.id === activeFranchiseId)) {
+        setActiveFranchiseId(filteredFranchises[0].id);
+      }
+    } else {
+      setActiveFranchiseId('');
+    }
+  }, [filteredFranchises, activeFranchiseId]);
+
+  // Map coordinates dynamically in a spiral layout on the constellation map
+  const franchiseCoordinates = useMemo(() => {
+    return filteredFranchises.map((fr, idx) => {
+      // Spiral positioning formula
+      const angle = idx * 0.95;
+      const radius = 70 + idx * 22;
+      
+      const x = 50 + (radius / 7.5) * Math.cos(angle);
+      const y = 50 + (radius / 11) * Math.sin(angle);
+
+      // Count actual database entries for this franchise
+      const count = entries.filter(e => e.franchiseId === fr.id).length;
+
+      return {
+        ...fr,
+        x: Math.max(12, Math.min(88, x)),
+        y: Math.max(12, Math.min(88, y)),
+        count
+      };
+    });
+  }, [filteredFranchises, entries]);
+
+  // Get actual database entries for the focused franchise
+  const activeSagaEntries = useMemo(() => {
+    if (!activeFranchiseId) return [];
+    return entries.filter(e => e.franchiseId === activeFranchiseId);
+  }, [activeFranchiseId, entries]);
+
+  // Sort chronological entries for timeline
+  const sortedActiveEntries = useMemo(() => {
+    return [...activeSagaEntries].sort((a, b) => {
+      const dateA = a.releaseDate ? new Date(a.releaseDate).getTime() : 0;
+      const dateB = b.releaseDate ? new Date(b.releaseDate).getTime() : 0;
+      return dateA - dateB;
+    });
+  }, [activeSagaEntries]);
+
+  // Handle active entry selection
+  useEffect(() => {
+    if (sortedActiveEntries.length > 0) {
+      if (!activeEntryId || !sortedActiveEntries.some(e => e.id === activeEntryId)) {
+        setActiveEntryId(sortedActiveEntries[0].id);
+      }
+    } else {
+      setActiveEntryId('');
+    }
+  }, [sortedActiveEntries, activeEntryId]);
+
+  const activeEntry = useMemo(() => {
+    return sortedActiveEntries.find(e => e.id === activeEntryId) || sortedActiveEntries[0];
+  }, [sortedActiveEntries, activeEntryId]);
+
+  const activeEntryIndex = useMemo(() => {
+    return sortedActiveEntries.findIndex(e => e.id === activeEntryId);
+  }, [sortedActiveEntries, activeEntryId]);
+
+  // Ambient stars backdrop
+  const starsList = useMemo(() => {
+    return Array.from({ length: 50 }).map((_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 1.8 + 0.8,
+      opacity: Math.random() * 0.6 + 0.3
+    }));
+  }, []);
+
+  const getPhaseName = (idx: number) => {
+    if (idx < 2) return "PHASE I: THE GENESIS";
+    if (idx < 4) return "PHASE II: EXPANSION";
+    return "PHASE III: LEGENDS";
   };
 
-  const handleStartEdit = (franchise: any) => {
-    setEditingFranchiseId(franchise.id);
-    setEditName(franchise.name);
-    setEditCoverImage(franchise.coverImage || '');
-  };
-
-  const handleSaveEdit = () => {
-    if (!editName.trim() || !editingFranchiseId) return;
-    const newFranchises = franchises.map(f => f.id === editingFranchiseId ? { ...f, name: editName.trim(), coverImage: editCoverImage } : f);
-    setFranchises(newFranchises);
-    setEditingFranchiseId(null);
+  const handlePickRandom = () => {
+    if (sortedActiveEntries.length > 0) {
+      const random = sortedActiveEntries[Math.floor(Math.random() * sortedActiveEntries.length)];
+      setActiveEntryId(random.id);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20 sm:pb-8 pt-8 px-4 sm:px-8 max-w-7xl mx-auto">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-12 h-12 bg-primary/20 text-primary rounded-2xl flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.2)] glass">
-          <Film size={24} />
-        </div>
+    <div className="min-h-screen bg-background pb-20 sm:pb-8 pt-6 sm:pt-8 px-4 sm:px-8 max-w-[1600px] mx-auto animate-fade-in text-left">
+      
+      {/* Sagas Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold font-display tracking-tight text-foreground">Sagas</h1>
           <p className="text-muted-foreground text-sm font-semibold">Your cinematic universes and collections.</p>
         </div>
+        
+        {/* Actions bar */}
+        <div className="flex flex-wrap items-center gap-3">
+          <button 
+            onClick={handlePickRandom}
+            disabled={sortedActiveEntries.length === 0}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-neutral-900/60 dark:bg-neutral-950/65 hover:bg-neutral-800 text-foreground font-semibold text-[12.5px] border border-white/5 transition-colors cursor-pointer disabled:opacity-40"
+          >
+            <Shuffle size={13} className="text-amber-500" /> Pick Random Watch
+          </button>
+          <Link 
+            href="/collection"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-neutral-900/60 dark:bg-neutral-950/65 hover:bg-neutral-800 text-foreground font-semibold text-[12.5px] border border-white/5 transition-colors cursor-pointer"
+          >
+            <ListFilter size={13} className="text-cyan-400" /> Collection Filters
+          </Link>
+          <Link 
+            href="/add"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-[13px] transition-all shadow-sm cursor-pointer"
+          >
+            <Plus size={15} strokeWidth={2.5} /> Add Media
+          </Link>
+        </div>
       </div>
 
-      <div className="space-y-6">
-        {franchises.length === 0 ? (
-          <div className="text-center py-20 bg-card glass border border-border/40 rounded-3xl">
-            <Film size={48} className="mx-auto mb-4 text-muted-foreground/30" strokeWidth={1} />
-            <h3 className="text-xl font-bold font-display mb-2">No Sagas Yet</h3>
-            <p className="text-muted-foreground text-sm">Add a saga while adding media to see your collections here.</p>
+      {franchises.length === 0 ? (
+        /* Empty State */
+        <div className="flex flex-col items-center justify-center py-32 bg-neutral-900/40 dark:bg-neutral-950/45 border border-white/5 rounded-[36px] text-center max-w-2xl mx-auto px-6">
+          <div className="w-16 h-16 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-full flex items-center justify-center mb-6">
+            <Film size={28} />
           </div>
-        ) : (
-          franchises.map(franchise => {
-            const sagaEntries = entries.filter(e => e.franchiseId === franchise.id);
-            const sortedSagaEntries = [...sagaEntries].sort((a, b) => {
-              const dateA = a.releaseDate ? new Date(a.releaseDate).getTime() : 0;
-              const dateB = b.releaseDate ? new Date(b.releaseDate).getTime() : 0;
-              return dateA - dateB;
-            });
+          <h3 className="text-xl font-bold text-white mb-2">No Sagas Found</h3>
+          <p className="text-muted-foreground text-sm max-w-md leading-relaxed mb-8">
+            You haven't logged any sagas yet. To build a saga universe, add or edit media entries in your collection and assign them a Franchise/Saga.
+          </p>
+          <Link 
+            href="/add"
+            className="bg-primary hover:bg-primary/95 text-white px-6 py-2.5 rounded-full font-semibold text-[13px] shadow-sm transition-all flex items-center gap-2"
+          >
+            <Plus size={15} strokeWidth={2.5} /> Add Media & Create Saga
+          </Link>
+        </div>
+      ) : (
+        <>
+          {/* Galaxy Map Arena (Draggable Star Constellation Graph) */}
+          <div 
+            ref={mapRef}
+            className="relative w-full h-[580px] bg-black/95 dark:bg-black/98 rounded-[36px] overflow-hidden border border-white/5 shadow-[0_0_50px_rgba(0,0,0,0.8)] mb-10 select-none"
+          >
+            
+            {/* Constellation Star Background */}
+            <div className="absolute inset-0 pointer-events-none opacity-45">
+              {starsList.map((star) => (
+                <div 
+                  key={star.id}
+                  className="absolute bg-white rounded-full animate-pulse"
+                  style={{
+                    left: `${star.x}%`,
+                    top: `${star.y}%`,
+                    width: `${star.size}px`,
+                    height: `${star.size}px`,
+                    opacity: star.opacity,
+                    animationDuration: `${star.size * 2 + 1}s`
+                  }}
+                />
+              ))}
+            </div>
 
-            return (
-              <motion.div key={franchise.id} initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="group relative bg-card/40 glass border border-border/60 rounded-[28px] shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
+            {/* Constellation Search Overlay (Top Left, handles 1000+ Sagas list search) */}
+            <div className="absolute left-6 top-6 z-30 max-w-[280px] w-full">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input 
+                  type="text" 
+                  placeholder="Search or jump to saga..."
+                  value={sagaSearchQuery}
+                  onChange={(e) => setSagaSearchQuery(e.target.value)}
+                  className="w-full bg-neutral-900/80 dark:bg-neutral-950/90 text-white placeholder-muted-foreground/60 text-xs rounded-full py-2 pl-9 pr-8 border border-white/5 focus:border-cyan-400/40 outline-none backdrop-blur-xl transition-all text-left"
+                />
+                {sagaSearchQuery && (
+                  <button 
+                    onClick={() => setSagaSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Constellation Map Viewport */}
+            <div className="absolute inset-0 z-10">
+
+              {/* Saga Star Clusters (Peripheral / Galaxy systems scatter) - Draggable! */}
+              {franchiseCoordinates.map((fr) => {
+                const isFocused = fr.id === activeFranchiseId;
                 
-                {/* Saga Header Backdrop */}
-                <div className="absolute inset-0 w-full h-full opacity-[0.03] pointer-events-none group-hover:opacity-10 transition-opacity duration-500">
-                  {franchise.coverImage ? (
-                    <img src={franchise.coverImage} alt={franchise.name} className="w-full h-full object-cover blur-3xl scale-110" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-primary/40 to-transparent" />
-                  )}
-                </div>
+                // Nodes are scaled based on entry counts (more titles = bigger/brighter stars!)
+                const starSize = Math.max(32, Math.min(76, 26 + fr.count * 4.5));
+                const fontScale = Math.max(9, Math.min(13, 8.5 + fr.count * 0.4));
 
-                {/* Header Content */}
-                <div className="relative z-20 flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-border/20 bg-card/60 backdrop-blur-md">
-                  {editingFranchiseId === franchise.id ? (
-                    <div className="flex flex-col gap-3 w-full max-w-md bg-background/80 p-4 m-4 rounded-xl border border-border/40 backdrop-blur-md shadow-lg">
-                      <div className="flex gap-3">
-                        <input 
-                          type="text" 
-                          value={editName} 
-                          onChange={(e) => setEditName(e.target.value)} 
-                          autoFocus
-                          placeholder="Saga Name"
-                          className="flex-1 bg-muted/40 focus:bg-background border border-border/80 px-3 py-2 rounded-xl outline-none text-sm font-bold"
-                        />
-                        <button onClick={handleSaveEdit} className="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center hover:bg-primary/90 shadow-sm"><Save size={16} /></button>
-                        <button onClick={() => setEditingFranchiseId(null)} className="w-9 h-9 rounded-xl bg-muted text-muted-foreground flex items-center justify-center hover:bg-muted-hover"><X size={16} /></button>
-                      </div>
-                      <input 
-                        type="text" 
-                        value={editCoverImage} 
-                        onChange={(e) => setEditCoverImage(e.target.value)} 
-                        placeholder="Cover Image URL (Optional)"
-                        className="w-full bg-muted/40 focus:bg-background border border-border/80 px-3 py-2 rounded-xl outline-none text-xs"
-                      />
-                    </div>
-                  ) : (
+                return (
+                  <motion.div 
+                    key={fr.id}
+                    drag
+                    dragConstraints={mapRef}
+                    dragElastic={0.1}
+                    dragMomentum={false}
+                    onClick={() => {
+                      setActiveFranchiseId(fr.id);
+                      setActiveEntryId('');
+                    }}
+                    className="absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer flex flex-col items-center justify-center z-20 group"
+                    style={{
+                      left: `${fr.x}%`,
+                      top: `${fr.y}%`
+                    }}
+                  >
+                    {/* Glowing Constellation Node Aura */}
                     <div 
-                      onClick={() => sagaEntries.length > 0 && toggleExpand(franchise.id)}
-                      className={`flex w-full items-center justify-between p-4 sm:p-5 transition-colors ${sagaEntries.length > 0 ? 'cursor-pointer hover:bg-muted/10' : ''}`}
+                      className={`absolute rounded-full border transition-all duration-500 pointer-events-none ${isFocused ? 'border-cyan-400 bg-cyan-500/10 shadow-[0_0_25px_rgba(34,211,238,0.25)] scale-110' : 'border-white/5 group-hover:border-cyan-400/20 group-hover:scale-105'}`}
+                      style={{
+                        width: `${starSize + 20}px`,
+                        height: `${starSize + 20}px`
+                      }}
+                    />
+
+                    {/* Star Globe representation */}
+                    <div 
+                      className={`rounded-full flex flex-col items-center justify-center border transition-all duration-500 shadow-md ${isFocused ? 'bg-gradient-to-tr from-cyan-950 via-teal-900 to-cyan-400 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.3)]' : 'bg-neutral-900/90 dark:bg-neutral-950/90 border-white/10 group-hover:border-cyan-400/30'}`}
+                      style={{
+                        width: `${starSize}px`,
+                        height: `${starSize}px`
+                      }}
                     >
-                      <div className="flex items-center gap-4 flex-1 min-w-0">
-                        {franchise.coverImage ? (
-                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-[14px] overflow-hidden border border-border/40 shadow-sm shrink-0 transition-transform duration-500 group-hover:scale-105 group-hover:shadow-primary/20">
-                            <img src={franchise.coverImage} alt={franchise.name} className="w-full h-full object-cover" />
-                          </div>
-                        ) : (
-                          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-[14px] bg-gradient-to-br from-primary/20 via-primary/10 to-transparent flex items-center justify-center border border-primary/20 shadow-sm shrink-0 relative overflow-hidden">
-                            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full"></div>
-                            <Film size={20} className="text-primary relative z-10 drop-shadow-sm sm:w-6 sm:h-6" />
-                          </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <h2 className="text-lg sm:text-2xl font-black font-display text-foreground tracking-tight mb-1 truncate bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/70">{franchise.name}</h2>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[9px] sm:text-[10px] font-black tracking-[0.2em] text-primary bg-primary/10 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full uppercase border border-primary/20 backdrop-blur-md shadow-sm">
-                              {sagaEntries.length} {sagaEntries.length === 1 ? 'Entry' : 'Entries'}
-                            </span>
-                            {sagaEntries.length > 0 && (
-                              <span className="hidden sm:flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full border border-border/40 uppercase tracking-wider">
-                                Timeline
+                      <Orbit size={starSize * 0.4} className={`opacity-40 transition-transform duration-[6s] animate-spin ${isFocused ? 'text-cyan-400' : 'text-muted-foreground'}`} />
+                    </div>
+
+                    {/* Styled Star / Saga Text Emblem */}
+                    <span 
+                      className={`mt-2.5 font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full select-none transition-all ${isFocused ? 'text-cyan-400 bg-cyan-950/40 border border-cyan-500/15' : 'text-white/60 bg-black/40 border border-white/5 group-hover:text-cyan-400'}`}
+                      style={{ fontSize: `${fontScale}px` }}
+                    >
+                      {fr.name}
+                    </span>
+
+                    {/* Small orbiting dots showing entries count */}
+                    <span className="text-[8.5px] font-mono text-muted-foreground/60 mt-0.5 leading-none">
+                      {fr.count} {fr.count === 1 ? 'title' : 'titles'}
+                    </span>
+                  </motion.div>
+                );
+              })}
+
+            </div>
+
+            {/* FOCUSED SAGA SLIDING LEFT DRAWER */}
+            <AnimatePresence>
+              {activeFranchiseId && (
+                <motion.div
+                  initial={{ x: '-100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '-100%' }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                  className="absolute left-0 top-0 bottom-0 z-40 w-full sm:w-[380px] h-full bg-neutral-950/95 border-r border-white/10 shadow-2xl backdrop-blur-xl flex flex-col"
+                >
+                  {/* Drawer Header */}
+                  <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between shrink-0">
+                    <div className="text-left">
+                      <span className="text-[9px] font-black text-cyan-400 uppercase tracking-widest">Franchise Saga</span>
+                      <h3 className="text-lg font-bold text-white truncate max-w-[220px] mt-0.5" title={franchises.find(f => f.id === activeFranchiseId)?.name}>
+                        {franchises.find(f => f.id === activeFranchiseId)?.name || ''}
+                      </h3>
+                    </div>
+                    <button 
+                      onClick={() => setActiveFranchiseId('')} 
+                      className="p-1.5 rounded-lg bg-white/5 text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  {/* Drawer Body - Scrollable Chronological List */}
+                  <div className="flex-1 overflow-y-auto p-5 space-y-4 hide-scrollbar">
+                    <div className="text-[10px] font-bold text-muted-foreground/60 tracking-wider uppercase mb-1">
+                      Timeline (Release Date)
+                    </div>
+                    {sortedActiveEntries.length > 0 ? (
+                      sortedActiveEntries.map((entry) => (
+                        <div
+                          key={entry.id}
+                          onClick={() => setSelectedEntry(entry)}
+                          className="flex gap-3.5 p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-cyan-500/20 transition-all duration-300 cursor-pointer group text-left"
+                        >
+                          {/* Small Poster Left */}
+                          <div className="shrink-0 w-[55px] aspect-[2/3] rounded-lg overflow-hidden border border-white/10 bg-neutral-900 flex items-center justify-center">
+                            {entry.coverImage ? (
+                              <img src={entry.coverImage} alt={entry.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-[8px] font-bold text-muted-foreground text-center uppercase p-1 leading-tight line-clamp-3">
+                                {entry.title}
                               </span>
                             )}
                           </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 sm:gap-2 pl-2">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleStartEdit(franchise); }} 
-                          className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-background/50 border border-border/40 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all flex items-center justify-center shadow-sm backdrop-blur-sm shrink-0"
-                        >
-                          <Edit2 size={13} className="sm:w-3.5 sm:h-3.5" />
-                        </button>
-                        {sagaEntries.length > 0 && (
-                          <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-muted/40 flex items-center justify-center text-muted-foreground transition-transform duration-300 ${expandedFranchiseId === franchise.id ? 'rotate-180 bg-primary/10 text-primary' : ''}`}>
-                            <ChevronDown size={16} className="sm:w-[18px] sm:h-[18px]" />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
 
-                {/* Timeline Grid */}
-                <AnimatePresence initial={false}>
-                  {expandedFranchiseId === franchise.id && (
-                    <motion.div 
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
-                      className="overflow-hidden"
-                    >
-                      <div className="relative z-10 px-6 sm:px-8 py-8 overflow-x-auto hide-scrollbar border-t border-border/30 bg-muted/5">
-                        {/* The continuous horizontal timeline line */}
-                        <div className="absolute top-[49px] left-12 right-12 h-0.5 bg-gradient-to-r from-primary/5 via-primary/30 to-primary/5 z-0 rounded-full"></div>
-
-                        <div className="flex gap-6 sm:gap-8 w-max pb-4 relative z-10">
-                          {sortedSagaEntries.map((entry, idx) => (
-                            <div key={entry.id} className="flex flex-col gap-5 w-[130px] sm:w-[150px] shrink-0 group">
-                              {/* Timeline Node */}
-                              <div className="flex flex-col items-center relative">
-                                <div className="text-[11px] font-black text-muted-foreground/60 group-hover:text-primary transition-colors tracking-widest mb-2.5">
-                                  {entry.releaseDate ? entry.releaseDate.split('-')[0] : 'TBA'}
-                                </div>
-                                {/* Dot */}
-                                <div className="w-3.5 h-3.5 rounded-full bg-background border-[2.5px] border-primary/40 group-hover:border-primary group-hover:bg-primary group-hover:scale-125 transition-all duration-300 shadow-[0_0_10px_rgba(var(--primary),0.2)] group-hover:shadow-[0_0_15px_rgba(var(--primary),0.6)] z-10"></div>
-                              </div>
-                              
-                              {/* Card Container with connecting line */}
-                              <div className="relative pt-2">
-                                {/* Vertical connecting line */}
-                                <div className="absolute -top-5 left-1/2 -translate-x-1/2 w-[2px] h-7 bg-gradient-to-b from-primary/30 to-transparent group-hover:from-primary/60 transition-colors duration-300"></div>
-                                <MediaCard entry={entry} onClick={() => setSelectedEntry(entry)} />
-                              </div>
+                          {/* Details Right */}
+                          <div className="flex-1 flex flex-col justify-center min-w-0">
+                            <span className="text-[8.5px] font-bold text-cyan-400/90 tracking-wider uppercase mb-0.5">
+                              {entry.releaseDate ? entry.releaseDate.split('-')[0] : 'TBA'}
+                            </span>
+                            <h4 className="text-[13px] font-bold text-white group-hover:text-cyan-400 transition-colors duration-200 truncate leading-snug">
+                              {entry.title}
+                            </h4>
+                            <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] text-muted-foreground/75 font-semibold">
+                              <span>{entry.type === 'TV Show' ? 'Series' : entry.type}</span>
+                              {entry.runtime && (
+                                <>
+                                  <span>•</span>
+                                  <span>{entry.runtime} min</span>
+                                </>
+                              )}
+                              {entry.rating && (
+                                <>
+                                  <span>•</span>
+                                  <span className="text-amber-450 font-bold flex items-center gap-0.5">
+                                    <Star size={9} className="fill-amber-450 text-amber-450" /> {entry.rating}
+                                  </span>
+                                </>
+                              )}
                             </div>
-                          ))}
+                          </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="py-12 text-center text-muted-foreground text-xs flex flex-col items-center justify-center gap-2">
+                        <HelpCircle size={24} className="opacity-30" />
+                        <p>No media logged in this saga yet.</p>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            );
-          })
-        )}
-      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+          </div>
+        </>
+      )}
 
       {selectedEntry && (
         <MediaDetailModal

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
@@ -26,40 +28,40 @@
 /* ─── Light Mode ─── */
 @layer base {
   :root {
-    --bg: #fafafa;
-    --fg: #09090b;
+    --bg: #f5f5f7; /* Apple classic gray bg */
+    --fg: #1d1d1f; /* Apple dark text */
     --card: #ffffff;
-    --card-hover: #f4f4f5;
-    --surface: #f4f4f5;
-    --primary: #0055ff;
-    --primary-hover: #0044cc;
-    --accent: #00e5ff;
-    --muted: #f4f4f5;
-    --muted-fg: #71717a;
-    --border: rgba(0, 0, 0, 0.08);
-    --shadow-subtle: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
-    --shadow-card-hover: 0 20px 25px -5px rgba(0, 85, 255, 0.08), 0 8px 10px -6px rgba(0, 85, 255, 0.08);
+    --card-hover: #ffffff;
+    --surface: #ffffff;
+    --primary: #0071e3; /* Apple Blue */
+    --primary-hover: #0077ed;
+    --accent: #2997ff;
+    --muted: #f5f5f7;
+    --muted-fg: #86868b;
+    --border: rgba(0, 0, 0, 0.05);
+    --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.12);
+    --shadow-card-hover: 0 20px 40px rgba(0, 0, 0, 0.12), 0 10px 10px rgba(0, 0, 0, 0.04);
     color-scheme: light;
   }
 
   .dark {
-    --bg: #000000;
-    --fg: #ffffff;
-    --card: #09090b;
-    --card-hover: #18181b;
-    --surface: #09090b;
-    --primary: #00aaff;
-    --primary-hover: #33bbff;
-    --accent: #00e5ff;
-    --muted: #18181b;
-    --muted-fg: #a1a1aa;
-    --border: rgba(255, 255, 255, 0.1);
-    --shadow-subtle: 0 1px 3px rgba(0,0,0,0.5);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.6);
-    --shadow-lg: 0 8px 30px rgba(0,0,0,0.7);
-    --shadow-card-hover: 0 12px 40px rgba(0, 170, 255, 0.15), 0 4px 12px rgba(0, 170, 255, 0.1);
+    --bg: #09090b;
+    --fg: #f5f5f7;
+    --card: #131316; /* Premium dark warm widget bg */
+    --card-hover: #1b1b1f;
+    --surface: #131316;
+    --primary: #2997ff; /* Apple light blue */
+    --primary-hover: #0071e3;
+    --accent: #0071e3;
+    --muted: #1e1e21;
+    --muted-fg: #86868b;
+    --border: rgba(255, 255, 255, 0.05);
+    --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 10px 35px rgba(0, 0, 0, 0.7);
+    --shadow-lg: 0 20px 45px rgba(0, 0, 0, 0.85);
+    --shadow-card-hover: 0 20px 40px rgba(0, 0, 0, 0.8), 0 10px 10px rgba(0, 0, 0, 0.5);
     color-scheme: dark;
   }
 }

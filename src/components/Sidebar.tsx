@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, BarChart2, Settings, LogOut, Sun, Moon, Film, Tv, PlayCircle, X } from "lucide-react";
+import { LayoutDashboard, BarChart2, Settings, LogOut, Sun, Moon, Film, Library, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -14,7 +14,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
-  const { logout } = useAuth();
+  const { user, login, logout, isLoading } = useAuth();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
@@ -23,74 +23,112 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
 
   const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
-  const links = [
+  const navItems = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "My Collection", href: "/collection", icon: Library },
     { name: "Sagas", href: "/sagas", icon: Film },
-    { name: "Analytics", href: "/analytics", icon: BarChart2 },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
 
   const sidebarContent = (
-    <div className="flex flex-col h-full bg-surface/90 lg:bg-surface/50 backdrop-blur-3xl border-r border-border">
-      {/* Logo & Close */}
-      <div className="h-16 flex items-center justify-between px-6 shrink-0">
-        <div className="flex items-center gap-2.5">
-          <KinoLogo size={32} />
-          <span className="font-display text-[17px] font-bold tracking-tight bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400 bg-clip-text text-transparent">Kino</span>
+    <div className="flex flex-col w-full h-full lg:w-[260px] lg:h-screen bg-neutral-100/60 dark:bg-[#161617]/70 backdrop-blur-xl border-r border-black/5 dark:border-white/10 overflow-hidden shrink-0">
+      
+      {/* Brand Section */}
+      <div className="p-6 pb-4 shrink-0 flex items-center justify-between">
+        <div className="transition-transform hover:scale-[1.02] active:scale-[0.98] origin-left">
+          <KinoLogo />
         </div>
-        {onMobileClose && (
-          <button onClick={onMobileClose} className="lg:hidden p-2 -mr-2 text-muted-foreground hover:text-foreground">
+        {isMobileOpen && (
+          <button onClick={onMobileClose} className="lg:hidden p-2 -mr-2 text-muted-foreground hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 rounded-xl transition-colors">
             <X size={20} />
           </button>
         )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 pt-4 space-y-0.5 overflow-y-auto hide-scrollbar">
-        {links.map((link) => {
-          const isActive = pathname === link.href;
-          const Icon = link.icon;
+      <nav className="flex-1 px-3 space-y-1 overflow-y-auto hide-scrollbar mt-4">
+        <div className="px-3 mb-2 text-[10px] font-bold text-muted-foreground/60 tracking-[0.12em] uppercase">
+          Menu
+        </div>
+        {navItems.map((item) => {
+          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
           return (
             <Link
-              key={link.name}
-              href={link.href}
-              onClick={onMobileClose}
-              className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 ${isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                }`}
+              key={item.name}
+              href={item.href}
+              onClick={() => isMobileOpen && onMobileClose?.()}
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 group relative ${
+                isActive 
+                  ? 'bg-primary text-primary-foreground font-semibold shadow-sm shadow-primary/10' 
+                  : 'text-muted-foreground hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 hover:text-foreground'
+              }`}
             >
-              {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-primary rounded-r-full" />
-              )}
-              <Icon size={17} strokeWidth={isActive ? 2.2 : 1.8} />
-              <span>{link.name}</span>
+              <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} className={`transition-transform duration-200 ${isActive ? '' : 'group-hover:scale-105'}`} />
+              <span className="text-[13.5px]">{item.name}</span>
             </Link>
           );
         })}
       </nav>
 
-      {/* Bottom Actions */}
-      <div className="px-3 py-4 space-y-1 border-t border-border/50 shrink-0">
-        {mounted && (
-          <button
-            onClick={toggleTheme}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200"
-          >
-            {theme === 'dark' ? <Sun size={17} strokeWidth={1.8} /> : <Moon size={17} strokeWidth={1.8} />}
-            <span className="flex-1 text-left">{theme === 'dark' ? "Light Mode" : "Dark Mode"}</span>
-            <div className={`w-8 h-[18px] rounded-full relative transition-colors duration-300 ${theme === 'dark' ? 'bg-primary/30' : 'bg-muted-foreground/20'}`}>
-              <div className={`absolute top-[2px] w-[14px] h-[14px] bg-foreground rounded-full shadow-sm transition-all duration-300 ${theme === 'dark' ? 'left-[15px]' : 'left-[2px]'}`} />
+      {/* Bottom User Area */}
+      <div className="p-4 mt-auto border-t border-black/5 dark:border-white/5 bg-neutral-200/10 dark:bg-neutral-900/10">
+        
+        {/* User Profile */}
+        <div className="mb-2.5 px-3 py-2 flex items-center gap-3 bg-neutral-200/20 dark:bg-neutral-800/20 rounded-xl border border-black/5 dark:border-white/5 shadow-none">
+          {user ? (
+            <>
+              {user.picture ? (
+                <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-full object-cover border border-background shadow-sm" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm border border-background shadow-sm">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="flex flex-col min-w-0">
+                <span className="text-[12px] font-semibold text-foreground truncate leading-tight">{user.name}</span>
+                <span className="text-[9.5px] text-muted-foreground truncate leading-tight">{user.email}</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 text-center py-1">
+              <span className="text-[11px] font-medium text-muted-foreground">Guest Mode</span>
             </div>
-          </button>
+          )}
+        </div>
+
+        {mounted && (
+          <div className="flex items-center justify-between px-3 py-2 bg-neutral-200/20 dark:bg-neutral-800/20 rounded-xl border border-black/5 dark:border-white/5 shadow-none mb-2">
+            <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-2">
+              {theme === 'dark' ? <Moon size={13} /> : <Sun size={13} />}
+              {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
+            </span>
+            <button
+              onClick={toggleTheme}
+              className={`w-9 h-5.5 rounded-full p-0.5 transition-colors cursor-pointer ${theme === 'dark' ? 'bg-primary' : 'bg-neutral-300 dark:bg-neutral-700'}`}
+            >
+              <div 
+                className={`w-4.5 h-4.5 bg-white rounded-full shadow-sm transition-transform duration-300 ${theme === 'dark' ? 'translate-x-3.5' : 'translate-x-0'}`}
+              />
+            </button>
+          </div>
         )}
-        <button
-          onClick={() => logout()}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium text-muted-foreground hover:text-red-400 hover:bg-red-500/5 transition-all duration-200"
-        >
-          <LogOut size={17} strokeWidth={1.8} />
-          <span className="flex-1 text-left">Log Out</span>
-        </button>
+
+        {user ? (
+          <button
+            onClick={() => logout()}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all cursor-pointer"
+          >
+            <LogOut size={14} /> Log Out
+          </button>
+        ) : (
+          <Link
+            href="/login"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-[12px] font-semibold text-primary-foreground bg-primary hover:bg-primary/95 rounded-xl transition-all shadow-sm hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+          >
+            Login with Google
+          </Link>
+        )}
       </div>
     </div>
   );
@@ -98,26 +136,19 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:block w-[240px] h-screen fixed left-0 top-0 z-40">
+      <aside className="hidden lg:block w-[260px] h-screen sticky top-0 z-40">
         {sidebarContent}
       </aside>
 
       {/* Mobile Sidebar Overlay */}
       {isMobileOpen && (
         <div className="lg:hidden fixed inset-0 z-[100] flex">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onMobileClose} />
-          <div className="relative w-[280px] max-w-[80vw] h-full shadow-2xl animate-fade-in" style={{ animation: 'slideRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onMobileClose} />
+          <div className="relative w-[260px] max-w-[80vw] h-full shadow-xl animate-fade-in-right">
             {sidebarContent}
           </div>
         </div>
       )}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-        @keyframes slideRight {
-          from { transform: translateX(-100%); }
-          to { transform: translateX(0); }
-        }
-      `}} />
     </>
   );
 }

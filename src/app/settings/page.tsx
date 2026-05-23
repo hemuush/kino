@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { useMedia } from '@/hooks/useMedia';
+import { useUI } from '@/context/UIContext';
 import { Tag } from '@/lib/db';
-import { Trash2, Edit2, Check, X, Tag as TagIcon, Film, Save } from 'lucide-react';
+import { Trash2, Edit2, Check, X, Tag as TagIcon, Film, Save, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function SettingsPage() {
   const { genres, setGenres, franchises, setFranchises, isLoading } = useMedia();
+  const { cardShape, setCardShape } = useUI();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -39,6 +41,35 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* UI Settings */}
+        <section className="bg-card glass border border-border/60 rounded-3xl p-8 shadow-sm md:col-span-2">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2.5 bg-primary/10 rounded-xl text-primary"><Settings size={20} /></div>
+            <h2 className="text-xl font-bold font-display">Appearance Preferences</h2>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-bold text-muted-foreground block mb-3">Media Card Shape</label>
+              <div className="flex gap-4">
+                {(['rectangle', 'square', 'circle'] as const).map((shape) => (
+                  <button
+                    key={shape}
+                    onClick={() => setCardShape(shape)}
+                    className={`flex-1 py-4 px-2 rounded-2xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center gap-2 ${
+                      cardShape === shape 
+                        ? 'border-primary bg-primary/5 shadow-md shadow-primary/10' 
+                        : 'border-border/40 bg-muted/20 hover:border-primary/40'
+                    }`}
+                  >
+                    <div className={`bg-primary/20 ${shape === 'rectangle' ? 'w-8 h-12 rounded-sm' : shape === 'square' ? 'w-10 h-10 rounded-sm' : 'w-10 h-10 rounded-full'}`} />
+                    <span className="text-[12px] font-bold uppercase tracking-wider">{shape}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-3">This setting instantly changes how movie and TV show posters are displayed across the entire app.</p>
+            </div>
+          </div>
+        </section>
 
         {/* Franchises Dictionary */}
         <section className="bg-card glass border border-border/60 rounded-3xl p-8 shadow-sm">

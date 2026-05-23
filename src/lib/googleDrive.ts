@@ -42,9 +42,15 @@ async function findBackupFileId(accessToken: string): Promise<string | null> {
   return null;
 }
 
-export async function uploadBackupToDrive(accessToken: string, entries: MediaEntry[]): Promise<boolean> {
+export interface BackupData {
+  entries: MediaEntry[];
+  genres: any[];
+  franchises: any[];
+}
+
+export async function uploadBackupToDrive(accessToken: string, data: BackupData | MediaEntry[]): Promise<boolean> {
   const fileId = await findBackupFileId(accessToken);
-  const fileContent = JSON.stringify(entries, null, 2);
+  const fileContent = JSON.stringify(data, null, 2);
   const metadata: any = {
     name: BACKUP_FILE_NAME,
   };
@@ -86,7 +92,7 @@ export async function uploadBackupToDrive(accessToken: string, entries: MediaEnt
   return true;
 }
 
-export async function downloadBackupFromDrive(accessToken: string): Promise<MediaEntry[] | null> {
+export async function downloadBackupFromDrive(accessToken: string): Promise<BackupData | MediaEntry[] | null> {
   const fileId = await findBackupFileId(accessToken);
   if (!fileId) {
     // File doesn't exist yet, nothing to restore
@@ -106,5 +112,5 @@ export async function downloadBackupFromDrive(accessToken: string): Promise<Medi
   }
 
   const data = await response.json();
-  return data as MediaEntry[];
+  return data;
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { AppShell } from "@/components/AppShell";
+import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
   title: "Kino — Track What You Watch",
@@ -26,6 +27,7 @@ export default function RootLayout({
         <Providers>
           <AppShell>{children}</AppShell>
         </Providers>
+        <Toaster position="top-center" richColors theme="system" />
       </body>
     </html>
   );

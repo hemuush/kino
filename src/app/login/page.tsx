@@ -56,7 +56,7 @@ export default function Login() {
           className="relative mb-6"
         >
           <div className="w-16 h-16 rounded-2xl bg-card border border-border/80 flex items-center justify-center shadow-lg shadow-primary/5">
-            <KinoLogo size={42} />
+            <KinoLogo size={42} showText={false} />
           </div>
           {/* Soft glow behind */}
           <div className="absolute inset-0 w-16 h-16 rounded-2xl bg-primary/20 blur-xl -z-10 animate-pulse" />

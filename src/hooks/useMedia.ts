@@ -64,9 +64,26 @@ export function useMedia() {
         globalHasFetchedFromDrive = true;
         setSyncStatus('syncing');
         const backup = await downloadBackupFromDrive(accessToken);
-        if (backup && Array.isArray(backup)) {
-          setEntries(backup);
-          localStorage.setItem('kino_entries', JSON.stringify(backup));
+        if (backup) {
+          if (Array.isArray(backup)) {
+            // Legacy array format
+            setEntries(backup);
+            localStorage.setItem('kino_entries', JSON.stringify(backup));
+          } else {
+            // New object format
+            if (backup.entries) {
+              setEntries(backup.entries);
+              localStorage.setItem('kino_entries', JSON.stringify(backup.entries));
+            }
+            if (backup.genres && backup.genres.length > 0) {
+              setGenres(backup.genres);
+              localStorage.setItem('kino_genres', JSON.stringify(backup.genres));
+            }
+            if (backup.franchises && backup.franchises.length > 0) {
+              setFranchises(backup.franchises);
+              localStorage.setItem('kino_franchises', JSON.stringify(backup.franchises));
+            }
+          }
         }
         setSyncStatus('synced');
       } catch (error) {
@@ -81,10 +98,10 @@ export function useMedia() {
     };
 
     fetchFromDrive();
-  }, [accessToken]);
+  }, [accessToken, logout]);
 
   // Upload to Google Drive wrapper
-  const uploadToDrive = useCallback((newEntries: MediaEntry[]) => {
+  const uploadToDrive = useCallback((newEntries: MediaEntry[], newGenres: Tag[] = genres, newFranchises: Tag[] = franchises) => {
     if (!accessToken) return;
 
     if (uploadTimeout) clearTimeout(uploadTimeout);
@@ -92,7 +109,11 @@ export function useMedia() {
 
     uploadTimeout = setTimeout(async () => {
       try {
-        await uploadBackupToDrive(accessToken, newEntries);
+        await uploadBackupToDrive(accessToken, {
+          entries: newEntries,
+          genres: newGenres,
+          franchises: newFranchises
+        });
         setSyncStatus('synced');
       } catch (error) {
         setSyncStatus('error');
@@ -104,7 +125,7 @@ export function useMedia() {
         }
       }
     }, 2000);
-  }, [accessToken, logout]);
+  }, [accessToken, logout, genres, franchises]);
 
   // --- Entries Methods ---
   const saveEntries = async (newEntries: MediaEntry[]) => {
@@ -146,11 +167,13 @@ export function useMedia() {
   const saveGenres = (newGenres: Tag[]) => {
     setGenres(newGenres);
     localStorage.setItem('kino_genres', JSON.stringify(newGenres));
+    uploadToDrive(entries, newGenres, franchises);
   };
 
   const saveFranchises = (newFranchises: Tag[]) => {
     setFranchises(newFranchises);
     localStorage.setItem('kino_franchises', JSON.stringify(newFranchises));
+    uploadToDrive(entries, genres, newFranchises);
   };
 
   return {
