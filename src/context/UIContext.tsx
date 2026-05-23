@@ -1,46 +1,41 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-
-export type CardShape = 'rectangle' | 'square' | 'circle';
+import React, { createContext, useContext, useState, ReactNode, useMemo } from "react";
 
 interface UIContextType {
-  cardShape: CardShape;
-  setCardShape: (shape: CardShape) => void;
+  isSidebarOpen: boolean;
+  toggleSidebar: () => void;
+  closeSidebar: () => void;
 }
 
 const UIContext = createContext<UIContextType | undefined>(undefined);
 
-export function UIProvider({ children }: { children: React.ReactNode }) {
-  const [cardShape, setCardShape] = useState<CardShape>('rectangle');
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const stored = localStorage.getItem('kino_ui_cardShape') as CardShape;
-    if (stored && ['rectangle', 'square', 'circle'].includes(stored)) {
-      setCardShape(stored);
-    }
-  }, []);
-
-  const handleSetCardShape = (shape: CardShape) => {
-    setCardShape(shape);
-    localStorage.setItem('kino_ui_cardShape', shape);
-  };
-
-  if (!mounted) return null; // Avoid hydration mismatch
-
-  return (
-    <UIContext.Provider value={{ cardShape, setCardShape: handleSetCardShape }}>
-      {children}
-    </UIContext.Provider>
-  );
+interface UIProviderProps {
+  children: ReactNode;
 }
 
-export function useUI() {
+export const UIProvider: React.FC<UIProviderProps> = ({ children }) => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+
+  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+  const closeSidebar = () => setIsSidebarOpen(false);
+
+  const value = useMemo(
+    () => ({
+      isSidebarOpen,
+      toggleSidebar,
+      closeSidebar,
+    }),
+    [isSidebarOpen]
+  );
+
+  return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
+};
+
+export const useUI = (): UIContextType => {
   const context = useContext(UIContext);
   if (context === undefined) {
-    throw new Error('useUI must be used within a UIProvider');
+    throw new Error("useUI must be used within a UIProvider");
   }
   return context;
-}
+};

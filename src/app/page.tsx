@@ -2,7 +2,7 @@
 
 import { useState, Suspense, useMemo } from 'react';
 import { useMedia } from '@/hooks/useMedia';
-import { MediaCard } from '@/components/MediaCard';
+import MediaCard from "@/components/MediaCard";
 import MediaCardSkeleton from '@/components/MediaCardSkeleton';
 import { MediaDetailModal } from '@/components/MediaDetailModal';
 import { MediaEntry, isEpisodic, formatRuntime } from '@/lib/db';
@@ -340,7 +340,7 @@ function DashboardContent() {
                     updateEntry({ ...entry, episodesWatched: current + 1 });
                   }
                 }}
-                onStatusChange={(newStatus) => updateEntry({ ...entry, status: newStatus })}
+                onStatusChange={(newStatus: MediaEntry["status"]) => updateEntry({ ...entry, status: newStatus })}
                 index={i}
               />
             ))}

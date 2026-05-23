@@ -1,168 +1,112 @@
-// src/components/MediaCard.tsx
 "use client";
 
-import { MediaEntry, WatchStatus } from '@/lib/db';
-import { motion } from 'framer-motion';
-import { Star, Heart, CheckCircle2, Clock, PlayCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import React, { useState } from "react";
+import { MediaEntry } from "@/lib/db";
+import { ImageOff, Heart, Plus, Star } from "lucide-react";
 
 interface MediaCardProps {
   entry: MediaEntry;
-  onClick?: () => void;
-  onFavoriteToggle?: (e: React.MouseEvent) => void;
-  onIncrementWatched?: (e: React.MouseEvent) => void;
-  onStatusChange?: (newStatus: WatchStatus, e: React.MouseEvent) => void;
-  index?: number;
+  onClick: () => void;
+  onFavoriteToggle: () => Promise<void> | void;
+  onIncrementWatched: () => void;
+  onStatusChange: (newStatus: MediaEntry["status"]) => Promise<void> | void;
+  index: number;
 }
 
-const typeLabels: Record<string, string> = {
-  Movie: 'MOVIE',
-  'TV Show': 'TV SHOW',
-  Anime: 'ANIME',
-};
-
-const STATUS_CYCLE: WatchStatus[] = ['Plan to Watch', 'Watching', 'Completed'];
-
-export function MediaCard({ entry, onClick, onFavoriteToggle, onIncrementWatched, onStatusChange, index = 0 }: MediaCardProps) {
-  const isWatching = entry.status === 'Watching';
-  const isPlanToWatch = entry.status === 'Plan to Watch';
-  const isCompleted = entry.status === 'Completed' || !entry.status;
-
-  const handleStatusClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!onStatusChange) return;
-
-    const currentStatus = entry.status || 'Completed';
-    const currentIndex = STATUS_CYCLE.indexOf(currentStatus);
-    const nextStatus = STATUS_CYCLE[(currentIndex + 1) % STATUS_CYCLE.length];
-
-    onStatusChange(nextStatus, e);
-    toast.success(`Status changed to ${nextStatus}`, {
-      description: entry.title,
-    });
-  };
+export default function MediaCard({
+  entry,
+  onClick,
+  onFavoriteToggle,
+  onIncrementWatched,
+  onStatusChange,
+  index,
+}: MediaCardProps) {
+  const [imgError, setImgError] = useState(false);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.97 }}
-      transition={{ duration: 0.4, delay: index * 0.04, ease: [0.16, 1, 0.3, 1] }}
+    <div
       onClick={onClick}
-      className="group w-full flex flex-col cursor-pointer select-none"
+      className="group flex flex-col gap-3 cursor-pointer animate-in fade-in zoom-in duration-300"
+      style={{ animationDelay: `${index * 50}ms` }}
     >
-      {/* Poster / Artwork Container (Fixed to Square) */}
-      <div className="relative w-full aspect-square rounded-2xl overflow-hidden border border-black/5 dark:border-white/10 bg-neutral-200/50 dark:bg-neutral-800/50 transition-all duration-300 group-hover:scale-[1.03] group-hover:shadow-lg group-hover:shadow-primary/5 group-hover:border-primary/30">
-        {entry.coverImage ? (
+      {/* 
+        Poster Container - Hardcoded to Rectangle (aspect-[2/3])
+        Appearance Preference Context has been completely removed.
+      */}
+      <div className="relative w-full aspect-[2/3] bg-card rounded-xl overflow-hidden border border-border/50 shadow-[0_4px_20px_rgba(0,0,0,0.1)] transition-all duration-300 group-hover:scale-[1.03] group-hover:shadow-cyan-500/10 group-hover:border-cyan-500/30">
+        {entry.coverImage && !imgError ? (
           <img
             src={entry.coverImage}
             alt={entry.title}
-            className="w-full h-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
-            loading="lazy"
+            className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-90"
+            onError={() => setImgError(true)}
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center p-4">
-            <span className="text-[10px] text-muted-foreground/50 font-bold uppercase tracking-wider text-center leading-relaxed line-clamp-3">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/10 text-muted-foreground p-4">
+            <ImageOff className="w-8 h-8 mb-3 opacity-30" />
+            <span className="text-[10px] text-center font-bold uppercase tracking-wider px-2 line-clamp-3">
               {entry.title}
             </span>
           </div>
         )}
 
-        {/* Interactive Favorite Icon Overlay */}
-        <button
-          type="button"
-          onClick={(e) => {
-            if (onFavoriteToggle) {
-              e.stopPropagation();
-              onFavoriteToggle(e);
-            }
-          }}
-          className={`absolute top-2 right-2 z-30 w-7 h-7 rounded-full flex items-center justify-center backdrop-blur-md transition-all duration-250 cursor-pointer shadow-sm ${entry.favorite
-            ? 'bg-red-500/90 text-white border border-red-500/30'
-            : 'bg-black/45 text-white/90 opacity-0 group-hover:opacity-100 hover:bg-black/60 hover:scale-110 active:scale-90 border border-white/10'
-            }`}
-          title={entry.favorite ? "Remove from Favorites" : "Add to Favorites"}
-        >
-          <Heart size={12} className={entry.favorite ? 'fill-white' : ''} />
-        </button>
-
-        {/* Quick +1 Episode Overlay Button */}
-        {entry.type !== 'Movie' && (isWatching || isPlanToWatch) && onIncrementWatched && (
+        {/* Top-Right Badges */}
+        <div className="absolute top-2 right-2 flex flex-col gap-1.5 items-end z-10">
           <button
-            type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onIncrementWatched(e);
-              toast.success(`Incremented episode for ${entry.title}`);
+              onFavoriteToggle();
             }}
-            className="absolute top-10 right-2 z-30 w-7 h-7 rounded-full bg-black/45 backdrop-blur-md text-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-primary hover:text-white hover:scale-110 active:scale-90 transition-all duration-250 cursor-pointer shadow-sm text-[10px] font-bold border border-white/10"
-            title={`Increment Watched (${entry.episodesWatched || 0}/${entry.episodesTotal || '?'})`}
+            className="p-1.5 rounded-full bg-black/40 backdrop-blur-md hover:bg-black/60 transition-colors"
+            title={entry.favorite ? "Remove from favorites" : "Add to favorites"}
           >
-            +1
-          </button>
-        )}
-
-        {/* Type & Status Label (Top Left Overlay) */}
-        <div className="absolute top-2 left-2 z-20 flex flex-col gap-1 items-start">
-          <button
-            type="button"
-            onClick={handleStatusClick}
-            className={`text-[8.5px] font-bold tracking-wider px-2 py-0.5 rounded-full shadow-sm uppercase flex items-center gap-1 transition-all hover:scale-105 active:scale-95 border ${isWatching
-              ? 'bg-primary/95 text-white border-primary/20 backdrop-blur-md'
-              : 'bg-black/45 backdrop-blur-md text-white/90 hover:bg-black/65 border-white/5'
-              }`}
-            title="Click to change status"
-          >
-            {isWatching && <PlayCircle size={9} />}
-            {isPlanToWatch && <Clock size={9} />}
-            {isCompleted && <CheckCircle2 size={9} />}
-            {entry.status || 'COMPLETED'}
+            <Heart
+              size={14}
+              className={entry.favorite ? "fill-red-500 text-red-500" : "text-white"}
+            />
           </button>
         </div>
 
-        {/* Progress Bar at the absolute bottom border */}
-        {entry.type !== 'Movie' && entry.episodesTotal && entry.episodesTotal > 0 && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40 z-20">
-            <div
-              className="bg-primary h-full transition-all duration-500 ease-out"
-              style={{ width: `${Math.min(100, ((entry.episodesWatched || 0) / entry.episodesTotal) * 100)}%` }}
-            />
+        {/* Bottom-Right Badges: Increment Episodes (For TV Shows currently being watched) */}
+        {entry.status === "Watching" && (entry.type === "TV Show" || entry.type === "Anime") && (
+          <div className="absolute bottom-2 right-2 z-10">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onIncrementWatched();
+              }}
+              className="flex items-center gap-1 bg-emerald-500/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md hover:bg-emerald-400 transition-colors shadow-sm"
+              title="Increment watched episodes"
+            >
+              <Plus size={12} strokeWidth={3} />
+              {entry.episodesWatched || 0}/{entry.episodesTotal || "?"}
+            </button>
           </div>
         )}
       </div>
 
-      {/* Metadata below artwork */}
-      <div className="mt-2.5 px-1 flex flex-col select-none text-left">
-        <span className="text-[9.5px] font-bold tracking-widest text-muted-foreground/75 uppercase leading-none truncate max-w-full">
-          {entry.type === 'Anime' && entry.animeType ? `ANIME • ${entry.animeType}` : typeLabels[entry.type]}
-        </span>
-
-        <h3 className="text-foreground font-semibold text-[13.5px] tracking-tight leading-tight mt-1 truncate max-w-full group-hover:text-primary transition-colors duration-200" title={entry.title}>
+      {/* Media Details */}
+      <div className="flex flex-col px-1">
+        <h3
+          className="text-[13px] sm:text-sm font-bold text-foreground truncate group-hover:text-cyan-400 transition-colors"
+          title={entry.title}
+        >
           {entry.title}
         </h3>
 
-        <div className="flex items-center w-full mt-1.5 min-h-[16px] justify-between">
-          {isCompleted ? (
-            <div className="flex items-center gap-0.5">
-              <Star size={11} className="text-amber-500 fill-amber-500 animate-fade-in" />
-              <span className="text-[11.5px] text-foreground/80 font-bold leading-none">{entry.rating}/10</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1">
-              <span className={`w-1.5 h-1.5 rounded-full ${isWatching ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-              <span className="text-[11.5px] text-muted-foreground font-medium leading-none">
-                {isWatching ? 'Watching' : 'Plan to Watch'}
-              </span>
-            </div>
-          )}
+        <div className="flex items-center justify-between mt-1">
+          <span className="text-[10px] sm:text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+            {entry.type === "TV Show" ? "Series" : entry.type}
+          </span>
 
-          {entry.type !== 'Movie' && (
-            <span className="text-[11px] text-muted-foreground font-bold bg-neutral-200/50 dark:bg-neutral-800/50 px-1.5 py-0.5 rounded text-right leading-none font-mono">
-              {entry.episodesWatched || 0}/{entry.episodesTotal || '?'}
-            </span>
-          )}
+          {entry.rating ? (
+            <div className="flex items-center gap-1 text-[11px] font-bold text-amber-400">
+              <Star size={10} className="fill-amber-400" />
+              {entry.rating}
+            </div>
+          ) : null}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

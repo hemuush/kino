@@ -115,25 +115,25 @@ function CollectionContent() {
     // Command options list
     const cmdOptions = useMemo(() => {
         const base = [
-            { 
-                id: 'add', 
-                title: 'Add New Media', 
+            {
+                id: 'add',
+                title: 'Add New Media',
                 description: 'Add a new movie, series, or anime to your watchlist',
                 shortcut: 'A',
                 icon: Plus,
                 action: () => { router.push('/add'); setIsCmdOpen(false); }
             },
-            { 
-                id: 'sagas', 
-                title: 'Jump to Sagas', 
+            {
+                id: 'sagas',
+                title: 'Jump to Sagas',
                 description: 'Manage your sagas, custom timelines, and franchises',
                 shortcut: 'S',
                 icon: Film,
                 action: () => { router.push('/sagas'); setIsCmdOpen(false); }
             },
-            { 
-                id: 'settings', 
-                title: 'View Settings', 
+            {
+                id: 'settings',
+                title: 'View Settings',
                 description: 'Database sync status, backup controls, and dark theme toggles',
                 shortcut: ',',
                 icon: Settings,
@@ -151,8 +151,8 @@ function CollectionContent() {
 
         // Filter based on query
         if (!cmdSearch) return base;
-        return base.filter(opt => 
-            opt.title.toLowerCase().includes(cmdSearch.toLowerCase()) || 
+        return base.filter(opt =>
+            opt.title.toLowerCase().includes(cmdSearch.toLowerCase()) ||
             opt.description.toLowerCase().includes(cmdSearch.toLowerCase())
         );
     }, [cmdSearch, entries]);
@@ -351,7 +351,7 @@ function CollectionContent() {
                 {isCmdOpen && (
                     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
                         {/* Background Grid Blur */}
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -360,7 +360,7 @@ function CollectionContent() {
                         />
 
                         {/* Modal Box */}
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, scale: 0.95, y: -10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: -10 }}
@@ -371,9 +371,9 @@ function CollectionContent() {
                             {/* Command Search Input */}
                             <div className="flex items-center border-b border-border/60 dark:border-white/5 px-4.5 py-3">
                                 <Search size={18} className="text-cyan-400 mr-3" />
-                                <input 
+                                <input
                                     ref={cmdInputRef}
-                                    type="text" 
+                                    type="text"
                                     placeholder="Type a command or search..."
                                     value={cmdSearch}
                                     onChange={(e) => setCmdSearch(e.target.value)}
@@ -391,7 +391,7 @@ function CollectionContent() {
                                         const isSelected = idx === selectedCmdIdx;
                                         const Icon = opt.icon;
                                         return (
-                                            <div 
+                                            <div
                                                 key={opt.id}
                                                 onClick={opt.action}
                                                 onMouseEnter={() => setSelectedCmdIdx(idx)}
@@ -418,7 +418,7 @@ function CollectionContent() {
                                     </div>
                                 )}
                             </div>
-                            
+
                             {/* Command Footer */}
                             <div className="border-t border-border/60 dark:border-white/5 px-4.5 py-2.5 bg-muted/80 dark:bg-neutral-950/80 flex items-center justify-between text-[10px] text-muted-foreground/50 font-mono">
                                 <span className="flex items-center gap-1.5">
