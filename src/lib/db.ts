@@ -31,7 +31,6 @@ export interface MediaEntry {
   franchiseId?: string;
   genreIds?: string[];
 
-  // Legacy fields (kept for backward compatibility/migration)
   franchise?: string;
   genre?: string[];
 
@@ -77,9 +76,15 @@ export function safeDateFormat(
   if (!lower || lower === 'unknown' || lower === 'tbd' || lower === 'n/a' || lower === 'null') return null;
 
   try {
-    // BUG 3 FIX: Prevent western hemisphere users from getting yesterday's date
-    // by anchoring short YYYY-MM-DD formats to noon instead of midnight UTC.
-    const normalizedStr = dateStr.includes('T') ? dateStr : `${dateStr}T12:00:00`;
+    let normalizedStr = dateStr;
+    // BUG 2 FIX: Only append T12:00:00 if the string is strictly YYYY-MM-DD.
+    // This prevents Safari/WebKit from throwing an Invalid Date crash on bare years.
+    const isStrictDate = /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
+
+    if (isStrictDate) {
+      normalizedStr = `${dateStr}T12:00:00`;
+    }
+
     const d = new Date(normalizedStr);
 
     if (isNaN(d.getTime())) return null;

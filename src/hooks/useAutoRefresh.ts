@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { MediaEntry } from '@/lib/db';
 
 const REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
-const MAX_CONCURRENT = 3; // Max concurrent API requests to avoid rate-limiting
+const MAX_CONCURRENT = 3;
 
 interface UseAutoRefreshOptions {
   entries: MediaEntry[];
@@ -18,11 +18,6 @@ interface AutoRefreshStatus {
   totalToRefresh: number;
 }
 
-/**
- * Auto-refresh hook that runs on app mount.
- * Checks each 'Watching' and 'Plan to Watch' entry's lastRefreshedAt.
- * If >24h old, re-fetches details from /api/media/details and merges results.
- */
 export function useAutoRefresh({ entries, batchUpdateEntries, isLoading }: UseAutoRefreshOptions): AutoRefreshStatus {
   const [status, setStatus] = useState<AutoRefreshStatus>({
     isRefreshing: false,
@@ -30,16 +25,25 @@ export function useAutoRefresh({ entries, batchUpdateEntries, isLoading }: UseAu
     refreshedCount: 0,
     totalToRefresh: 0,
   });
+
   const hasRunRef = useRef(false);
+  // Store refs so useCallback doesn't need to rebuild on every single entry edit
+  const entriesRef = useRef(entries);
+  const updateRef = useRef(batchUpdateEntries);
+
+  useEffect(() => {
+    entriesRef.current = entries;
+    updateRef.current = batchUpdateEntries;
+  }, [entries, batchUpdateEntries]);
 
   const runRefresh = useCallback(async () => {
-    if (hasRunRef.current || isLoading || entries.length === 0) return;
+    // BUG 4 FIX: Check hasRunRef *inside* here so if the timer fires, it instantly aborts
+    if (hasRunRef.current || isLoading || entriesRef.current.length === 0) return;
     hasRunRef.current = true;
 
     const now = Date.now();
 
-    // Find stale entries: Watching or Plan to Watch, and not refreshed in 24h
-    const staleEntries = entries.filter(e => {
+    const staleEntries = entriesRef.current.filter(e => {
       const isOngoing = e.status === 'Watching' || e.status === 'Plan to Watch';
       if (!isOngoing) return false;
       const lastRefresh = e.lastRefreshedAt || 0;
@@ -57,7 +61,6 @@ export function useAutoRefresh({ entries, batchUpdateEntries, isLoading }: UseAu
 
     const updatedEntries: MediaEntry[] = [];
 
-    // Process in batches of MAX_CONCURRENT
     for (let i = 0; i < staleEntries.length; i += MAX_CONCURRENT) {
       const batch = staleEntries.slice(i, i + MAX_CONCURRENT);
 
@@ -75,19 +78,16 @@ export function useAutoRefresh({ entries, batchUpdateEntries, isLoading }: UseAu
 
             const data = await res.json();
 
-            // Merge: keep user's watched progress, update episode metadata
             const mergedEntry: MediaEntry = {
               ...entry,
               lastRefreshedAt: Date.now(),
             };
 
-            // Update episodes if we got new ones
             if (data.episodes && data.episodes.length > 0) {
               mergedEntry.episodes = data.episodes;
               mergedEntry.episodesTotal = data.episodes.length;
             }
 
-            // Update seasons count if changed
             if (data.seasonsCount && data.seasonsCount !== entry.seasonsCount) {
               mergedEntry.seasonsCount = data.seasonsCount;
             }
@@ -95,7 +95,6 @@ export function useAutoRefresh({ entries, batchUpdateEntries, isLoading }: UseAu
             return mergedEntry;
           } catch (err) {
             console.warn(`Auto-refresh failed for "${entry.title}":`, err);
-            // Still mark as refreshed to avoid hammering on failure
             return {
               ...entry,
               lastRefreshedAt: Date.now(),
@@ -116,9 +115,8 @@ export function useAutoRefresh({ entries, batchUpdateEntries, isLoading }: UseAu
       }));
     }
 
-    // Batch update all refreshed entries at once
     if (updatedEntries.length > 0) {
-      await batchUpdateEntries(updatedEntries);
+      await updateRef.current(updatedEntries);
     }
 
     setStatus({
@@ -128,17 +126,17 @@ export function useAutoRefresh({ entries, batchUpdateEntries, isLoading }: UseAu
       totalToRefresh: staleEntries.length,
     });
 
-    // Clear refreshed status after 5 seconds
     setTimeout(() => {
       setStatus({ isRefreshing: false, refreshingCount: 0, refreshedCount: 0, totalToRefresh: 0 });
     }, 5000);
-  }, [entries, batchUpdateEntries, isLoading]);
+  }, [isLoading]);
 
   useEffect(() => {
-    // Wait a moment after initial load before starting refresh
+    // BUG 4 FIX: Check hasRunRef *outside* to prevent queueing timers unnecessarily
+    if (hasRunRef.current || isLoading) return;
     const timer = setTimeout(runRefresh, 3000);
     return () => clearTimeout(timer);
-  }, [runRefresh]);
+  }, [runRefresh, isLoading]);
 
   return status;
 }

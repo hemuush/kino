@@ -51,6 +51,7 @@ export interface BackupData {
 export async function uploadBackupToDrive(accessToken: string, data: BackupData | MediaEntry[]): Promise<boolean> {
   const fileId = await findBackupFileId(accessToken);
   const fileContent = JSON.stringify(data, null, 2);
+
   const metadata: any = {
     name: BACKUP_FILE_NAME,
   };
@@ -59,9 +60,19 @@ export async function uploadBackupToDrive(accessToken: string, data: BackupData 
     metadata.parents = ['appDataFolder'];
   }
 
-  const form = new FormData();
-  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-  form.append('file', new Blob([fileContent], { type: 'application/json' }));
+  // BUG 1 FIX: Construct raw multipart/related body to comply with Google Drive REST API standards
+  const boundary = '-------314159265358979323846';
+  const delimiter = `\r\n--${boundary}\r\n`;
+  const closeDelimiter = `\r\n--${boundary}--`;
+
+  const multipartRequestBody =
+    delimiter +
+    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+    JSON.stringify(metadata) +
+    delimiter +
+    'Content-Type: application/json\r\n\r\n' +
+    fileContent +
+    closeDelimiter;
 
   let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
   let method = 'POST';
@@ -73,8 +84,11 @@ export async function uploadBackupToDrive(accessToken: string, data: BackupData 
 
   const response = await fetch(url, {
     method,
-    headers: { Authorization: `Bearer ${accessToken}` },
-    body: form,
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': `multipart/related; boundary=${boundary}`
+    },
+    body: multipartRequestBody,
   });
 
   if (response.status === 401) {
@@ -109,20 +123,20 @@ export async function downloadBackupFromDrive(accessToken: string): Promise<Back
   }
 
   const text = await response.text();
-  if (!text.trim()) return null; // Handle 0-byte files gracefully
+  if (!text.trim()) return null;
 
   try {
     return JSON.parse(text);
   } catch (error) {
     console.error("Google Drive Backup is corrupted or invalid JSON:", error);
-    return null; // Fallback to local data instead of crashing the app
+    return null;
   }
 }
 
 export async function deleteBackupFromDrive(accessToken: string): Promise<boolean> {
   const fileId = await findBackupFileId(accessToken);
   if (!fileId) {
-    return true; // Already doesn't exist
+    return true;
   }
 
   const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {

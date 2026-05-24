@@ -38,7 +38,20 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   const uploadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const latestDataRef = useRef<{ entries: MediaEntry[]; genres: Tag[]; franchises: Tag[]; }>({ entries: [], genres: [], franchises: [] });
   const hasFetchedFromDriveRef = useRef<boolean>(false);
-  const cacheCorruptedRef = useRef<boolean>(false); // BUG 1 FIX: Track corruption
+  const cacheCorruptedRef = useRef<boolean>(false);
+
+  // BUG 3 FIX: Prevent tab closure data loss during debounce queue
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (syncStatus === 'syncing' || uploadTimeoutRef.current) {
+        e.preventDefault();
+        e.returnValue = 'Data is currently saving to Google Drive. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [syncStatus]);
 
   const updateStateAndRef = useCallback((newEntries?: MediaEntry[], newGenres?: Tag[], newFranchises?: Tag[]) => {
     if (newEntries) { setEntries(newEntries); latestDataRef.current.entries = newEntries; localStorage.setItem('kino_entries', JSON.stringify(newEntries)); }
@@ -61,7 +74,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Failed to parse local cache, flagging as corrupted", error);
-      cacheCorruptedRef.current = true; // BUG 1 FIX: Mark cache as poisoned
+      cacheCorruptedRef.current = true;
     }
   }, []);
 
@@ -80,6 +93,8 @@ export function MediaProvider({ children }: { children: ReactNode }) {
           console.warn("Session expired");
           logout(false);
         }
+      } finally {
+        uploadTimeoutRef.current = null;
       }
     }, 1000);
   }, [accessToken, logout]);
@@ -116,7 +131,6 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         const cloudTimestamp = backup && 'timestamp' in backup && typeof backup.timestamp === 'number' ? backup.timestamp : 0;
         const localTimestamp = parseInt(localStorage.getItem('kino_timestamp') || '0', 10);
 
-        // BUG 1 FIX: If local cache threw a JSON error, NEVER overwrite the cloud.
         if (localTimestamp > cloudTimestamp && !cacheCorruptedRef.current) {
           triggerUpload();
         } else {
@@ -173,7 +187,6 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     if (data.entries && data.entries.length > 0) {
       hasChanges = true;
 
-      // BUG 2 FIX: Safely parse maxId, ignoring string UUIDs to prevent NaN corruption.
       let maxId = mergedEntries.reduce((max, e) => {
         const numId = parseInt(String(e.id), 10);
         return Math.max(max, isNaN(numId) ? 0 : numId);
