@@ -1,3 +1,4 @@
+// src/components/MediaCard.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -27,10 +28,9 @@ export default function MediaCard({
     <div
       onClick={onClick}
       className="group flex flex-col gap-3 cursor-pointer animate-in fade-in zoom-in duration-300"
-      style={{ animationDelay: `${index * 50}ms` }}
+      style={{ animationDelay: `${Math.min(index, 20) * 50}ms` }}
     >
-      {/* 
-        Poster Container - Hardcoded to Square (aspect-square)
+      {/* Poster Container - Hardcoded to Square (aspect-square)
         Appearance Preference Context has been completely removed.
       */}
       <div className="relative w-full aspect-square bg-card rounded-xl overflow-hidden border border-border/50 shadow-[0_4px_20px_rgba(0,0,0,0.1)] transition-all duration-300 group-hover:scale-[1.03] group-hover:shadow-cyan-500/10 group-hover:border-cyan-500/30">
@@ -57,7 +57,7 @@ export default function MediaCard({
               e.stopPropagation();
               onFavoriteToggle();
             }}
-            className="p-1.5 rounded-full bg-black/40 backdrop-blur-md hover:bg-black/60 transition-colors"
+            className="p-1.5 rounded-full bg-black/40 backdrop-blur-md hover:bg-black/60 transition-colors cursor-pointer"
             title={entry.favorite ? "Remove from favorites" : "Add to favorites"}
           >
             <Heart
@@ -75,7 +75,7 @@ export default function MediaCard({
                 e.stopPropagation();
                 onIncrementWatched();
               }}
-              className="flex items-center gap-1 bg-emerald-500/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md hover:bg-emerald-400 transition-colors shadow-sm"
+              className="flex items-center gap-1 bg-emerald-500/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md hover:bg-emerald-400 transition-colors shadow-sm cursor-pointer"
               title="Increment watched episodes"
             >
               <Plus size={12} strokeWidth={3} />

@@ -1,3 +1,4 @@
+// src/context/AuthContext.tsx
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
@@ -54,6 +55,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: data.email,
           picture: data.picture,
         });
+      } else if (res.status === 401) {
+        // TOKEN IS DEAD. Kill the session immediately.
+        console.warn("Token expired during profile fetch");
+        setAccessToken(null);
+        localStorage.removeItem('kino_access_token');
       }
     } catch (error) {
       console.error("Failed to fetch user profile", error);

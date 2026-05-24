@@ -1,3 +1,4 @@
+// src/hooks/useAutoRefresh.ts
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { MediaEntry } from '@/lib/db';
 
@@ -36,7 +37,7 @@ export function useAutoRefresh({ entries, batchUpdateEntries, isLoading }: UseAu
     hasRunRef.current = true;
 
     const now = Date.now();
-    
+
     // Find stale entries: Watching or Plan to Watch, and not refreshed in 24h
     const staleEntries = entries.filter(e => {
       const isOngoing = e.status === 'Watching' || e.status === 'Plan to Watch';
@@ -59,7 +60,7 @@ export function useAutoRefresh({ entries, batchUpdateEntries, isLoading }: UseAu
     // Process in batches of MAX_CONCURRENT
     for (let i = 0; i < staleEntries.length; i += MAX_CONCURRENT) {
       const batch = staleEntries.slice(i, i + MAX_CONCURRENT);
-      
+
       const results = await Promise.allSettled(
         batch.map(async (entry) => {
           try {
@@ -71,9 +72,9 @@ export function useAutoRefresh({ entries, batchUpdateEntries, isLoading }: UseAu
 
             const res = await fetch(`/api/media/details?${params.toString()}`);
             if (!res.ok) throw new Error(`API returned ${res.status}`);
-            
+
             const data = await res.json();
-            
+
             // Merge: keep user's watched progress, update episode metadata
             const mergedEntry: MediaEntry = {
               ...entry,
@@ -89,11 +90,6 @@ export function useAutoRefresh({ entries, batchUpdateEntries, isLoading }: UseAu
             // Update seasons count if changed
             if (data.seasonsCount && data.seasonsCount !== entry.seasonsCount) {
               mergedEntry.seasonsCount = data.seasonsCount;
-            }
-
-            // Update genres if we got better data
-            if (data.genres && data.genres.length > 0 && (!entry.genre || entry.genre.length === 0)) {
-              mergedEntry.genre = data.genres;
             }
 
             return mergedEntry;

@@ -77,7 +77,11 @@ export function safeDateFormat(
   if (!lower || lower === 'unknown' || lower === 'tbd' || lower === 'n/a' || lower === 'null') return null;
 
   try {
-    const d = new Date(dateStr);
+    // BUG 3 FIX: Prevent western hemisphere users from getting yesterday's date
+    // by anchoring short YYYY-MM-DD formats to noon instead of midnight UTC.
+    const normalizedStr = dateStr.includes('T') ? dateStr : `${dateStr}T12:00:00`;
+    const d = new Date(normalizedStr);
+
     if (isNaN(d.getTime())) return null;
     return d.toLocaleDateString(undefined, options || { dateStyle: 'medium' });
   } catch {

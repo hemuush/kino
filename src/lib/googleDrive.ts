@@ -1,3 +1,4 @@
+// src/lib/googleDrive.ts
 import { MediaEntry } from './db';
 
 const BACKUP_FILE_NAME = 'kino-backup.json';
@@ -107,7 +108,15 @@ export async function downloadBackupFromDrive(accessToken: string): Promise<Back
     throw new Error(`Download failed: ${response.statusText}`);
   }
 
-  return await response.json();
+  const text = await response.text();
+  if (!text.trim()) return null; // Handle 0-byte files gracefully
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Google Drive Backup is corrupted or invalid JSON:", error);
+    return null; // Fallback to local data instead of crashing the app
+  }
 }
 
 export async function deleteBackupFromDrive(accessToken: string): Promise<boolean> {

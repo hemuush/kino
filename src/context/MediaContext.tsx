@@ -38,6 +38,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   const uploadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const latestDataRef = useRef<{ entries: MediaEntry[]; genres: Tag[]; franchises: Tag[]; }>({ entries: [], genres: [], franchises: [] });
   const hasFetchedFromDriveRef = useRef<boolean>(false);
+  const cacheCorruptedRef = useRef<boolean>(false); // BUG 1 FIX: Track corruption
 
   const updateStateAndRef = useCallback((newEntries?: MediaEntry[], newGenres?: Tag[], newFranchises?: Tag[]) => {
     if (newEntries) { setEntries(newEntries); latestDataRef.current.entries = newEntries; localStorage.setItem('kino_entries', JSON.stringify(newEntries)); }
@@ -59,7 +60,8 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         latestDataRef.current = { entries: parsedEntries, genres: parsedGenres, franchises: parsedFranchises };
       }
     } catch (error) {
-      console.error("Failed to parse local cache", error);
+      console.error("Failed to parse local cache, flagging as corrupted", error);
+      cacheCorruptedRef.current = true; // BUG 1 FIX: Mark cache as poisoned
     }
   }, []);
 
@@ -114,7 +116,8 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         const cloudTimestamp = backup && 'timestamp' in backup && typeof backup.timestamp === 'number' ? backup.timestamp : 0;
         const localTimestamp = parseInt(localStorage.getItem('kino_timestamp') || '0', 10);
 
-        if (localTimestamp > cloudTimestamp) {
+        // BUG 1 FIX: If local cache threw a JSON error, NEVER overwrite the cloud.
+        if (localTimestamp > cloudTimestamp && !cacheCorruptedRef.current) {
           triggerUpload();
         } else {
           if (fetchedGenres.length === 0) {
@@ -169,7 +172,12 @@ export function MediaProvider({ children }: { children: ReactNode }) {
 
     if (data.entries && data.entries.length > 0) {
       hasChanges = true;
-      let maxId = mergedEntries.reduce((max, e) => Math.max(max, Number(e.id) || 0), Date.now());
+
+      // BUG 2 FIX: Safely parse maxId, ignoring string UUIDs to prevent NaN corruption.
+      let maxId = mergedEntries.reduce((max, e) => {
+        const numId = parseInt(String(e.id), 10);
+        return Math.max(max, isNaN(numId) ? 0 : numId);
+      }, Date.now());
 
       data.entries.forEach(imported => {
         const entryToSave = { ...imported };

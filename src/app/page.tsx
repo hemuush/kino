@@ -1,3 +1,4 @@
+// src/app/page.tsx
 "use client";
 
 import { useState, Suspense, useMemo } from 'react';
@@ -5,7 +6,7 @@ import { useMedia } from '@/context/MediaContext';
 import MediaCard from "@/components/MediaCard";
 import MediaCardSkeleton from '@/components/MediaCardSkeleton';
 import { MediaDetailModal } from '@/components/MediaDetailModal';
-import { MediaEntry, formatRuntime } from '@/lib/db';
+import { MediaEntry, formatRuntime, isEpisodic } from '@/lib/db';
 import {
   Clock, PlayCircle, ArrowRight, Plus, Star, Info,
   Play, Calendar, CheckCircle2
@@ -32,7 +33,6 @@ function DashboardContent() {
     return null;
   }, [currentlyWatching, planToWatch, entries]);
 
-  // FIXED: Accurate analytics calculation strictly based on WATCHED content.
   const stats = useMemo(() => {
     let totalTime = 0;
     let totalEpisodes = 0;
@@ -43,8 +43,8 @@ function DashboardContent() {
         totalCompleted++;
       }
 
-      if (e.type === 'Movie') {
-        // ONLY add movie runtime if the movie is completely watched
+      if (!isEpisodic(e)) {
+        // It's a standard Movie OR an Anime Movie
         if (e.status === 'Completed') {
           totalTime += (e.runtime || 0);
         }
@@ -112,7 +112,7 @@ function DashboardContent() {
                   </div>
                   <button
                     onClick={() => setSelectedEntry(heroEntry)}
-                    className="flex items-center gap-2 bg-foreground text-background hover:bg-primary hover:text-primary-foreground px-5 py-2.5 rounded-full font-bold text-sm transition-all shadow-lg active:scale-95"
+                    className="flex items-center gap-2 bg-foreground text-background hover:bg-primary hover:text-primary-foreground px-5 py-2.5 rounded-full font-bold text-sm transition-all shadow-lg active:scale-95 cursor-pointer"
                   >
                     <Info size={16} /> View Details
                   </button>
@@ -126,7 +126,7 @@ function DashboardContent() {
                 <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
                   Start logging your media. Your accurate watch-time analytics will automatically compile here based on completed movies and watched episodes.
                 </p>
-                <Link href="/add" className="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-3 rounded-full font-bold text-sm transition-all shadow-lg active:scale-95 hover:shadow-primary/25">
+                <Link href="/add" className="inline-flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-3 rounded-full font-bold text-sm transition-all shadow-lg active:scale-95 hover:shadow-primary/25 cursor-pointer">
                   <Plus size={16} /> Add First Entry
                 </Link>
               </div>
@@ -167,7 +167,7 @@ function DashboardContent() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
-              className={`flex-1 text-center py-2.5 text-xs font-bold rounded-xl transition-all capitalize ${activeTab === tab ? 'bg-background shadow-md text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-1 text-center py-2.5 text-xs font-bold rounded-xl transition-all capitalize cursor-pointer ${activeTab === tab ? 'bg-background shadow-md text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
             >
               {tab}
             </button>
@@ -247,7 +247,7 @@ function DashboardContent() {
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
               <Clock size={18} className="text-primary" /> Recently Added
             </h2>
-            <Link href="/collection" className="text-xs font-bold text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors">
+            <Link href="/collection" className="text-xs font-bold text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors cursor-pointer">
               View All <ArrowRight size={14} />
             </Link>
           </div>
@@ -316,7 +316,7 @@ function DashboardContent() {
       {/* Floating Action Button */}
       <Link
         href="/add"
-        className="fixed bottom-20 right-6 lg:bottom-10 lg:right-10 w-14 h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center shadow-xl shadow-primary/25 transition-all hover:scale-105 active:scale-95 z-50 group border border-primary/20"
+        className="fixed bottom-20 right-6 lg:bottom-10 lg:right-10 w-14 h-14 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full flex items-center justify-center shadow-xl shadow-primary/25 transition-all hover:scale-105 active:scale-95 z-50 group border border-primary/20 cursor-pointer"
       >
         <Plus size={24} className="stroke-[2.5] transition-transform duration-300 group-hover:rotate-90" />
       </Link>

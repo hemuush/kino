@@ -150,9 +150,17 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
     setIsSaving(true);
 
     if (!isEditMode) {
-      const duplicate = entries.find(entry => entry.title.toLowerCase() === title.trim().toLowerCase() && entry.type === type);
+      // BUG 4 FIX: Ensure duplicate checks factor in the release year so remakes can be added
+      const currentYear = releaseDate ? releaseDate.split('-')[0] : '';
+      const duplicate = entries.find(entry => {
+        const isSameTitle = entry.title.toLowerCase() === title.trim().toLowerCase();
+        const isSameType = entry.type === type;
+        const entryYear = entry.releaseDate ? entry.releaseDate.split('-')[0] : '';
+        return isSameTitle && isSameType && (entryYear === currentYear || (!entryYear && !currentYear));
+      });
+
       if (duplicate) {
-        toast.error(`"${title.trim()}" already exists.`, { description: "You can edit the existing entry instead." });
+        toast.error(`"${title.trim()}" already exists in your library.`, { description: "If this is a remake, please alter the release date to distinguish them." });
         setIsSaving(false);
         return;
       }
