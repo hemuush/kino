@@ -1,10 +1,11 @@
+// src/app/settings/page.tsx
 "use client";
 
 import { useState } from 'react';
 import { useMedia } from '@/context/MediaContext';
 import { Tag } from '@/lib/db';
-import { Trash2, Edit2, Check, X, Tag as TagIcon, Film, Save } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Trash2, Edit2, Check, X, Tag as TagIcon, Film } from 'lucide-react';
+import JsonImporter from '@/components/settings/JsonImporter';
 
 export default function SettingsPage() {
   const { genres, setGenres, franchises, setFranchises, isLoading, wipeAllData } = useMedia();
@@ -98,6 +99,9 @@ export default function SettingsPage() {
             ))}
           </div>
         </section>
+
+        {/* Data Import Component */}
+        <JsonImporter />
 
         {/* Danger Zone */}
         <section className="bg-card glass border border-red-500/30 rounded-3xl p-5 sm:p-8 shadow-sm md:col-span-2">

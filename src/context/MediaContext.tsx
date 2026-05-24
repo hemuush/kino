@@ -1,3 +1,4 @@
+// src/context/MediaContext.tsx
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
@@ -18,6 +19,7 @@ interface MediaContextType {
   syncStatus: 'idle' | 'syncing' | 'synced' | 'error';
   batchUpdateEntries: (entries: MediaEntry[]) => Promise<void>;
   wipeAllData: () => Promise<void>;
+  importData: (data: { entries?: MediaEntry[], genres?: Tag[], franchises?: Tag[] }) => Promise<void>;
 }
 
 const MediaContext = createContext<MediaContextType | undefined>(undefined);
@@ -75,7 +77,6 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     }, 10);
   }, [accessToken, logout]);
 
-
   useEffect(() => {
     if (!accessToken) { setIsLoading(false); return; }
     if (globalHasFetchedFromDrive) return;
@@ -102,16 +103,12 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         const localTimestamp = parseInt(localStorage.getItem('kino_timestamp') || '0', 10);
 
         if (localTimestamp > cloudTimestamp) {
-          // Local data is newer (likely due to an offline save or failed upload)
-          // We push local data to cloud instead of overwriting local cache.
-          console.warn("Local cache is newer than Google Drive backup. Pushing local changes to Drive.");
           triggerUpload();
           return;
         }
 
         if (fetchedGenres.length === 0) { fetchedGenres = DEFAULT_GENRES.map(name => ({ id: crypto.randomUUID(), name })); }
-        
-        // Disable triggerUpload temporarily while we overwrite state with cloud data
+
         updateStateAndRef(fetchedEntries, fetchedGenres, fetchedFranchises);
         setSyncStatus('synced');
       } catch (error) {
@@ -130,6 +127,97 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     updateStateAndRef(newEntries, undefined, undefined);
     triggerUpload();
   };
+
+  const importData = async (data: { entries?: MediaEntry[], genres?: Tag[], franchises?: Tag[] }) => {
+    let mergedEntries = [...latestDataRef.current.entries];
+    let mergedGenres = [...latestDataRef.current.genres];
+    let mergedFranchises = [...latestDataRef.current.franchises];
+    let hasChanges = false;
+
+    if (data.genres && data.genres.length > 0) {
+      hasChanges = true;
+      data.genres.forEach(imported => {
+        const existing = mergedGenres.find(g => g.id === imported.id || g.name.toLowerCase() === imported.name.toLowerCase());
+        if (!existing) mergedGenres.push({ ...imported, id: imported.id || crypto.randomUUID() });
+      });
+    }
+
+    if (data.franchises && data.franchises.length > 0) {
+      hasChanges = true;
+      data.franchises.forEach(imported => {
+        const existing = mergedFranchises.find(f => f.id === imported.id || f.name.toLowerCase() === imported.name.toLowerCase());
+        if (!existing) mergedFranchises.push({ ...imported, id: imported.id || crypto.randomUUID() });
+      });
+    }
+
+    if (data.entries && data.entries.length > 0) {
+      hasChanges = true;
+      let maxId = mergedEntries.reduce((max, e) => Math.max(max, Number(e.id) || 0), Date.now());
+
+      data.entries.forEach(imported => {
+        let entryToSave = { ...imported };
+
+        // Smart Genre Mapping
+        if (entryToSave.genre && Array.isArray(entryToSave.genre)) {
+          const mappedGenreIds: string[] = [];
+          entryToSave.genre.forEach(genreName => {
+            if (typeof genreName !== 'string') return;
+            let existingGenre = mergedGenres.find(g => g.name.toLowerCase() === genreName.toLowerCase());
+            if (!existingGenre) {
+              existingGenre = { id: crypto.randomUUID(), name: genreName };
+              mergedGenres.push(existingGenre);
+            }
+            mappedGenreIds.push(existingGenre.id);
+          });
+          entryToSave.genreIds = [...new Set([...(entryToSave.genreIds || []), ...mappedGenreIds])];
+          delete entryToSave.genre;
+        }
+
+        // Smart Franchise Mapping
+        if (entryToSave.franchise && typeof entryToSave.franchise === 'string') {
+          let existingFranchise = mergedFranchises.find(f => f.name.toLowerCase() === entryToSave.franchise!.toLowerCase());
+          if (!existingFranchise) {
+            existingFranchise = { id: crypto.randomUUID(), name: entryToSave.franchise };
+            mergedFranchises.push(existingFranchise);
+          }
+          entryToSave.franchiseId = existingFranchise.id;
+          delete entryToSave.franchise;
+        }
+
+        // Smart ID & Title Merging Logic
+        let existingIndex = -1;
+
+        if (entryToSave.id) {
+          existingIndex = mergedEntries.findIndex(e => String(e.id) === String(entryToSave.id));
+        }
+
+        // Fallback to searching by Title (case-insensitive) if ID didn't match or wasn't provided
+        if (existingIndex === -1 && entryToSave.title) {
+          existingIndex = mergedEntries.findIndex(e => e.title.toLowerCase() === entryToSave.title.toLowerCase());
+        }
+
+        if (existingIndex >= 0) {
+          // OVERWRITE: Merge new data into existing data based on Title or ID match
+          mergedEntries[existingIndex] = {
+            ...mergedEntries[existingIndex],
+            ...entryToSave,
+            id: mergedEntries[existingIndex].id, // Ensure we don't accidentally wipe the ID if matching by title
+            updatedAt: Date.now()
+          };
+        } else {
+          // CREATE NEW
+          maxId++;
+          mergedEntries.unshift({ ...entryToSave, id: entryToSave.id || maxId, createdAt: entryToSave.createdAt || Date.now() });
+        }
+      });
+    }
+
+    if (hasChanges) {
+      updateStateAndRef(mergedEntries, mergedGenres, mergedFranchises);
+      triggerUpload();
+    }
+  };
+
   const addEntry = async (entry: MediaEntry) => { const newEntry = { ...entry, id: entry.id || Date.now(), createdAt: Date.now() }; const updatedEntries = [newEntry, ...latestDataRef.current.entries]; updateStateAndRef(updatedEntries, undefined, undefined); triggerUpload(); };
   const updateEntry = async (updatedEntry: MediaEntry) => { const updatedEntries = latestDataRef.current.entries.map(e => String(e.id) === String(updatedEntry.id) ? updatedEntry : e); updateStateAndRef(updatedEntries, undefined, undefined); triggerUpload(); };
   const deleteEntry = async (id: number) => { const updatedEntries = latestDataRef.current.entries.filter(e => String(e.id) !== String(id)); updateStateAndRef(updatedEntries, undefined, undefined); triggerUpload(); };
@@ -148,7 +236,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
 
   return (
     <MediaContext.Provider value={{
-      entries, isLoading, addEntry, updateEntry, deleteEntry, genres, setGenres: saveGenres, franchises, setFranchises: saveFranchises, syncStatus, batchUpdateEntries, wipeAllData
+      entries, isLoading, addEntry, updateEntry, deleteEntry, genres, setGenres: saveGenres, franchises, setFranchises: saveFranchises, syncStatus, batchUpdateEntries, wipeAllData, importData
     }}>
       {children}
     </MediaContext.Provider>
@@ -159,4 +247,4 @@ export function useMedia() {
   const context = useContext(MediaContext);
   if (context === undefined) { throw new Error('useMedia must be used within a MediaProvider'); }
   return context;
-}
+}
