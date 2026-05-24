@@ -1,4 +1,3 @@
-// src/context/MediaContext.tsx
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
@@ -24,8 +23,6 @@ interface MediaContextType {
 
 const MediaContext = createContext<MediaContextType | undefined>(undefined);
 
-let globalHasFetchedFromDrive = false;
-
 export function MediaProvider({ children }: { children: ReactNode }) {
   const { accessToken, logout } = useAuth();
 
@@ -37,6 +34,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
 
   const uploadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const latestDataRef = useRef<{ entries: MediaEntry[]; genres: Tag[]; franchises: Tag[]; }>({ entries: [], genres: [], franchises: [] });
+  const hasFetchedFromDriveRef = useRef<boolean>(false);
 
   const updateStateAndRef = useCallback((newEntries?: MediaEntry[], newGenres?: Tag[], newFranchises?: Tag[]) => {
     if (newEntries) { setEntries(newEntries); latestDataRef.current.entries = newEntries; localStorage.setItem('kino_entries', JSON.stringify(newEntries)); }
@@ -45,6 +43,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('kino_timestamp', Date.now().toString());
   }, []);
 
+  // Initial Load from LocalStorage
   useEffect(() => {
     try {
       const storedEntries = localStorage.getItem('kino_entries');
@@ -56,7 +55,6 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         const parsedFranchises = storedFranchises ? JSON.parse(storedFranchises) : [];
         setEntries(parsedEntries); setGenres(parsedGenres); setFranchises(parsedFranchises);
         latestDataRef.current = { entries: parsedEntries, genres: parsedGenres, franchises: parsedFranchises };
-        setIsLoading(false);
       }
     } catch (error) { console.error("Failed to parse local cache", error); }
   }, []);
@@ -74,16 +72,23 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         setSyncStatus('error');
         if (error instanceof TokenExpiredError || (error as Error).message?.includes('401')) { console.warn("Session expired"); logout(false); }
       }
-    }, 10);
+    }, 1000);
   }, [accessToken, logout]);
 
+  // Fetch from Drive logic
   useEffect(() => {
-    if (!accessToken) { setIsLoading(false); return; }
-    if (globalHasFetchedFromDrive) return;
+    if (!accessToken) {
+      setIsLoading(false);
+      hasFetchedFromDriveRef.current = false;
+      return;
+    }
+
+    if (hasFetchedFromDriveRef.current) return;
 
     const fetchFromDrive = async () => {
+      setIsLoading(true);
       try {
-        globalHasFetchedFromDrive = true;
+        hasFetchedFromDriveRef.current = true;
         setSyncStatus('syncing');
         const backup = await downloadBackupFromDrive(accessToken) as BackupData | MediaEntry[] | null;
         let fetchedEntries: MediaEntry[] = [];
@@ -104,20 +109,21 @@ export function MediaProvider({ children }: { children: ReactNode }) {
 
         if (localTimestamp > cloudTimestamp) {
           triggerUpload();
-          return;
+        } else {
+          if (fetchedGenres.length === 0) { fetchedGenres = DEFAULT_GENRES.map(name => ({ id: crypto.randomUUID(), name })); }
+          updateStateAndRef(fetchedEntries, fetchedGenres, fetchedFranchises);
         }
-
-        if (fetchedGenres.length === 0) { fetchedGenres = DEFAULT_GENRES.map(name => ({ id: crypto.randomUUID(), name })); }
-
-        updateStateAndRef(fetchedEntries, fetchedGenres, fetchedFranchises);
         setSyncStatus('synced');
       } catch (error) {
         setSyncStatus('error');
         if (error instanceof TokenExpiredError || (error as Error).message?.includes('401')) { logout(false); }
-      } finally { setIsLoading(false); }
+      } finally {
+        setIsLoading(false);
+      }
     };
+
     fetchFromDrive();
-  }, [accessToken, logout, updateStateAndRef]);
+  }, [accessToken, logout, triggerUpload, updateStateAndRef]);
 
   const batchUpdateEntries = async (updatedEntries: MediaEntry[]) => {
     const newEntries = latestDataRef.current.entries.map(e => {

@@ -21,8 +21,8 @@ const AuthContext = createContext<AuthContextType>({
   accessToken: null,
   user: null,
   isLoading: true,
-  login: async () => {},
-  logout: async (forceWipe?: boolean) => {},
+  login: async () => { },
+  logout: async (forceWipe?: boolean) => { },
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -84,11 +84,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAccessToken(null);
     setUser(null);
     localStorage.removeItem('kino_access_token');
-    
+
     if (forceWipe) {
       localStorage.removeItem('kino_entries');
       localStorage.removeItem('kino_genres');
       localStorage.removeItem('kino_franchises');
+      localStorage.removeItem('kino_timestamp');
       import('@/lib/googleDrive').then(({ clearDriveCache }) => clearDriveCache());
       window.location.href = '/login';
       return;
