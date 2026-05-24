@@ -7,28 +7,27 @@ export interface Tag {
   id: string;
   name: string;
   coverImage?: string;
-  color?: string; // Optional: for UI styling
+  color?: string;
 }
 
 export interface EpisodeInfo {
   name: string;
-  airDate?: string; // Exactly when this episode aired
+  airDate?: string;
   season?: number;
   number?: number;
-  runtime?: number; // Exact runtime of this specific episode
+  runtime?: number;
 }
 
 export interface MediaEntry {
-  id?: number;
+  id?: number | string;
   title: string;
   type: MediaType;
   animeType?: AnimeType;
   status?: WatchStatus;
   coverImage: string;
   releaseDate?: string;
-  runtime?: number; // General runtime (Movie length, or avg episode length)
+  runtime?: number;
 
-  // Normalization: Linked by ID
   franchiseId?: string;
   genreIds?: string[];
 
@@ -40,7 +39,7 @@ export interface MediaEntry {
   review?: string;
   favorite?: boolean;
   createdAt: number;
-  updatedAt?: number; // Tracking the last modification time
+  updatedAt?: number;
   episodesWatched?: number;
   episodesTotal?: number;
   seasonsCount?: number;
@@ -54,10 +53,6 @@ export const DEFAULT_GENRES = [
   'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'Slice of Life', 'Supernatural', 'Documentary', 'Animation'
 ];
 
-/**
- * Architectural Helper: Determines if an entry should have episodes.
- * Handles the edge case where Anime can be either a Show or a Movie.
- */
 export function isEpisodic(entry: Partial<MediaEntry>): boolean {
   if (entry.type === 'Anime') return entry.animeType === 'Show';
   if (entry.type === 'TV Show') return true;
