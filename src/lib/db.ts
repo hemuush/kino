@@ -48,7 +48,7 @@ export interface MediaEntry {
   lastRefreshedAt?: number;
 }
 
-export const DEFAULT_GENRES = [
+export const DEFAULT_GENRES: string[] = [
   'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Horror',
   'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'Slice of Life', 'Supernatural', 'Documentary', 'Animation'
 ];

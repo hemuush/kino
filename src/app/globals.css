@@ -29,17 +29,19 @@
 /* ─── Light Mode ─── */
 @layer base {
   :root {
-    --bg: #f5f5f7; /* Apple classic gray bg */
-    --fg: #1d1d1f; /* Apple dark text */
+    --bg: #f5f5f7;
+    --fg: #1d1d1f;
     --card: #ffffff;
     --card-hover: #ffffff;
     --surface: #ffffff;
-    --primary: #0071e3; /* Apple Blue */
+    --primary: #0071e3;
     --primary-hover: #0077ed;
     --accent: #2997ff;
-    --muted: #f5f5f7;
+    --muted: #e5e5ea;
+    /* Fixed: Added contrast for muted inputs */
     --muted-fg: #86868b;
-    --border: rgba(0, 0, 0, 0.05);
+    --border: #d2d2d7;
+    /* Fixed: Made borders visible in light mode */
     --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.04);
     --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.08);
     --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.12);
@@ -50,15 +52,16 @@
   .dark {
     --bg: #09090b;
     --fg: #f5f5f7;
-    --card: #131316; /* Premium dark warm widget bg */
+    --card: #131316;
     --card-hover: #1b1b1f;
     --surface: #131316;
-    --primary: #2997ff; /* Apple light blue */
+    --primary: #2997ff;
     --primary-hover: #0071e3;
     --accent: #0071e3;
     --muted: #1e1e21;
     --muted-fg: #86868b;
-    --border: rgba(255, 255, 255, 0.05);
+    --border: rgba(255, 255, 255, 0.1);
+    /* Slightly increased dark border visibility */
     --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.5);
     --shadow-md: 0 10px 35px rgba(0, 0, 0, 0.7);
     --shadow-lg: 0 20px 45px rgba(0, 0, 0, 0.85);
@@ -73,34 +76,57 @@
     @apply border-border;
     box-sizing: border-box;
   }
+
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
   }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);
     overflow-x: hidden;
     letter-spacing: -0.01em;
   }
+
   ::selection {
     background: color-mix(in srgb, var(--primary) 25%, transparent);
   }
 }
 
 /* ─── Scrollbar ─── */
-.hide-scrollbar::-webkit-scrollbar { display: none; }
-.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
 /* ─── Safe Area ─── */
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--muted-fg); border-radius: 999px; opacity: 0.5; }
-::-webkit-scrollbar-thumb:hover { background: var(--fg); }
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted-fg);
+  border-radius: 999px;
+  opacity: 0.5;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fg);
+}
 
 /* ─── Typography ─── */
 .font-display {
@@ -156,63 +182,151 @@
 
 /* ─── Animations ─── */
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
+
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(100%); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.97); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
+
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
+
 @keyframes pulse-soft {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(1.05); }
+
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
 }
+
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
 }
+
 @keyframes dot-pulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 .animate-fade-up {
   animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
 .animate-fade-in {
   animation: fadeIn 0.4s ease-out both;
 }
+
 .animate-scale-in {
   animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
 .animate-float {
   animation: float 6s ease-in-out infinite;
 }
 
 /* Staggered children — tighter timing */
-.stagger > * {
+.stagger>* {
   animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-.stagger > *:nth-child(1) { animation-delay: 0ms; }
-.stagger > *:nth-child(2) { animation-delay: 50ms; }
-.stagger > *:nth-child(3) { animation-delay: 100ms; }
-.stagger > *:nth-child(4) { animation-delay: 150ms; }
-.stagger > *:nth-child(5) { animation-delay: 200ms; }
-.stagger > *:nth-child(6) { animation-delay: 250ms; }
-.stagger > *:nth-child(7) { animation-delay: 300ms; }
-.stagger > *:nth-child(8) { animation-delay: 350ms; }
+
+.stagger>*:nth-child(1) {
+  animation-delay: 0ms;
+}
+
+.stagger>*:nth-child(2) {
+  animation-delay: 50ms;
+}
+
+.stagger>*:nth-child(3) {
+  animation-delay: 100ms;
+}
+
+.stagger>*:nth-child(4) {
+  animation-delay: 150ms;
+}
+
+.stagger>*:nth-child(5) {
+  animation-delay: 200ms;
+}
+
+.stagger>*:nth-child(6) {
+  animation-delay: 250ms;
+}
+
+.stagger>*:nth-child(7) {
+  animation-delay: 300ms;
+}
+
+.stagger>*:nth-child(8) {
+  animation-delay: 350ms;
+}
 
 /* Skeleton loading */
 .skeleton {
@@ -231,15 +345,18 @@
 .interactive-lift {
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
 }
+
 @media (hover: hover) and (pointer: fine) {
   .interactive-lift:hover {
     transform: translateY(-3px) scale(1.01);
     box-shadow: var(--shadow-card-hover);
   }
+
   .interactive-lift:active {
     transform: translateY(0) scale(0.99);
   }
 }
+
 .interactive-lift:active {
   transform: scale(0.98);
 }
@@ -249,6 +366,7 @@
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
 }
-.snap-x-mandatory > * {
+
+.snap-x-mandatory>* {
   scroll-snap-align: start;
 }

@@ -2,9 +2,11 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
-import { MediaEntry, Tag, DEFAULT_GENRES } from '@/lib/db';
+import { MediaEntry, Tag, DEFAULT_GENRES, MediaType } from '@/lib/db';
 import { useAuth } from '@/context/AuthContext';
 import { TokenExpiredError, downloadBackupFromDrive, uploadBackupToDrive, deleteBackupFromDrive, BackupData } from '@/lib/googleDrive';
+
+export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error';
 
 interface MediaContextType {
   entries: MediaEntry[];
@@ -16,7 +18,7 @@ interface MediaContextType {
   setGenres: (genres: Tag[]) => void;
   franchises: Tag[];
   setFranchises: (franchises: Tag[]) => void;
-  syncStatus: 'idle' | 'syncing' | 'synced' | 'error';
+  syncStatus: SyncStatus;
   batchUpdateEntries: (entries: MediaEntry[]) => Promise<void>;
   wipeAllData: () => Promise<void>;
   importData: (data: { entries?: MediaEntry[], genres?: Tag[], franchises?: Tag[] }) => Promise<void>;
@@ -30,8 +32,8 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<MediaEntry[]>([]);
   const [genres, setGenres] = useState<Tag[]>([]);
   const [franchises, setFranchises] = useState<Tag[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
 
   const uploadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const latestDataRef = useRef<{ entries: MediaEntry[]; genres: Tag[]; franchises: Tag[]; }>({ entries: [], genres: [], franchises: [] });
@@ -101,18 +103,15 @@ export function MediaProvider({ children }: { children: ReactNode }) {
 
         if (backup) {
           if (Array.isArray(backup)) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            fetchedEntries = backup.map(e => { if ((e.type as any) === 'Series') return { ...e, type: 'TV Show' }; return e; });
+            fetchedEntries = backup.map(e => { if (e.type === ('Series' as unknown as MediaType)) return { ...e, type: 'TV Show' }; return e; });
           } else {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            fetchedEntries = backup.entries?.map(e => { if ((e.type as any) === 'Series') return { ...e, type: 'TV Show' }; return e; }) || [];
+            fetchedEntries = backup.entries?.map(e => { if (e.type === ('Series' as unknown as MediaType)) return { ...e, type: 'TV Show' }; return e; }) || [];
             fetchedGenres = backup.genres || [];
             fetchedFranchises = backup.franchises || [];
           }
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const cloudTimestamp = backup && 'timestamp' in backup ? (backup as any).timestamp : 0;
+        const cloudTimestamp = backup && 'timestamp' in backup && typeof backup.timestamp === 'number' ? backup.timestamp : 0;
         const localTimestamp = parseInt(localStorage.getItem('kino_timestamp') || '0', 10);
 
         if (localTimestamp > cloudTimestamp) {
@@ -236,7 +235,6 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     triggerUpload();
   };
 
-  // Safe string matching for IDs prevents missing entries during updates
   const updateEntry = async (updatedEntry: MediaEntry) => {
     const updatedEntries = latestDataRef.current.entries.map(e => String(e.id) === String(updatedEntry.id) ? updatedEntry : e);
     updateStateAndRef(updatedEntries, undefined, undefined);
@@ -289,7 +287,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useMedia() {
+export function useMedia(): MediaContextType {
   const context = useContext(MediaContext);
   if (context === undefined) { throw new Error('useMedia must be used within a MediaProvider'); }
   return context;

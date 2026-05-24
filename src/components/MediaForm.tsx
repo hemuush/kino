@@ -11,11 +11,13 @@ import { toast } from 'sonner';
 interface MediaFormProps {
   onCancel: () => void;
   onSave: (entry: MediaEntry) => Promise<void> | void;
-  initialData?: MediaEntry | null;
+  initialData?: MediaEntry;
 }
 
 const mediaTypes: MediaType[] = ['Movie', 'TV Show', 'Anime'];
 const statuses: WatchStatus[] = ['Completed', 'Watching', 'Plan to Watch'];
+
+type FormTabType = 'General' | 'Details' | 'Episodes';
 
 const FieldWrapper = ({ label, icon, children }: { label: React.ReactNode, icon?: React.ReactNode, children: React.ReactNode }) => (
   <div className="space-y-2 flex flex-col w-full">
@@ -26,22 +28,20 @@ const FieldWrapper = ({ label, icon, children }: { label: React.ReactNode, icon?
   </div>
 );
 
-type FormTabType = 'General' | 'Details' | 'Episodes';
-
 export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
   const { entries, genres: dbGenres, franchises: dbFranchises, setGenres, setFranchises } = useMedia();
   const isEditMode = !!initialData;
 
-  const [title, setTitle] = useState(initialData?.title || '');
+  const [title, setTitle] = useState<string>(initialData?.title || '');
   const [type, setType] = useState<MediaType>(initialData?.type || 'Movie');
   const [animeType, setAnimeType] = useState<AnimeType>(initialData?.animeType || 'Show');
   const [status, setStatus] = useState<WatchStatus>(initialData?.status || 'Completed');
-  const [coverImage, setCoverImage] = useState(initialData?.coverImage || '');
-  const [releaseDate, setReleaseDate] = useState(initialData?.releaseDate || new Date().toISOString().split('T')[0]);
+  const [coverImage, setCoverImage] = useState<string>(initialData?.coverImage || '');
+  const [releaseDate, setReleaseDate] = useState<string>(initialData?.releaseDate || new Date().toISOString().split('T')[0]);
   const [runtime, setRuntime] = useState<number | ''>(initialData?.runtime || '');
-  const [rating, setRating] = useState(initialData?.rating || 8);
-  const [review, setReview] = useState(initialData?.review || '');
-  const [favorite, setFavorite] = useState(initialData?.favorite || false);
+  const [rating, setRating] = useState<number>(initialData?.rating || 8);
+  const [review, setReview] = useState<string>(initialData?.review || '');
+  const [favorite, setFavorite] = useState<boolean>(initialData?.favorite || false);
 
   const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>(initialData?.genreIds || []);
   const [selectedFranchiseId, setSelectedFranchiseId] = useState<string | null>(initialData?.franchiseId || null);
@@ -53,19 +53,25 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
   const [activeSeasonTab, setActiveSeasonTab] = useState<number>(1);
 
   const [hoveredStar, setHoveredStar] = useState<number | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [imageInputMode, setImageInputMode] = useState<'url' | 'upload'>('url');
 
-  const [genreSearch, setGenreSearch] = useState('');
-  const [franchiseSearch, setFranchiseSearch] = useState('');
-  const [showGenreDropdown, setShowGenreDropdown] = useState(false);
-  const [showFranchiseDropdown, setShowFranchiseDropdown] = useState(false);
+  const [genreSearch, setGenreSearch] = useState<string>('');
+  const [franchiseSearch, setFranchiseSearch] = useState<string>('');
+  const [showGenreDropdown, setShowGenreDropdown] = useState<boolean>(false);
+  const [showFranchiseDropdown, setShowFranchiseDropdown] = useState<boolean>(false);
   const [formTab, setFormTab] = useState<FormTabType>('General');
 
   const genreRef = useRef<HTMLDivElement>(null);
   const franchiseRef = useRef<HTMLDivElement>(null);
 
   const currentIsEpisodic = isEpisodic({ type, animeType });
+
+  useEffect(() => {
+    if (!currentIsEpisodic && formTab === 'Episodes') {
+      setFormTab('General');
+    }
+  }, [currentIsEpisodic, formTab]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -117,6 +123,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
       }
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleCreateFranchise = () => {
@@ -197,7 +204,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
             key={tab}
             type="button"
             onClick={() => setFormTab(tab)}
-            className={`pb-4 text-xs font-bold tracking-wider uppercase transition-all border-b-2 outline-none relative ${formTab === tab ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
+            className={`pb-4 text-xs font-bold tracking-wider uppercase transition-all border-b-2 outline-none relative cursor-pointer ${formTab === tab ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
           >
             {tab}
@@ -477,7 +484,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
                           {episodes.map((ep, idx) => {
                             if (ep.season !== currentTab) return null;
                             return (
-                              <div key={idx} className="flex items-center gap-3 bg-background border border-border/60 rounded-xl p-2 hover:border-primary/40 hover:shadow-sm transition-all group">
+                              <div key={`${ep.season}-${ep.number || idx}`} className="flex items-center gap-3 bg-background border border-border/60 rounded-xl p-2 hover:border-primary/40 hover:shadow-sm transition-all group">
                                 <div className="w-12 text-xs font-bold text-muted-foreground font-mono flex-shrink-0 text-center bg-muted/40 rounded-lg py-2.5 cursor-default">
                                   {ep.number || 1}
                                 </div>
