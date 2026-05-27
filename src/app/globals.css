@@ -29,23 +29,21 @@
 /* ─── Light Mode ─── */
 @layer base {
   :root {
-    --bg: #f5f5f7;
-    --fg: #1d1d1f;
+    --bg: #f3f6fb;
+    --fg: #0f172a;
     --card: #ffffff;
-    --card-hover: #ffffff;
+    --card-hover: #fbfdff;
     --surface: #ffffff;
-    --primary: #0071e3;
-    --primary-hover: #0077ed;
-    --accent: #2997ff;
-    --muted: #e5e5ea;
-    /* Fixed: Added contrast for muted inputs */
-    --muted-fg: #86868b;
-    --border: #d2d2d7;
-    /* Fixed: Made borders visible in light mode */
-    --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.04);
-    --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.08);
-    --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.12);
-    --shadow-card-hover: 0 20px 40px rgba(0, 0, 0, 0.12), 0 10px 10px rgba(0, 0, 0, 0.04);
+    --primary: #1f7ae0;
+    --primary-hover: #1769c4;
+    --accent: #0ea5e9;
+    --muted: #e8eef7;
+    --muted-fg: #52607a;
+    --border: #d6e0ee;
+    --shadow-subtle: 0 4px 18px rgba(15, 23, 42, 0.05);
+    --shadow-md: 0 10px 26px rgba(15, 23, 42, 0.1);
+    --shadow-lg: 0 18px 42px rgba(15, 23, 42, 0.13);
+    --shadow-card-hover: 0 20px 40px rgba(15, 23, 42, 0.14), 0 8px 12px rgba(15, 23, 42, 0.06);
     color-scheme: light;
   }
 
@@ -87,6 +85,7 @@
     font-family: var(--font-sans);
     overflow-x: hidden;
     letter-spacing: -0.01em;
+    transition: background-color 320ms ease, color 320ms ease;
   }
 
   ::selection {
@@ -359,6 +358,25 @@
 
 .interactive-lift:active {
   transform: scale(0.98);
+}
+
+/* Global micro-interactions */
+button,
+a,
+input,
+select,
+textarea {
+  transition: background-color 220ms ease, color 220ms ease, border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease, opacity 220ms ease;
+}
+
+button:active,
+a:active {
+  transform: translateY(0.5px) scale(0.99);
+}
+
+/* Smooth page-region animation helper */
+.page-enter {
+  animation: fadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Snap scroll */

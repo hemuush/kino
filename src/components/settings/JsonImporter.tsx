@@ -65,7 +65,7 @@ export default function JsonImporter() {
 
             const stats = {
                 movies: entries.filter(ent => ent.type === 'Movie').length,
-                tvShows: entries.filter(ent => ent.type === 'TV Show' || ent.type === 'Series').length,
+                tvShows: entries.filter(ent => ent.type === 'TV Show').length,
                 anime: entries.filter(ent => ent.type === 'Anime').length,
             };
 

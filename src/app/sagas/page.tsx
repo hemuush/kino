@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useMedia } from '@/context/MediaContext';
 import { MediaEntry, formatRuntime } from '@/lib/db';
 import { PageLoader } from '@/components/ui/Loader';
@@ -8,12 +9,16 @@ import { PageLoader } from '@/components/ui/Loader';
 export default function SagasPage() {
   // 1. Fetch data from your custom hook
   const { entries, franchises, isLoading } = useMedia();
+  const searchParams = useSearchParams();
 
   // 2. State Configuration
   const [selectedSaga, setSelectedSaga] = useState<string | null>(null);
   const [selectedMovie, setSelectedMovie] = useState<MediaEntry | null>(null);
   const [searchTerm, setSearchTerm] = useState(''); // New state for search
   const [mobileView, setMobileView] = useState<'list' | 'detail'>('list');
+  useEffect(() => {
+    setSearchTerm(searchParams.get('q') || '');
+  }, [searchParams]);
 
   // 3. Data Processing & Grouping based on your MediaEntry schema
   const groupedSagas = useMemo(() => {
@@ -93,7 +98,7 @@ export default function SagasPage() {
   }
 
   return (
-    <div className="absolute inset-0 flex w-full bg-background text-foreground overflow-hidden">
+    <div className="absolute inset-0 flex w-full bg-[radial-gradient(circle_at_10%_0%,rgba(245,158,11,0.08),transparent_35%),radial-gradient(circle_at_85%_15%,rgba(59,130,246,0.08),transparent_40%),#05070f] text-white overflow-hidden">
 
       {/* ========================================================
         LEFT SIDEBAR: The Master List
@@ -173,36 +178,12 @@ export default function SagasPage() {
         {!selectedSaga && (
           <div className="p-6 md:p-12 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
             <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-              <div>
+              <div className="hidden md:block">
                 <h1 className="text-4xl font-extrabold text-foreground tracking-tight">Your Sagas</h1>
                 <p className="text-muted-foreground mt-2 text-lg">Organized collections and cinematic universes.</p>
               </div>
 
-              {/* SEARCH BAR */}
-              <div className="relative w-full md:w-72 lg:w-96">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search franchises..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-card border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all shadow-sm"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm('')}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                )}
-              </div>
+              
             </header>
 
             {sagaNames.length === 0 ? (

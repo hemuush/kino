@@ -17,10 +17,10 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="absolute inset-0 flex flex-col px-4 sm:px-6 lg:px-8 py-6 lg:py-10 max-w-7xl mx-auto w-full h-full overflow-hidden">
+    <div className="absolute inset-0 flex flex-col bg-[radial-gradient(circle_at_10%_0%,rgba(245,158,11,0.08),transparent_35%),radial-gradient(circle_at_85%_15%,rgba(59,130,246,0.08),transparent_40%),#05070f] text-white px-4 sm:px-6 lg:px-8 py-6 lg:py-10 max-w-7xl mx-auto w-full h-full overflow-hidden">
 
       {/* Mobile Header Title */}
-      <div className="md:hidden shrink-0 mb-4 px-1">
+      <div className="hidden md:hidden shrink-0 mb-4 px-1">
         <h1 className="font-display text-2xl font-extrabold tracking-tight text-foreground">Settings</h1>
       </div>
 

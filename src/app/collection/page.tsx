@@ -5,7 +5,7 @@ import { useState, useEffect, Suspense, useMemo, useRef } from 'react';
 import { useMedia } from '@/context/MediaContext';
 import MediaCard from '@/components/MediaCard';
 import { MediaDetailModal } from '@/components/MediaDetailModal';
-import { Plus, Film, X, Heart, Shuffle, SlidersHorizontal, Search, Settings, Terminal } from 'lucide-react';
+import { Plus, Film, X, Heart, Shuffle, Search, Settings, Terminal } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MediaEntry, isEpisodic } from '@/lib/db';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
@@ -24,10 +24,15 @@ function CollectionContent() {
     const [filter, setFilter] = useState<'All' | 'Movie' | 'Series' | 'Anime'>(typeParam || 'All');
 
     const [statusFilter, setStatusFilter] = useState<'All' | 'Completed' | 'Watching' | 'Plan to Watch'>('All');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [showFilters, setShowFilters] = useState(true);
+    const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+    const [showFilters, setShowFilters] = useState(searchParams.get('filters') !== '0');
     const [favoritesOnly, setFavoritesOnly] = useState(false);
     const [sortBy, setSortBy] = useState<'Recent' | 'Rating' | 'Title'>('Recent');
+    const [viewMode, setViewMode] = useState<'poster' | 'list'>('poster');
+    useEffect(() => {
+        setSearchQuery(searchParams.get('q') || '');
+        setShowFilters(searchParams.get('filters') !== '0');
+    }, [searchParams]);
 
     // Command Menu state
     const [isCmdOpen, setIsCmdOpen] = useState(false);
@@ -77,6 +82,13 @@ function CollectionContent() {
         const random = ptw[crypto.getRandomValues(new Uint32Array(1))[0] % ptw.length];
         setSelectedEntry(random);
     };
+
+    const quickStats = useMemo(() => ([
+        { label: 'Watching', value: entries.filter(e => e.status === 'Watching').length, onClick: () => setStatusFilter('Watching') },
+        { label: 'Plan', value: entries.filter(e => e.status === 'Plan to Watch').length, onClick: () => setStatusFilter('Plan to Watch') },
+        { label: 'Completed', value: entries.filter(e => e.status === 'Completed').length, onClick: () => setStatusFilter('Completed') },
+        { label: 'Favorites', value: entries.filter(e => e.favorite).length, onClick: () => setFavoritesOnly(true) },
+    ]), [entries]);
 
     // Listen for Cmd+K / Ctrl+K
     useEffect(() => {
@@ -166,7 +178,7 @@ function CollectionContent() {
     };
 
     return (
-        <div className="absolute inset-0 flex flex-col bg-[radial-gradient(circle_at_15%_0%,rgba(56,189,248,0.08),transparent_35%),radial-gradient(circle_at_85%_0%,rgba(251,191,36,0.06),transparent_38%),var(--background)] pb-4 lg:pb-6 pt-4 lg:pt-6 px-4 sm:px-8 lg:px-10 overflow-hidden w-full max-w-[1600px] mx-auto animate-fade-in animate-fade-up">
+        <div className="absolute inset-0 flex flex-col bg-[radial-gradient(circle_at_15%_0%,rgba(56,189,248,0.08),transparent_35%),radial-gradient(circle_at_85%_0%,rgba(251,191,36,0.06),transparent_38%),\#05070f] pb-4 lg:pb-6 pt-4 lg:pt-6 px-4 sm:px-8 lg:px-10 overflow-hidden w-full max-w-[1600px] mx-auto animate-fade-in animate-fade-up">
             {/* Ambient background glow orbs */}
             <div className="absolute top-[15%] left-[25%] w-[400px] h-[400px] bg-cyan-500/5 rounded-full blur-[120px] pointer-events-none" />
             <div className="absolute top-[40%] right-[20%] w-[350px] h-[350px] bg-purple-500/5 rounded-full blur-[110px] pointer-events-none" />
@@ -174,7 +186,7 @@ function CollectionContent() {
             {/* Header Area */}
             <div className="shrink-0 pb-4 border-b border-cyan-400/15">
                 <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
-                    <div className="flex flex-col text-left">
+                    <div className="hidden md:flex flex-col text-left">
                         <h1 className="text-3xl font-display font-bold tracking-tight text-foreground flex items-center gap-2">
                             My Collection
                         </h1>
@@ -182,6 +194,10 @@ function CollectionContent() {
                     </div>
 
                     <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1 sm:pb-0">
+                        <div className="hidden md:flex items-center rounded-full border border-border/70 bg-card/60 p-1 mr-1">
+                            <button onClick={() => setViewMode('poster')} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${viewMode === 'poster' ? 'bg-primary text-white' : 'text-muted-foreground hover:text-foreground'}`}>Poster</button>
+                            <button onClick={() => setViewMode('list')} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${viewMode === 'list' ? 'bg-primary text-white' : 'text-muted-foreground hover:text-foreground'}`}>List</button>
+                        </div>
                         {/* Cmd+K trigger button */}
                         <button
                             onClick={() => setIsCmdOpen(true)}
@@ -199,12 +215,7 @@ function CollectionContent() {
                         >
                             <Shuffle size={13} /> Pick Random
                         </button>
-                        <button
-                            onClick={() => setShowFilters(!showFilters)}
-                            className={`flex items-center gap-1.5 px-4 py-2 rounded-full font-semibold text-[12.5px] transition-all whitespace-nowrap border cursor-pointer shadow-sm ${showFilters ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/25 shadow-cyan-500/5' : 'bg-card/70 dark:bg-neutral-950/65 text-foreground hover:bg-muted dark:hover:bg-neutral-900 border-border/80 dark:border-white/5'}`}
-                        >
-                            <SlidersHorizontal size={13} /> Filters
-                        </button>
+                        
                         <div className="h-6 w-px bg-black/5 dark:bg-white/10 mx-1 hidden sm:block"></div>
                         <Link
                             href="/add"
@@ -225,24 +236,7 @@ function CollectionContent() {
                         >
                             <div className="max-w-[1600px] mx-auto pt-5 flex flex-col gap-4">
                                 <div className="flex flex-col md:flex-row md:items-center gap-4">
-                                    {/* Search Bar */}
-                                    <div className="relative w-full md:max-w-[340px] shrink-0">
-                                        <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                                        <input
-                                            type="text"
-                                            placeholder="Search collection..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full bg-card/70 dark:bg-neutral-950/65 focus:bg-muted/80 rounded-full pl-11 pr-4 py-2 text-[13.5px] outline-none border border-border/80 dark:border-white/5 focus:border-cyan-400/35 transition-all text-foreground shadow-inner"
-                                        />
-                                        {searchQuery && (
-                                            <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                                                <X size={15} />
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    {/* Horizontal scroll container for the rest of filters on mobile, normal flex on desktop */}
+                                    {/* Horizontal scroll container for filters */}
                                     <div className="w-full min-w-0 overflow-x-auto hide-scrollbar pb-2 md:pb-0">
                                         <div className="flex w-max min-w-full items-center gap-3 md:w-auto md:min-w-0">
                                         {/* Neon Cyan Filter Pills: Type */}
@@ -330,26 +324,63 @@ function CollectionContent() {
                     </div>
                 ) : (
                     <section>
+                        {showFilters && (
+                            <div className="mb-4 flex flex-wrap gap-2">
+                                {quickStats.map((s) => (
+                                    <button key={s.label} onClick={s.onClick} className="rounded-full border border-border/70 bg-card/70 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50">
+                                        {s.label}: <span className="text-foreground">{s.value}</span>
+                                    </button>
+                                ))}
+                                <button onClick={() => { setSearchQuery(''); setFilter('All'); setStatusFilter('All'); setFavoritesOnly(false); router.push('/collection'); }} className="rounded-full border border-border/70 bg-card/70 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground">
+                                    Reset
+                                </button>
+                            </div>
+                        )}
                         <div className="flex items-center justify-between mb-5 px-1">
                             <h2 className="text-[10px] font-bold text-muted-foreground/60 tracking-widest uppercase">
                                 {searchQuery ? 'Search Results' : 'Your Collection'}
                             </h2>
                         </div>
-                        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-x-4 gap-y-6">
-                            <AnimatePresence>
-                                {sortedEntries.map((entry, i) => (
-                                    <MediaCard
-                                        key={entry.id}
-                                        entry={entry}
-                                        onClick={() => setSelectedEntry(entry)}
-                                        onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })}
-                                        onIncrementWatched={() => handleIncrementWatched(entry)}
-                                        onStatusChange={(newStatus) => updateEntry({ ...entry, status: newStatus })}
-                                        index={i}
-                                    />
-                                ))}
-                            </AnimatePresence>
-                        </div>
+                        {viewMode === 'poster' ? (
+                            <motion.div layout className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-x-4 gap-y-6">
+                                <AnimatePresence>
+                                    {sortedEntries.map((entry, i) => (
+                                        <MediaCard
+                                            key={entry.id}
+                                            entry={entry}
+                                            onClick={() => setSelectedEntry(entry)}
+                                            onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })}
+                                            onIncrementWatched={() => handleIncrementWatched(entry)}
+                                            onStatusChange={(newStatus) => updateEntry({ ...entry, status: newStatus })}
+                                            index={i}
+                                        />
+                                    ))}
+                                </AnimatePresence>
+                            </motion.div>
+                        ) : (
+                            <motion.div layout className="space-y-2">
+                                <AnimatePresence>
+                                    {sortedEntries.map((entry) => (
+                                        <motion.div key={entry.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="rounded-2xl border border-border/70 bg-card/70 p-3 flex items-center gap-3">
+                                            <button onClick={() => setSelectedEntry(entry)} className="w-12 h-14 rounded-lg overflow-hidden bg-muted shrink-0">
+                                                {entry.coverImage ? <img src={entry.coverImage} alt={entry.title} className="w-full h-full object-cover" /> : null}
+                                            </button>
+                                            <button onClick={() => setSelectedEntry(entry)} className="text-left min-w-0 flex-1">
+                                                <p className="font-semibold truncate">{entry.title}</p>
+                                                <p className="text-xs text-muted-foreground">{entry.type} - {entry.status || 'Tracked'}</p>
+                                            </button>
+                                            <button onClick={() => updateEntry({ ...entry, favorite: !entry.favorite })} className="px-2 py-1 text-xs rounded-lg border border-border/70">Fav</button>
+                                            {isEpisodic(entry) && <button onClick={() => handleIncrementWatched(entry)} className="px-2 py-1 text-xs rounded-lg border border-border/70">+1 Ep</button>}
+                                            <select value={entry.status || 'Completed'} onChange={(e) => updateEntry({ ...entry, status: e.target.value as MediaEntry['status'] })} className="text-xs rounded-lg border border-border/70 bg-background px-2 py-1">
+                                                <option>Completed</option>
+                                                <option>Watching</option>
+                                                <option>Plan to Watch</option>
+                                            </select>
+                                        </motion.div>
+                                    ))}
+                                </AnimatePresence>
+                            </motion.div>
+                        )}
                     </section>
                 )}
             </div>
