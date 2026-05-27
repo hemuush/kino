@@ -14,7 +14,7 @@ export default function AddMediaPage() {
       <div className="w-full h-full flex justify-center items-center">
         <MediaForm
           onSave={async (entry) => {
-            addEntry(entry as MediaEntry);
+            await addEntry(entry as MediaEntry);
             router.push('/');
           }}
           onCancel={() => router.back()}

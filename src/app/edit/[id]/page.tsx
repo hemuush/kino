@@ -5,8 +5,7 @@ import { MediaForm } from '@/components/MediaForm';
 import { useMedia } from '@/context/MediaContext';
 import { useRouter, useParams } from 'next/navigation';
 import { MediaEntry } from '@/lib/db';
-import { Loader2 } from 'lucide-react';
-import { useMemo } from 'react';
+import { PageLoader } from '@/components/ui/Loader';
 import { toast } from 'sonner';
 
 export default function EditMediaPage() {
@@ -14,21 +13,10 @@ export default function EditMediaPage() {
   const router = useRouter();
   const { entries, updateEntry, isLoading } = useMedia();
 
-  // Safely find the entry. useMemo prevents unnecessary re-renders.
-  const entry = useMemo(() => {
-    if (!params?.id || isLoading) return null;
-    return entries.find(e => String(e.id) === String(params.id)) || null;
-  }, [entries, params?.id, isLoading]);
+  const entry = !params?.id || isLoading ? null : entries.find(e => String(e.id) === String(params.id)) || null;
 
   if (isLoading) {
-    return (
-      <div className="absolute inset-0 flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4 text-muted-foreground">
-          <Loader2 className="w-10 h-10 animate-spin text-primary" />
-          <p className="text-sm font-medium">Loading entry...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader text="Loading entry..." />;
   }
 
   if (!entry && !isLoading) {
@@ -37,7 +25,7 @@ export default function EditMediaPage() {
         <div className="p-10 flex flex-col items-center gap-3 text-center text-muted-foreground bg-muted/20 border border-border/40 rounded-3xl shadow-sm">
           <span className="text-4xl">🎬</span>
           <h2 className="font-semibold text-lg text-foreground">Entry Not Found</h2>
-          <p className="text-sm">The media you are trying to edit doesn't exist or was removed.</p>
+          <p className="text-sm">The media you are trying to edit doesn&apos;t exist or was removed.</p>
           <button
             onClick={() => router.back()}
             className="mt-4 px-6 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-bold shadow-sm hover:opacity-90 transition-opacity cursor-pointer"

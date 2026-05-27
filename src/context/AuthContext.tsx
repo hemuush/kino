@@ -33,18 +33,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  useEffect(() => {
-    const initAuth = async () => {
-      const token = localStorage.getItem('kino_access_token');
-      if (token) {
-        setAccessToken(token);
-        await fetchUserProfile(token);
-      }
-      setIsLoading(false);
-    };
-    initAuth();
-  }, []);
-
   const fetchUserProfile = async (token: string) => {
     try {
       const res = await fetch(`https://www.googleapis.com/oauth2/v1/userinfo?access_token=${token}`);
@@ -56,7 +44,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           picture: data.picture,
         });
       } else if (res.status === 401) {
-        // TOKEN IS DEAD. Kill the session immediately.
         console.warn("Token expired during profile fetch");
         setAccessToken(null);
         localStorage.removeItem('kino_access_token');
@@ -65,6 +52,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to fetch user profile", error);
     }
   };
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const token = localStorage.getItem('kino_access_token');
+      if (token) {
+        setAccessToken(token);
+        await fetchUserProfile(token);
+      }
+      setIsLoading(false);
+    };
+    initAuth();
+  }, []);
 
   useEffect(() => {
     if (!isLoading) {

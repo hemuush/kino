@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { MediaEntry } from "@/lib/db";
+import { isEpisodic, MediaEntry } from "@/lib/db";
 import { ImageOff, Heart, Plus, Star } from "lucide-react";
 
 interface MediaCardProps {
@@ -68,7 +68,7 @@ export default function MediaCard({
         </div>
 
         {/* Bottom-Right Badges: Increment Episodes (For TV Shows currently being watched) */}
-        {entry.status === "Watching" && (entry.type === "TV Show" || entry.type === "Anime") && (
+        {entry.status === "Watching" && isEpisodic(entry) && (
           <div className="absolute bottom-2 right-2 z-10">
             <button
               onClick={(e) => {

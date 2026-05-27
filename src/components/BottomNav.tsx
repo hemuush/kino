@@ -14,8 +14,8 @@ export function BottomNav() {
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 glass-heavy border-t border-border safe-area-bottom pb-2">
         <div className="flex items-center justify-between px-2 h-[65px] max-w-md mx-auto relative">
 
-          <Link href="/" className={`flex flex-col items-center justify-center gap-1 flex-1 ${pathname === '/' && !window.location.search ? 'text-primary' : 'text-muted-foreground'}`}>
-            <LayoutDashboard size={20} strokeWidth={pathname === '/' && !window.location.search ? 2.5 : 1.8} />
+          <Link href="/dashboard" className={`flex flex-col items-center justify-center gap-1 flex-1 ${pathname === '/dashboard' || pathname === '/' ? 'text-primary' : 'text-muted-foreground'}`}>
+            <LayoutDashboard size={20} strokeWidth={pathname === '/dashboard' || pathname === '/' ? 2.5 : 1.8} />
             <span className="text-[10px] font-semibold">Home</span>
           </Link>
 

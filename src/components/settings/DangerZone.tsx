@@ -7,14 +7,14 @@ import { toast } from 'sonner';
 export function DangerZone() {
     const { wipeAllData } = useMedia();
 
-    const handleWipeData = () => {
+    const handleWipeData = async () => {
         const isConfirmed = window.confirm(
             "Are you absolutely sure you want to delete ALL data?\n\nThis includes your Google Drive backup and cannot be undone."
         );
 
         if (isConfirmed) {
             try {
-                wipeAllData();
+                await wipeAllData();
                 toast.success("All data has been wiped for a fresh start.");
             } catch (error) {
                 toast.error("Failed to wipe data. Please try again.");

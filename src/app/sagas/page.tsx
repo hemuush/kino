@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useMedia } from '@/context/MediaContext';
 import { MediaEntry, formatRuntime } from '@/lib/db';
+import { PageLoader } from '@/components/ui/Loader';
 
 export default function SagasPage() {
   // 1. Fetch data from your custom hook
@@ -79,21 +80,16 @@ export default function SagasPage() {
   const getYear = (dateString?: string) => {
     if (!dateString) return 'Unknown Year';
     try {
-      return new Date(dateString).getFullYear().toString();
+      const d = new Date(dateString);
+      if (Number.isNaN(d.getTime())) return 'Unknown Year';
+      return d.getFullYear().toString();
     } catch {
       return 'Unknown Year';
     }
   };
 
   if (isLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-zinc-950 text-zinc-400">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="w-12 h-12 border-4 border-zinc-800 border-t-blue-500 rounded-full animate-spin mb-4"></div>
-          <p>Loading your Sagas...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader text="Loading your Sagas..." />;
   }
 
   return (

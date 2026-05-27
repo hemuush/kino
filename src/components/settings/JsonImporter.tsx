@@ -1,5 +1,6 @@
 // src/components/settings/JsonImporter.tsx
 "use client";
+/* eslint-disable react/no-unescaped-entities */
 
 import React, { useState, useRef } from 'react';
 import { useMedia } from '@/context/MediaContext';
@@ -64,7 +65,7 @@ export default function JsonImporter() {
 
             const stats = {
                 movies: entries.filter(ent => ent.type === 'Movie').length,
-                tvShows: entries.filter(ent => ent.type === 'TV Show' || ent.type === 'Series' as any).length,
+                tvShows: entries.filter(ent => ent.type === 'TV Show' || ent.type === 'Series').length,
                 anime: entries.filter(ent => ent.type === 'Anime').length,
             };
 
@@ -98,7 +99,7 @@ export default function JsonImporter() {
             setParsedData(null);
             setPasteInput(''); // Clear paste input on success
             alert("Data successfully merged and imported!");
-        } catch (err) {
+        } catch {
             setError("An error occurred while importing data.");
         } finally {
             setIsImporting(false);

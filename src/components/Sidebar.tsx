@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, BarChart2, Settings, LogOut, Sun, Moon, Film, Library, X } from "lucide-react";
+import { LayoutDashboard, Settings, LogOut, Sun, Moon, Film, Library, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
 import { KinoLogo } from "@/components/KinoLogo";
 
 interface SidebarProps {
@@ -14,17 +13,14 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
-  const { user, login, logout, isLoading } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
-
-  useEffect(() => setMounted(true), []);
 
   const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
   const navItems = [
-    { name: "Dashboard", href: "/", icon: LayoutDashboard },
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "My Collection", href: "/collection", icon: Library },
     { name: "Sagas", href: "/sagas", icon: Film },
     { name: "Settings", href: "/settings", icon: Settings },
@@ -96,8 +92,7 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
           )}
         </div>
 
-        {mounted && (
-          <div className="flex items-center justify-between px-3 py-2 bg-neutral-200/20 dark:bg-neutral-800/20 rounded-xl border border-black/5 dark:border-white/5 shadow-none mb-2">
+        <div className="flex items-center justify-between px-3 py-2 bg-neutral-200/20 dark:bg-neutral-800/20 rounded-xl border border-black/5 dark:border-white/5 shadow-none mb-2">
             <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-2">
               {theme === 'dark' ? <Moon size={13} /> : <Sun size={13} />}
               {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
@@ -111,7 +106,6 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
               />
             </button>
           </div>
-        )}
 
         {user ? (
           <button

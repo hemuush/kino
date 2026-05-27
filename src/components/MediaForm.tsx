@@ -1,5 +1,6 @@
 // src/components/MediaForm.tsx
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect, react/no-unescaped-entities */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { MediaType, WatchStatus, AnimeType, EpisodeInfo, MediaEntry, Tag, isEpisodic } from '@/lib/db';
@@ -220,7 +221,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
         ))}
       </div>
 
-      <form id="media-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden p-8 bg-background/50">
+      <form id="media-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden p-8 pb-28 bg-background/50">
         <AnimatePresence mode="wait">
           {formTab === 'General' && (
             <motion.div key="general" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">

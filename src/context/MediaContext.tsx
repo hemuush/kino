@@ -1,5 +1,6 @@
 // src/context/MediaContext.tsx
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { MediaEntry, Tag, DEFAULT_GENRES, MediaType } from '@/lib/db';
@@ -43,7 +44,9 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   // BUG 3 FIX: Prevent tab closure data loss during debounce queue
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (syncStatus === 'syncing' || uploadTimeoutRef.current) {
+      // Warn only when there is a pending local upload debounce queue.
+      // Do not warn during background download/initial sync reads.
+      if (uploadTimeoutRef.current) {
         e.preventDefault();
         e.returnValue = 'Data is currently saving to Google Drive. Are you sure you want to leave?';
         return e.returnValue;
@@ -163,9 +166,9 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   };
 
   const importData = async (data: { entries?: MediaEntry[], genres?: Tag[], franchises?: Tag[] }) => {
-    let mergedEntries = [...latestDataRef.current.entries];
-    let mergedGenres = [...latestDataRef.current.genres];
-    let mergedFranchises = [...latestDataRef.current.franchises];
+    const mergedEntries = [...latestDataRef.current.entries];
+    const mergedGenres = [...latestDataRef.current.genres];
+    const mergedFranchises = [...latestDataRef.current.franchises];
     let hasChanges = false;
 
     if (data.genres && data.genres.length > 0) {

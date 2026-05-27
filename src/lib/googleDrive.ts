@@ -43,8 +43,8 @@ async function findBackupFileId(accessToken: string): Promise<string | null> {
 
 export interface BackupData {
   entries: MediaEntry[];
-  genres: any[];
-  franchises: any[];
+  genres: { id: string; name: string }[];
+  franchises: { id: string; name: string }[];
   timestamp?: number;
 }
 
@@ -52,7 +52,7 @@ export async function uploadBackupToDrive(accessToken: string, data: BackupData 
   const fileId = await findBackupFileId(accessToken);
   const fileContent = JSON.stringify(data, null, 2);
 
-  const metadata: any = {
+  const metadata: { name: string; parents?: string[] } = {
     name: BACKUP_FILE_NAME,
   };
 

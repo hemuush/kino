@@ -8,14 +8,14 @@ import { toast } from 'sonner';
 export function DataManager() {
     const { wipeAllData } = useMedia();
 
-    const handleWipeData = () => {
+    const handleWipeData = async () => {
         const isConfirmed = window.confirm(
             "CRITICAL WARNING:\n\nAre you absolutely sure you want to delete ALL data? This includes your Google Drive backup and cannot be undone."
         );
 
         if (isConfirmed) {
             try {
-                wipeAllData();
+                await wipeAllData();
                 toast.success("All data has been wiped successfully.");
             } catch (error) {
                 toast.error("Failed to wipe data.");

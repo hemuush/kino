@@ -6,19 +6,14 @@ import { SettingsSidebar } from '@/components/settings/SettingsSidebar';
 import { SagasManager } from '@/components/settings/SagasManager';
 import { GenresManager } from '@/components/settings/GenresManager';
 import { DataManager } from '@/components/settings/DataManager';
-import { Loader2 } from 'lucide-react';
+import { PageLoader } from '@/components/ui/Loader';
 
 export default function SettingsPage() {
   const { isLoading } = useMedia();
   const [activeTab, setActiveTab] = useState<'sagas' | 'genres' | 'data'>('sagas');
 
   if (isLoading) {
-    return (
-      <div className="absolute inset-0 flex flex-col items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
-        <p className="text-muted-foreground text-sm font-medium">Loading settings...</p>
-      </div>
-    );
+    return <PageLoader text="Loading settings..." />;
   }
 
   return (

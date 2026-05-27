@@ -5,30 +5,23 @@ import { useState, useEffect, Suspense, useMemo, useRef } from 'react';
 import { useMedia } from '@/context/MediaContext';
 import MediaCard from '@/components/MediaCard';
 import { MediaDetailModal } from '@/components/MediaDetailModal';
-import { Plus, Film, X, Heart, Shuffle, SlidersHorizontal, Search, Settings, Sparkles, Terminal, BookOpen, Compass } from 'lucide-react';
+import { Plus, Film, X, Heart, Shuffle, SlidersHorizontal, Search, Settings, Terminal } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MediaEntry, isEpisodic } from '@/lib/db';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { PageLoader } from '@/components/ui/Loader';
 
 function CollectionContent() {
-    const { entries, isLoading, updateEntry, deleteEntry, syncStatus, batchUpdateEntries, genres } = useMedia();
-    const autoRefresh = useAutoRefresh({ entries, batchUpdateEntries, isLoading });
+    const { entries, isLoading, updateEntry, deleteEntry, batchUpdateEntries } = useMedia();
+    useAutoRefresh({ entries, batchUpdateEntries, isLoading });
     const searchParams = useSearchParams();
     const router = useRouter();
     const typeParam = searchParams.get('type') as 'All' | 'Movie' | 'Series' | 'Anime' | null;
 
     const [selectedEntry, setSelectedEntry] = useState<MediaEntry | null>(null);
     const [filter, setFilter] = useState<'All' | 'Movie' | 'Series' | 'Anime'>(typeParam || 'All');
-
-    useEffect(() => {
-        if (typeParam) {
-            setFilter(typeParam);
-        } else {
-            setFilter('All');
-        }
-    }, [typeParam]);
 
     const [statusFilter, setStatusFilter] = useState<'All' | 'Completed' | 'Watching' | 'Plan to Watch'>('All');
     const [searchQuery, setSearchQuery] = useState('');
@@ -44,7 +37,7 @@ function CollectionContent() {
 
     // Filtered entries
     const sortedEntries = useMemo(() => {
-        let filtered = entries.filter(e => {
+        const filtered = entries.filter(e => {
             if (filter === 'Series' && e.type !== 'TV Show') return false;
             if (filter !== 'All' && filter !== 'Series' && e.type !== filter) return false;
 
@@ -81,7 +74,7 @@ function CollectionContent() {
             alert("No items in 'Plan to Watch'!");
             return;
         }
-        const random = ptw[Math.floor(Math.random() * ptw.length)];
+        const random = ptw[crypto.getRandomValues(new Uint32Array(1))[0] % ptw.length];
         setSelectedEntry(random);
     };
 
@@ -90,6 +83,8 @@ function CollectionContent() {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
+                setCmdSearch('');
+                setSelectedCmdIdx(0);
                 setIsCmdOpen(prev => !prev);
             }
             if (e.key === 'Escape') {
@@ -103,8 +98,6 @@ function CollectionContent() {
     // Focus input when Command Menu opens
     useEffect(() => {
         if (isCmdOpen) {
-            setCmdSearch('');
-            setSelectedCmdIdx(0);
             setTimeout(() => {
                 cmdInputRef.current?.focus();
             }, 100);
@@ -173,13 +166,13 @@ function CollectionContent() {
     };
 
     return (
-        <div className="absolute inset-0 flex flex-col bg-background pb-4 lg:pb-6 pt-4 lg:pt-6 px-4 sm:px-8 lg:px-10 overflow-hidden w-full max-w-[1600px] mx-auto animate-fade-in animate-fade-up">
+        <div className="absolute inset-0 flex flex-col bg-[radial-gradient(circle_at_15%_0%,rgba(56,189,248,0.08),transparent_35%),radial-gradient(circle_at_85%_0%,rgba(251,191,36,0.06),transparent_38%),var(--background)] pb-4 lg:pb-6 pt-4 lg:pt-6 px-4 sm:px-8 lg:px-10 overflow-hidden w-full max-w-[1600px] mx-auto animate-fade-in animate-fade-up">
             {/* Ambient background glow orbs */}
             <div className="absolute top-[15%] left-[25%] w-[400px] h-[400px] bg-cyan-500/5 rounded-full blur-[120px] pointer-events-none" />
             <div className="absolute top-[40%] right-[20%] w-[350px] h-[350px] bg-purple-500/5 rounded-full blur-[110px] pointer-events-none" />
 
             {/* Header Area */}
-            <div className="shrink-0 pb-4 border-b border-border/40">
+            <div className="shrink-0 pb-4 border-b border-cyan-400/15">
                 <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
                     <div className="flex flex-col text-left">
                         <h1 className="text-3xl font-display font-bold tracking-tight text-foreground flex items-center gap-2">
@@ -250,7 +243,8 @@ function CollectionContent() {
                                     </div>
 
                                     {/* Horizontal scroll container for the rest of filters on mobile, normal flex on desktop */}
-                                    <div className="flex flex-nowrap items-center gap-3 overflow-x-auto md:overflow-x-visible hide-scrollbar pb-2 md:pb-0 w-full md:w-auto -mx-6 px-6 md:mx-0 md:px-0 shrink-0">
+                                    <div className="w-full min-w-0 overflow-x-auto hide-scrollbar pb-2 md:pb-0">
+                                        <div className="flex w-max min-w-full items-center gap-3 md:w-auto md:min-w-0">
                                         {/* Neon Cyan Filter Pills: Type */}
                                         <div className="flex bg-card/70 dark:bg-neutral-950/65 p-1 rounded-full border border-border/80 dark:border-white/5 shadow-sm shrink-0">
                                             {(['All', 'Movie', 'Series', 'Anime'] as const).map(f => {
@@ -289,7 +283,7 @@ function CollectionContent() {
 
                                         <select
                                             value={sortBy}
-                                            onChange={(e: any) => setSortBy(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSortBy(e.target.value as 'Recent' | 'Rating' | 'Title')}
                                             className="bg-card/70 dark:bg-neutral-950/65 border border-border/80 dark:border-white/5 rounded-full px-4 py-2 text-[12.5px] font-semibold outline-none text-muted-foreground hover:text-foreground transition-colors cursor-pointer shadow-sm shrink-0"
                                         >
                                             <option value="Recent">Newest First</option>
@@ -303,6 +297,7 @@ function CollectionContent() {
                                         >
                                             <Heart size={14} className={favoritesOnly ? "fill-red-500 text-red-500" : ""} /> Favorites
                                         </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -314,10 +309,7 @@ function CollectionContent() {
             {/* Main Content */}
             <div className="flex-1 min-h-0 overflow-y-auto hide-scrollbar pt-4 z-10 relative pb-28">
                 {isLoading ? (
-                    <div className="flex flex-col items-center justify-center py-20 opacity-50">
-                        <Film size={40} className="animate-pulse mb-4 text-cyan-400" />
-                        <p className="text-sm font-medium tracking-wide">Loading Library...</p>
-                    </div>
+                    <PageLoader text="Loading Library..." />
                 ) : entries.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-32 max-w-sm mx-auto text-center animate-fade-in">
                         <div className="w-16 h-16 bg-card/70 dark:bg-neutral-950/65 rounded-full flex items-center justify-center mb-6 border border-border/80 dark:border-white/5 shadow-sm">
@@ -470,7 +462,7 @@ function CollectionContent() {
 
 export default function Collection() {
     return (
-        <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Film className="animate-pulse opacity-50 text-cyan-400" /></div>}>
+        <Suspense fallback={<PageLoader fullScreen text="Loading Collection..." />}>
             <CollectionContent />
         </Suspense>
     );
