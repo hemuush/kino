@@ -3,7 +3,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
-import { MediaEntry, Tag, DEFAULT_GENRES, MediaType } from '@/lib/db';
+import { MediaEntry, Tag, DEFAULT_GENRES, normalizeMediaType, normalizeWatchStatus } from '@/lib/db';
 import { useAuth } from '@/context/AuthContext';
 import { TokenExpiredError, downloadBackupFromDrive, uploadBackupToDrive, deleteBackupFromDrive, BackupData } from '@/lib/googleDrive';
 
@@ -123,9 +123,9 @@ export function MediaProvider({ children }: { children: ReactNode }) {
 
         if (backup) {
           if (Array.isArray(backup)) {
-            fetchedEntries = backup.map(e => { if (e.type === ('Series' as unknown as MediaType)) return { ...e, type: 'TV Show' }; return e; });
+            fetchedEntries = backup.map(e => ({ ...e, type: normalizeMediaType(e.type), status: normalizeWatchStatus(e.status) }));
           } else {
-            fetchedEntries = backup.entries?.map(e => { if (e.type === ('Series' as unknown as MediaType)) return { ...e, type: 'TV Show' }; return e; }) || [];
+            fetchedEntries = backup.entries?.map(e => ({ ...e, type: normalizeMediaType(e.type), status: normalizeWatchStatus(e.status) })) || [];
             fetchedGenres = backup.genres || [];
             fetchedFranchises = backup.franchises || [];
           }
@@ -196,7 +196,15 @@ export function MediaProvider({ children }: { children: ReactNode }) {
       }, Date.now());
 
       data.entries.forEach(imported => {
-        const entryToSave = { ...imported };
+        const entryToSave: MediaEntry = {
+          ...imported,
+          type: normalizeMediaType(imported.type),
+          animeType: normalizeMediaType(imported.type) === 'Anime' ? (imported.animeType || 'Show') : undefined,
+          status: normalizeWatchStatus(imported.status),
+          coverImage: imported.coverImage || '',
+          rating: Number(imported.rating || 0),
+          createdAt: imported.createdAt || Date.now(),
+        };
 
         if (entryToSave.genre && Array.isArray(entryToSave.genre)) {
           const mappedGenreIds: string[] = [];
@@ -233,10 +241,13 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         }
 
         if (existingIndex >= 0) {
+          const existingEntry = mergedEntries[existingIndex];
           mergedEntries[existingIndex] = {
-            ...mergedEntries[existingIndex],
+            ...existingEntry,
             ...entryToSave,
-            id: mergedEntries[existingIndex].id,
+            id: existingEntry.id,
+            coverImage: entryToSave.coverImage || existingEntry.coverImage || '',
+            createdAt: existingEntry.createdAt || entryToSave.createdAt || Date.now(),
             updatedAt: Date.now()
           };
         } else {

@@ -58,6 +58,41 @@ export function isEpisodic(entry: Partial<MediaEntry>): boolean {
   return false;
 }
 
+export function normalizeMediaType(type: unknown): MediaType {
+  const value = String(type || '').trim().toLowerCase();
+  if (value === 'series' || value === 'tv' || value === 'tv series' || value === 'show' || value === 'tv show') return 'TV Show';
+  if (value === 'anime') return 'Anime';
+  return 'Movie';
+}
+
+export function normalizeWatchStatus(status: unknown): WatchStatus {
+  const value = String(status || '').trim().toLowerCase();
+  if (value === 'watching' || value === 'in progress') return 'Watching';
+  if (value === 'plan to watch' || value === 'planned' || value === 'watchlist') return 'Plan to Watch';
+  return 'Completed';
+}
+
+export function getWatchedRuntimeMinutes(entry: Partial<MediaEntry>): number {
+  const runtime = Number(entry.runtime || 0);
+  if (runtime <= 0) return 0;
+
+  if (!isEpisodic(entry)) {
+    return entry.status === 'Completed' || !entry.status ? runtime : 0;
+  }
+
+  const watchedCount = Number(entry.episodesWatched || (entry.status === 'Completed' ? entry.episodesTotal || 0 : 0));
+  if (watchedCount <= 0) return 0;
+
+  if (entry.episodes?.length) {
+    return entry.episodes.slice(0, watchedCount).reduce((total, episode) => {
+      const episodeRuntime = Number(episode.runtime || 0);
+      return total + (episodeRuntime > 0 ? episodeRuntime : runtime);
+    }, 0);
+  }
+
+  return watchedCount * runtime;
+}
+
 export function formatRuntime(minutes: number | undefined): string {
   if (!minutes || minutes <= 0) return '';
   const h = Math.floor(minutes / 60);

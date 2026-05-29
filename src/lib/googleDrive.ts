@@ -48,6 +48,40 @@ export interface BackupData {
   timestamp?: number;
 }
 
+export interface BackupMetadata {
+  id: string;
+  name: string;
+  size: number;
+  modifiedTime?: string;
+}
+
+export async function getBackupMetadataFromDrive(accessToken: string): Promise<BackupMetadata | null> {
+  const fileId = await findBackupFileId(accessToken);
+  if (!fileId) return null;
+
+  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,size,modifiedTime`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (response.status === 401) {
+    throw new TokenExpiredError();
+  }
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error('Drive API Metadata Error:', response.status, errText);
+    throw new Error(`Failed to query Drive backup metadata: Status ${response.status}`);
+  }
+
+  const data = await response.json();
+  return {
+    id: data.id,
+    name: data.name || BACKUP_FILE_NAME,
+    size: Number(data.size || 0),
+    modifiedTime: data.modifiedTime,
+  };
+}
+
 export async function uploadBackupToDrive(accessToken: string, data: BackupData | MediaEntry[]): Promise<boolean> {
   const fileId = await findBackupFileId(accessToken);
   const fileContent = JSON.stringify(data, null, 2);

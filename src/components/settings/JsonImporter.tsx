@@ -5,7 +5,7 @@
 import React, { useState, useRef } from 'react';
 import { useMedia } from '@/context/MediaContext';
 import { Upload, FileJson, Check, X, AlertCircle, Info, ChevronDown, ChevronUp, Tv, Film, MonitorPlay, ClipboardPaste, FileText } from 'lucide-react';
-import { MediaEntry, Tag } from '@/lib/db';
+import { MediaEntry, Tag, normalizeMediaType } from '@/lib/db';
 
 interface ParsedData {
     entries: MediaEntry[];
@@ -62,6 +62,8 @@ export default function JsonImporter() {
             if (entries.length === 0 && genres.length === 0 && franchises.length === 0) {
                 throw new Error("No data found to import in this payload.");
             }
+
+            entries = entries.map((entry) => ({ ...entry, type: normalizeMediaType(entry.type) }));
 
             const stats = {
                 movies: entries.filter(ent => ent.type === 'Movie').length,

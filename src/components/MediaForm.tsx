@@ -3,7 +3,7 @@
 /* eslint-disable react-hooks/set-state-in-effect, react/no-unescaped-entities */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { MediaType, WatchStatus, AnimeType, EpisodeInfo, MediaEntry, Tag, isEpisodic } from '@/lib/db';
+import { MediaType, WatchStatus, AnimeType, EpisodeInfo, MediaEntry, Tag, isEpisodic, getWatchedRuntimeMinutes } from '@/lib/db';
 import { X, Check, Image as ImageIcon, Star, Heart, Upload, Clock, Film, ListPlus, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMedia } from '@/context/MediaContext';
@@ -83,25 +83,15 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const timeWatched = useMemo(() => {
-    if (!currentIsEpisodic) {
-      return status === 'Completed' ? Number(runtime || 0) : 0;
-    }
-
-    const watchedCount = Number(episodesWatched || 0);
-    const avgRuntime = Number(runtime || 0);
-
-    if (episodes.length > 0) {
-      let total = 0;
-      for (let i = 0; i < watchedCount; i++) {
-        const epRuntime = episodes[i]?.runtime;
-        total += (epRuntime !== undefined && epRuntime > 0) ? epRuntime : avgRuntime;
-      }
-      return total;
-    }
-
-    return watchedCount * avgRuntime;
-  }, [currentIsEpisodic, status, runtime, episodesWatched, episodes]);
+  const timeWatched = useMemo(() => getWatchedRuntimeMinutes({
+    type,
+    animeType,
+    status,
+    runtime: runtime === '' ? undefined : Number(runtime),
+    episodesWatched: currentIsEpisodic ? Number(episodesWatched || 0) : undefined,
+    episodesTotal: currentIsEpisodic && episodesTotal !== '' ? Number(episodesTotal) : undefined,
+    episodes,
+  }), [type, animeType, currentIsEpisodic, status, runtime, episodesWatched, episodesTotal, episodes]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -202,12 +192,12 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
   const tabs: FormTabType[] = currentIsEpisodic ? ['General', 'Details', 'Episodes'] : ['General', 'Details'];
 
   return (
-    <div className="w-full max-w-4xl bg-card rounded-3xl overflow-hidden flex flex-col border border-border shadow-xl mx-auto h-full max-h-[90vh] lg:max-h-[850px]">
-      <div className="flex items-center justify-between px-8 py-5 bg-muted/30 border-b border-border shrink-0">
+    <div className="w-full max-w-4xl bg-card rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col border border-border shadow-xl mx-auto h-full max-h-[100dvh] sm:max-h-[90vh] lg:max-h-[850px]">
+      <div className="flex items-center justify-between px-4 sm:px-8 py-4 sm:py-5 bg-muted/30 border-b border-border shrink-0">
         <h2 className="font-display text-xl font-bold tracking-tight text-foreground">{isEditMode ? 'Edit Media' : 'Add to Collection'}</h2>
       </div>
 
-      <div className="flex px-8 pt-4 gap-8 border-b border-border bg-background shrink-0">
+      <div className="flex px-4 sm:px-8 pt-4 gap-6 sm:gap-8 border-b border-border bg-background shrink-0 overflow-x-auto hide-scrollbar">
         {tabs.map(tab => (
           <button
             key={tab}
@@ -221,7 +211,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
         ))}
       </div>
 
-      <form id="media-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden p-8 pb-28 bg-background/50">
+      <form id="media-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8 pb-24 sm:pb-28 bg-background/50">
         <AnimatePresence mode="wait">
           {formTab === 'General' && (
             <motion.div key="general" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
@@ -251,8 +241,8 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <FieldWrapper label="Cover Image">
-                  <div className="flex gap-5 items-start">
-                    <div className="w-[100px] h-[150px] rounded-xl overflow-hidden bg-muted/30 border border-border shrink-0 flex items-center justify-center shadow-sm relative group">
+                  <div className="flex flex-col xs:flex-row gap-4 sm:gap-5 items-start">
+                    <div className="w-[96px] h-[144px] sm:w-[100px] sm:h-[150px] rounded-xl overflow-hidden bg-muted/30 border border-border shrink-0 flex items-center justify-center shadow-sm relative group">
                       {coverImage ? (
                         <>
                           <img src={coverImage} alt="Poster" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
@@ -363,21 +353,23 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-6 items-stretch">
-                <div className="flex-1 flex items-center justify-between bg-card border border-border px-6 py-4 rounded-2xl shadow-sm hover:border-primary/40 transition-colors">
+                <div className="flex-1 flex items-center justify-between bg-card border border-border px-4 sm:px-6 py-4 rounded-2xl shadow-sm hover:border-primary/40 transition-colors">
                   <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2"><Heart size={16} /> Favorite</span>
                   <button type="button" onClick={() => setFavorite(!favorite)} className={`p-2.5 rounded-xl transition-all border cursor-pointer ${favorite ? 'bg-red-500/15 text-red-500 border-red-500/30 shadow-sm' : 'bg-muted/50 text-muted-foreground border-border/50 hover:bg-muted'}`}><Heart size={20} className={favorite ? 'fill-red-500' : ''} /></button>
                 </div>
 
                 <AnimatePresence>
                   {status === 'Completed' && (
-                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="flex-[2] flex items-center justify-between bg-card border border-border px-6 py-4 rounded-2xl shadow-sm">
-                      <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2"><Star size={16} /> Rating</span>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl font-bold text-primary tabular-nums">{displayRating}/10</span>
-                        <div className="flex items-center gap-0.5">
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="flex-[2] min-w-0 bg-card border border-border px-4 sm:px-6 py-4 rounded-2xl shadow-sm">
+                      <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 shrink-0"><Star size={16} /> Rating</span>
+                          <span className="text-lg sm:text-xl font-bold text-primary tabular-nums whitespace-nowrap">{displayRating}/10</span>
+                        </div>
+                        <div className="grid grid-cols-5 sm:flex sm:items-center gap-1 sm:gap-0.5 shrink-0">
                           {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
-                            <button key={value} type="button" onClick={() => setRating(value)} onMouseEnter={() => setHoveredStar(value)} onMouseLeave={() => setHoveredStar(null)} className="p-0.5 transition-transform hover:scale-125 cursor-pointer focus:outline-none">
-                              <Star className={`w-5 h-5 transition-colors ${value <= displayRating ? 'text-amber-400 fill-amber-400 drop-shadow-sm' : 'text-muted-foreground/20'}`} />
+                            <button key={value} type="button" onClick={() => setRating(value)} onMouseEnter={() => setHoveredStar(value)} onMouseLeave={() => setHoveredStar(null)} className="p-1 sm:p-0.5 transition-transform hover:scale-110 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-md">
+                              <Star className={`w-4.5 h-4.5 sm:w-5 sm:h-5 transition-colors ${value <= displayRating ? 'text-amber-400 fill-amber-400 drop-shadow-sm' : 'text-muted-foreground/20'}`} />
                             </button>
                           ))}
                         </div>
@@ -549,7 +541,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
         </AnimatePresence>
       </form>
 
-      <div className="px-8 py-5 bg-muted/20 border-t border-border flex gap-4 shrink-0 mt-auto">
+      <div className="px-4 sm:px-8 py-4 sm:py-5 bg-muted/20 border-t border-border flex gap-3 sm:gap-4 shrink-0 mt-auto">
         <button type="button" onClick={onCancel} className="flex-1 py-3.5 rounded-xl text-sm font-bold bg-background border border-border hover:bg-muted text-foreground transition-all cursor-pointer shadow-sm">Cancel</button>
         <button type="submit" form="media-form" disabled={!title.trim() || isSaving} className="flex-[2] py-3.5 rounded-xl text-sm font-bold bg-primary text-primary-foreground flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-md hover:shadow-lg hover:opacity-90">
           {isSaving ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={18} strokeWidth={2.5} />}

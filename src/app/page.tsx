@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Clock3, ListVideo, CheckCircle2, Bookmark, Star } from "lucide-react";
 import { useMedia } from "@/context/MediaContext";
-import { MediaEntry, formatRuntime, isEpisodic } from "@/lib/db";
+import { MediaEntry, formatRuntime, getWatchedRuntimeMinutes, isEpisodic } from "@/lib/db";
 import { MediaDetailModal } from "@/components/MediaDetailModal";
 import { PageLoader } from "@/components/ui/Loader";
 
@@ -91,10 +91,8 @@ function DashboardContent() {
       if (isEpisodic(e)) {
         const w = e.episodesWatched || 0;
         episodes += w;
-        time += w * (e.runtime || 0);
-      } else if (e.status === "Completed") {
-        time += e.runtime || 0;
       }
+      time += getWatchedRuntimeMinutes(e);
       if ((e.rating || 0) > 0) {
         avgRatingSum += e.rating;
         ratedCount += 1;

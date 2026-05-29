@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { KinoLogo } from "@/components/KinoLogo";
 import { useTheme } from "next-themes";
 import { Moon, LogOut, LayoutDashboard, Library, Film, Settings, Search, SlidersHorizontal, Sun } from "lucide-react";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { PageLoader } from "./ui/Loader";
 import Link from "next/link";
 
@@ -21,6 +21,9 @@ export function AppShell({ children }: AppShellProps) {
   const [search, setSearch] = useState("");
   const [q, setQ] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(true);
+  const [isRouteLoading, setIsRouteLoading] = useState(false);
+  const routeLoadingStartedAt = useRef(0);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
@@ -29,12 +32,45 @@ export function AppShell({ children }: AppShellProps) {
   }, [pathname]);
 
   useEffect(() => {
+    const handleRouteStart = (event: Event) => {
+      const detail = (event as CustomEvent<{ url?: string }>).detail;
+      const nextUrl = detail?.url;
+      if (!nextUrl || typeof window === "undefined") return;
+
+      const nextPathname = new URL(nextUrl, window.location.href).pathname;
+      if (nextPathname === window.location.pathname) return;
+
+      routeLoadingStartedAt.current = Date.now();
+      setIsRouteLoading(true);
+    };
+
+    window.addEventListener("kino:route-transition-start", handleRouteStart);
+    return () => {
+      window.removeEventListener("kino:route-transition-start", handleRouteStart);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isRouteLoading) return;
+
+    const elapsed = Date.now() - routeLoadingStartedAt.current;
+    const delay = Math.max(120, 320 - elapsed);
+    const timer = setTimeout(() => setIsRouteLoading(false), delay);
+    return () => clearTimeout(timer);
+  }, [pathname, isRouteLoading]);
+
+  useEffect(() => {
     setSearch(q);
   }, [q]);
 
   const isLoginPage = pathname === "/login";
   const showTopSearch = pathname !== "/settings";
   const showShell = !isLoading && accessToken && !isLoginPage;
+  const shellMainClass = showShell
+    ? showTopSearch
+      ? "relative h-[calc(100dvh-12rem-env(safe-area-inset-bottom,0px))] md:h-[calc(100dvh-4rem)] overflow-hidden page-enter"
+      : "relative h-[calc(100dvh-8.75rem-env(safe-area-inset-bottom,0px))] md:h-[calc(100dvh-4rem)] overflow-hidden page-enter"
+    : "relative min-h-screen page-enter";
 
   if (isLoading) return <PageLoader fullScreen text="Authenticating..." />;
 
@@ -69,7 +105,7 @@ export function AppShell({ children }: AppShellProps) {
                 <div className="scale-[0.9] origin-left">
                   <KinoLogo showText={false} />
                 </div>
-                <span className="text-2xl font-display font-black tracking-tight text-foreground">{mobileTitle}</span>
+                <span className="text-xl font-display font-black tracking-tight text-foreground truncate max-w-[42vw]">{mobileTitle}</span>
               </div>
               <nav className="hidden lg:flex items-center gap-1 rounded-full border border-black/10 dark:border-white/12 bg-white/70 dark:bg-white/6 px-2 py-1 backdrop-blur-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
                 {navItems.map((item) => {
@@ -137,6 +173,7 @@ export function AppShell({ children }: AppShellProps) {
                     const sp = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
                     if (filtersOpen) sp.set("filters", "0");
                     else sp.delete("filters");
+                    setFiltersOpen(!filtersOpen);
                     router.replace(`/collection?${sp.toString()}`);
                   }}
                   className={`p-2 rounded-full transition ${filtersOpen ? "bg-primary/15 text-primary" : "hover:bg-muted/70 text-muted-foreground hover:text-foreground"}`}
@@ -182,7 +219,8 @@ export function AppShell({ children }: AppShellProps) {
         </header>
       )}
 
-      <main className={showShell ? "relative h-[calc(100dvh-4rem)] overflow-hidden page-enter" : "relative min-h-screen page-enter"}>{children}</main>
+      {showShell && isRouteLoading && <PageLoader fullScreen text="Loading page..." />}
+      <main className={shellMainClass}>{children}</main>
       {showShell && <BottomNav />}
     </div>
   );

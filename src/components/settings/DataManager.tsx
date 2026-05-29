@@ -1,12 +1,48 @@
 "use client";
 
+import { useCallback, useEffect, useState } from 'react';
 import JsonImporter from '@/components/settings/JsonImporter';
 import { useMedia } from '@/context/MediaContext';
-import { Trash2, AlertTriangle, HardDriveUpload } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { getBackupMetadataFromDrive, BackupMetadata, TokenExpiredError } from '@/lib/googleDrive';
+import { Trash2, AlertTriangle, HardDriveUpload, Database, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+
+function formatBytes(bytes: number) {
+    if (!bytes || bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    const value = bytes / Math.pow(1024, index);
+    return `${value >= 10 || index === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[index]}`;
+}
 
 export function DataManager() {
     const { wipeAllData } = useMedia();
+    const { accessToken, logout } = useAuth();
+    const [backupMetadata, setBackupMetadata] = useState<BackupMetadata | null>(null);
+    const [isMetadataLoading, setIsMetadataLoading] = useState(false);
+
+    const loadBackupMetadata = useCallback(async () => {
+        if (!accessToken) return;
+
+        setIsMetadataLoading(true);
+        try {
+            const metadata = await getBackupMetadataFromDrive(accessToken);
+            setBackupMetadata(metadata);
+        } catch (error) {
+            if (error instanceof TokenExpiredError || (error as Error).message?.includes('401')) {
+                logout(false);
+                return;
+            }
+            toast.error("Could not load Drive backup size.");
+        } finally {
+            setIsMetadataLoading(false);
+        }
+    }, [accessToken, logout]);
+
+    useEffect(() => {
+        loadBackupMetadata();
+    }, [loadBackupMetadata]);
 
     const handleWipeData = async () => {
         const isConfirmed = window.confirm(
@@ -23,8 +59,48 @@ export function DataManager() {
         }
     };
 
+    const modifiedLabel = backupMetadata?.modifiedTime
+        ? new Date(backupMetadata.modifiedTime).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+        : 'Not synced yet';
+
     return (
         <div className="flex flex-col flex-1 min-h-0 gap-6 overflow-y-auto pr-2 pb-10 hide-scrollbar">
+
+            <section className="shrink-0 bg-card glass border border-border/60 rounded-3xl p-6 shadow-sm">
+                <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-primary/10 rounded-xl text-primary">
+                            <Database size={20} />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold font-display text-foreground">Google Drive Backup</h3>
+                            <p className="text-sm text-muted-foreground">Current size saved in Drive app data.</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={loadBackupMetadata}
+                        disabled={isMetadataLoading || !accessToken}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                    >
+                        <RefreshCw size={15} className={isMetadataLoading ? 'animate-spin' : ''} />
+                        Refresh
+                    </button>
+                </header>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Drive Size</p>
+                        <p className="mt-2 text-2xl font-black text-foreground">
+                            {isMetadataLoading ? '...' : backupMetadata ? formatBytes(backupMetadata.size) : 'No backup'}
+                        </p>
+                    </div>
+                    <div className="rounded-2xl border border-border/60 bg-background/70 p-4 sm:col-span-2">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Last Updated</p>
+                        <p className="mt-2 text-sm font-semibold text-foreground break-words">{isMetadataLoading ? 'Checking...' : modifiedLabel}</p>
+                        <p className="mt-1 text-xs text-muted-foreground break-all">{backupMetadata?.name || 'kino-backup.json'}</p>
+                    </div>
+                </div>
+            </section>
 
             {/* Import Section */}
             <section className="shrink-0 bg-card glass border border-border/60 rounded-3xl p-6 shadow-sm">

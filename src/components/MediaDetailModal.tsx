@@ -3,7 +3,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import { useState, useEffect } from 'react';
-import { MediaEntry, EpisodeInfo, safeDateFormat, isEpisodic, formatRuntime } from '@/lib/db';
+import { MediaEntry, EpisodeInfo, safeDateFormat, isEpisodic, formatRuntime, getWatchedRuntimeMinutes } from '@/lib/db';
 import { X, Edit2, Trash2, Calendar, Star, Check, Heart, Plus, Minus, Tv, Clock, Film } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/Badge';
@@ -78,7 +78,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
 
   const filteredEpisodes = displayEpisodes.filter(ep => (ep.season || 1) === selectedSeason);
   const episodesWatched = entry.episodesWatched || 0;
-  const watchedRuntimeMinutes = currentIsEpisodic ? episodesWatched * (entry.runtime || 0) : (entry.runtime || 0);
+  const watchedRuntimeMinutes = getWatchedRuntimeMinutes(entry);
 
   const handleOpenAddEpisode = () => {
     const currentSeason = selectedSeason || 1;
@@ -138,6 +138,21 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
     await onSave({ ...entry, episodesWatched: nextWatched, updatedAt: Date.now() });
   };
 
+  const handleEdit = () => {
+    router.push(`/edit/${entry.id}`);
+    onClose();
+  };
+
+  const handleDeleteClick = () => {
+    if (showDeleteConfirm) {
+      onDelete(entry.id!);
+      return;
+    }
+
+    setShowDeleteConfirm(true);
+    setTimeout(() => setShowDeleteConfirm(false), 3000);
+  };
+
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center text-foreground">
@@ -152,42 +167,34 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
           {entry.coverImage && <div className="absolute inset-0 h-[300px] overflow-hidden -z-10 pointer-events-none opacity-[0.06] blur-3xl"><img src={entry.coverImage} className="w-full h-full object-cover scale-150" alt="background" /></div>}
 
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border/60 relative z-10 bg-card/50 backdrop-blur-sm">
-            <div className="flex items-center gap-2">
+          <div className="sticky top-0 flex items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-border/60 z-20 bg-card/95 backdrop-blur-xl shadow-sm">
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
               <Badge variant={entry.type === 'Movie' ? 'movie' : entry.type === 'TV Show' || (entry.type as string) === 'Series' ? 'tv' : entry.type === 'Anime' ? 'anime' : 'primary'}>{entry.type === 'Anime' ? `Anime (${entry.animeType || 'Show'})` : entry.type}</Badge>
               {entry.status && entry.status !== 'Completed' && <Badge variant={entry.status === 'Watching' ? 'accent' : 'muted'}>{entry.status}</Badge>}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <button onClick={() => onSave({ ...entry, favorite: !entry.favorite, updatedAt: Date.now() })} className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all border cursor-pointer ${entry.favorite ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-muted border-border/60 hover:text-foreground'}`}><Heart size={14} className={entry.favorite ? 'fill-red-500' : ''} /></button>
 
               <button
-                onClick={() => {
-                  router.push(`/edit/${entry.id}`);
-                  onClose();
-                }}
+                onClick={handleEdit}
                 className="w-8 h-8 rounded-xl bg-muted border border-border/60 flex items-center justify-center hover:bg-muted/80 transition-colors cursor-pointer hover:text-primary"
+                title="Edit"
               >
                 <Edit2 size={14} strokeWidth={2} />
               </button>
 
               <button
-                onClick={() => {
-                  if (showDeleteConfirm) {
-                    onDelete(entry.id!);
-                  } else {
-                    setShowDeleteConfirm(true);
-                    setTimeout(() => setShowDeleteConfirm(false), 3000);
-                  }
-                }}
+                onClick={handleDeleteClick}
                 className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${showDeleteConfirm ? 'bg-red-500 border-red-600 text-white animate-pulse' : 'bg-muted border-border/60 hover:text-red-400'}`}
+                title={showDeleteConfirm ? 'Confirm delete' : 'Delete'}
               >
                 <Trash2 size={14} strokeWidth={2} />
               </button>
-              <button onClick={onClose} className="w-8 h-8 rounded-xl bg-muted border border-border/60 flex items-center justify-center hover:bg-muted/80 transition-colors cursor-pointer"><X size={15} strokeWidth={2.5} /></button>
+              <button onClick={onClose} className="w-8 h-8 rounded-xl bg-muted border border-border/60 flex items-center justify-center hover:bg-muted/80 transition-colors cursor-pointer" title="Close"><X size={15} strokeWidth={2.5} /></button>
             </div>
           </div>
 
-          <div className="flex-1 overflow-hidden px-4 sm:px-6 py-6 flex flex-col sm:flex-row gap-6 md:gap-8">
+          <div className="flex-1 overflow-hidden px-4 sm:px-6 py-5 sm:py-6 flex flex-col sm:flex-row gap-5 sm:gap-6 md:gap-8">
             <div className="w-[120px] sm:w-[220px] md:w-[260px] shrink-0 mx-auto sm:mx-0 overflow-y-auto hide-scrollbar pb-6">
               <div className="aspect-[2/3] rounded-[24px] overflow-hidden bg-card glass shadow-2xl shadow-black/20 border border-border/60 relative group ring-1 ring-white/5">
                 {entry.coverImage ? (
@@ -234,16 +241,36 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                   <div className="space-y-6 animate-fade-in">
                     <div className="min-w-0">
                       <h2 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight mb-2 break-words">{entry.title}</h2>
-                      <div className="flex flex-wrap items-center gap-2 mb-4">
+                      <div className="mb-4 grid grid-cols-3 gap-2 sm:hidden">
+                        <button
+                          onClick={() => onSave({ ...entry, favorite: !entry.favorite, updatedAt: Date.now() })}
+                          className={`min-h-10 rounded-xl border px-3 text-xs font-bold flex items-center justify-center gap-1.5 ${entry.favorite ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-card border-border text-muted-foreground'}`}
+                        >
+                          <Heart size={14} className={entry.favorite ? 'fill-red-500' : ''} /> Fav
+                        </button>
+                        <button
+                          onClick={handleEdit}
+                          className="min-h-10 rounded-xl border border-primary/25 bg-primary/10 px-3 text-xs font-bold text-primary flex items-center justify-center gap-1.5"
+                        >
+                          <Edit2 size={14} /> Edit
+                        </button>
+                        <button
+                          onClick={handleDeleteClick}
+                          className={`min-h-10 rounded-xl border px-3 text-xs font-bold flex items-center justify-center gap-1.5 ${showDeleteConfirm ? 'border-red-500 bg-red-500 text-white' : 'border-red-500/25 bg-red-500/10 text-red-500'}`}
+                        >
+                          <Trash2 size={14} /> {showDeleteConfirm ? 'Sure?' : 'Delete'}
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 mb-4 min-w-0">
                         {entryGenres.map((g) => <span key={g} className="bg-muted border border-border/40 text-muted-foreground px-3 py-1 rounded-full text-[10px] font-bold uppercase">{g}</span>)}
                         {entry.runtime ? (
                           <span className="bg-muted/50 border border-border/40 text-foreground px-3 py-1 rounded-full text-[10px] font-bold uppercase flex items-center gap-1"><Clock size={10} /> {formatRuntime(entry.runtime)}</span>
                         ) : null}
                       </div>
                       {entry.releaseDate && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Calendar size={14} className="text-primary" />
-                          <span>Released: <strong className="text-foreground">{safeDateFormat(entry.releaseDate)}</strong></span>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
+                          <Calendar size={14} className="text-primary shrink-0" />
+                          <span className="min-w-0 break-words">Released: <strong className="text-foreground">{safeDateFormat(entry.releaseDate)}</strong></span>
                         </div>
                       )}
                     </div>
@@ -254,7 +281,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                       </div>
                     )}
                     {entry.rating > 0 && (
-                      <div className="flex items-center gap-2 text-amber-400 font-semibold">
+                      <div className="flex flex-wrap items-center gap-2 text-amber-400 font-semibold">
                         <span>★</span>
                         <span>{entry.rating}/10</span>
                       </div>

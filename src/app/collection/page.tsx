@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { PageLoader } from '@/components/ui/Loader';
 
 function CollectionContent() {
-    const { entries, isLoading, updateEntry, deleteEntry, batchUpdateEntries } = useMedia();
+    const { entries, isLoading, updateEntry, deleteEntry, batchUpdateEntries, genres, franchises } = useMedia();
     useAutoRefresh({ entries, batchUpdateEntries, isLoading });
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -48,9 +48,21 @@ function CollectionContent() {
 
             if (statusFilter !== 'All' && e.status !== statusFilter) return false;
             if (favoritesOnly && !e.favorite) return false;
-            if (searchQuery) {
-                return e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    e.review?.toLowerCase().includes(searchQuery.toLowerCase());
+            if (searchQuery.trim()) {
+                const query = searchQuery.trim().toLowerCase();
+                const year = e.releaseDate?.slice(0, 4) || '';
+                const genreText = (e.genreIds || []).map(id => genres.find(g => g.id === id)?.name || '').join(' ');
+                const franchiseText = e.franchiseId ? franchises.find(f => f.id === e.franchiseId)?.name || '' : '';
+                const haystack = [
+                    e.title,
+                    e.type === 'TV Show' ? 'series tv show' : e.type,
+                    e.status,
+                    year,
+                    e.review,
+                    genreText,
+                    franchiseText,
+                ].filter(Boolean).join(' ').toLowerCase();
+                return query.split(/\s+/).every(token => haystack.includes(token));
             }
             return true;
         });
@@ -60,7 +72,7 @@ function CollectionContent() {
             if (sortBy === 'Title') return a.title.localeCompare(b.title);
             return b.createdAt - a.createdAt;
         });
-    }, [entries, filter, statusFilter, searchQuery, favoritesOnly, sortBy]);
+    }, [entries, filter, statusFilter, searchQuery, favoritesOnly, sortBy, genres, franchises]);
 
     const handleIncrementWatched = (entry: MediaEntry) => {
         if (!isEpisodic(entry)) return;
@@ -178,11 +190,7 @@ function CollectionContent() {
     };
 
     return (
-        <div className="absolute inset-0 flex flex-col bg-[radial-gradient(circle_at_15%_0%,rgba(56,189,248,0.08),transparent_35%),radial-gradient(circle_at_85%_0%,rgba(251,191,36,0.06),transparent_38%),\#05070f] pb-4 lg:pb-6 pt-4 lg:pt-6 px-4 sm:px-8 lg:px-10 overflow-hidden w-full max-w-[1600px] mx-auto animate-fade-in animate-fade-up">
-            {/* Ambient background glow orbs */}
-            <div className="absolute top-[15%] left-[25%] w-[400px] h-[400px] bg-cyan-500/5 rounded-full blur-[120px] pointer-events-none" />
-            <div className="absolute top-[40%] right-[20%] w-[350px] h-[350px] bg-purple-500/5 rounded-full blur-[110px] pointer-events-none" />
-
+        <div className="absolute inset-0 flex flex-col bg-background pb-4 lg:pb-6 pt-3 sm:pt-4 lg:pt-6 px-3 sm:px-6 lg:px-10 overflow-hidden w-full max-w-[1600px] mx-auto animate-fade-in animate-fade-up">
             {/* Header Area */}
             <div className="shrink-0 pb-4 border-b border-cyan-400/15">
                 <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
@@ -193,7 +201,7 @@ function CollectionContent() {
                         <p className="text-xs text-muted-foreground mt-1 font-semibold">{entries.length} Items Total</p>
                     </div>
 
-                    <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1 sm:pb-0">
+                    <div className="flex w-full sm:w-auto items-center gap-2 overflow-x-auto hide-scrollbar pb-1 sm:pb-0">
                         <div className="hidden md:flex items-center rounded-full border border-border/70 bg-card/60 p-1 mr-1">
                             <button onClick={() => setViewMode('poster')} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${viewMode === 'poster' ? 'bg-primary text-white' : 'text-muted-foreground hover:text-foreground'}`}>Poster</button>
                             <button onClick={() => setViewMode('list')} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${viewMode === 'list' ? 'bg-primary text-white' : 'text-muted-foreground hover:text-foreground'}`}>List</button>
@@ -301,7 +309,7 @@ function CollectionContent() {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 min-h-0 overflow-y-auto hide-scrollbar pt-4 z-10 relative pb-28">
+            <div className="flex-1 min-h-0 overflow-y-auto hide-scrollbar pt-4 z-10 relative pb-28 lg:pb-4">
                 {isLoading ? (
                     <PageLoader text="Loading Library..." />
                 ) : entries.length === 0 ? (
@@ -342,7 +350,7 @@ function CollectionContent() {
                             </h2>
                         </div>
                         {viewMode === 'poster' ? (
-                            <motion.div layout className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-x-4 gap-y-6">
+                            <motion.div layout className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-x-3 sm:gap-x-4 gap-y-5 sm:gap-y-6">
                                 <AnimatePresence>
                                     {sortedEntries.map((entry, i) => (
                                         <MediaCard
