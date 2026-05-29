@@ -56,7 +56,7 @@ export default function JsonImporter() {
                     throw new Error("Invalid JSON structure. Please verify the expected array format.");
                 }
             } else {
-                throw new Error("Invalid format format.");
+                throw new Error("Invalid format.");
             }
 
             if (entries.length === 0 && genres.length === 0 && franchises.length === 0) {
@@ -99,8 +99,8 @@ export default function JsonImporter() {
         try {
             await importData(parsedData);
             setParsedData(null);
-            setPasteInput(''); // Clear paste input on success
-            alert("Data successfully merged and imported!");
+            setPasteInput('');
+            // Toast is called inside importData in MediaContext
         } catch {
             setError("An error occurred while importing data.");
         } finally {
@@ -147,26 +147,23 @@ export default function JsonImporter() {
                                     <div className="bg-background border border-border/40 p-3 rounded-lg">
                                         <span className="font-bold text-primary mb-1 block">type (Required)</span>
                                         <p className="text-muted-foreground">Must be exactly one of:</p>
-                                        <code className="text-emerald-400">"Movie"</code>, <code className="text-emerald-400">"TV Show"</code>, or <code className="text-emerald-400">"Anime"</code>
+                                        <code className="text-emerald-400">&quot;Movie&quot;</code>, <code className="text-emerald-400">&quot;TV Show&quot;</code>, or <code className="text-emerald-400">&quot;Anime&quot;</code>
                                     </div>
-
                                     <div className="bg-background border border-border/40 p-3 rounded-lg">
                                         <span className="font-bold text-primary mb-1 block">status (Optional)</span>
                                         <p className="text-muted-foreground">Must be exactly one of:</p>
-                                        <code className="text-emerald-400">"Completed"</code>, <code className="text-emerald-400">"Watching"</code>, or <code className="text-emerald-400">"Plan to Watch"</code>
+                                        <code className="text-emerald-400">&quot;Completed&quot;</code>, <code className="text-emerald-400">&quot;Watching&quot;</code>, or <code className="text-emerald-400">&quot;Plan to Watch&quot;</code>
                                     </div>
-
                                     <div className="bg-background border border-border/40 p-3 rounded-lg">
                                         <span className="font-bold text-primary mb-1 block">animeType (Optional, Anime Only)</span>
                                         <p className="text-muted-foreground">Sub-category for Anime:</p>
-                                        <code className="text-emerald-400">"Show"</code> or <code className="text-emerald-400">"Movie"</code>
+                                        <code className="text-emerald-400">&quot;Show&quot;</code> or <code className="text-emerald-400">&quot;Movie&quot;</code>
                                     </div>
-
                                     <div className="bg-background border border-border/40 p-3 rounded-lg">
                                         <span className="font-bold text-primary mb-1 block">genre / franchise (Optional)</span>
-                                        <p className="text-muted-foreground">Auto-created if they don't exist.</p>
-                                        Genre expects an array: <code className="text-emerald-400">["Action", "Drama"]</code><br />
-                                        Franchise expects string: <code className="text-emerald-400">"Marvel Universe"</code>
+                                        <p className="text-muted-foreground">Auto-created if they don&apos;t exist.</p>
+                                        Genre expects an array: <code className="text-emerald-400">[&quot;Action&quot;, &quot;Drama&quot;]</code><br />
+                                        Franchise expects string: <code className="text-emerald-400">&quot;Marvel Universe&quot;</code>
                                     </div>
                                 </div>
                             </div>
@@ -198,23 +195,7 @@ export default function JsonImporter() {
     "episodesTotal": 86,
     "seasonsCount": 6,
     "rating": 4.5,
-    "genre": ["Crime", "Drama"],
-    "episodes": [
-      {
-        "name": "Pilot",
-        "airDate": "1999-01-10",
-        "season": 1,
-        "number": 1,
-        "runtime": 59
-      },
-      {
-        "name": "46 Long",
-        "airDate": "1999-01-17",
-        "season": 1,
-        "number": 2,
-        "runtime": 50
-      }
-    ]
+    "genre": ["Crime", "Drama"]
   },
   {
     "title": "Attack on Titan",
@@ -242,13 +223,13 @@ export default function JsonImporter() {
                     <div className="bg-muted/20 border border-border/40 p-1.5 rounded-xl flex items-center w-full max-w-sm">
                         <button
                             onClick={() => setInputMode('file')}
-                            className={`flex-1 flex justify-center items-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${inputMode === 'file' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                            className={`flex-1 flex justify-center items-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors cursor-pointer ${inputMode === 'file' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             <FileText size={16} /> File Upload
                         </button>
                         <button
                             onClick={() => setInputMode('paste')}
-                            className={`flex-1 flex justify-center items-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${inputMode === 'paste' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                            className={`flex-1 flex justify-center items-center gap-2 py-2 px-3 rounded-lg text-sm font-medium transition-colors cursor-pointer ${inputMode === 'paste' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             <ClipboardPaste size={16} /> Paste Text
                         </button>

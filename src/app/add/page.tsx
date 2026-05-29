@@ -4,10 +4,20 @@ import { MediaForm } from '@/components/MediaForm';
 import { useMedia } from '@/context/MediaContext';
 import { useRouter } from 'next/navigation';
 import { MediaEntry } from '@/lib/db';
+import { toast } from 'sonner';
 
 export default function AddMediaPage() {
   const { addEntry } = useMedia();
   const router = useRouter();
+
+  const handleSave = async (entry: MediaEntry) => {
+    await addEntry(entry as MediaEntry);
+    toast.success(`"${entry.title}" added to your collection! 🎬`, {
+      description: 'Syncing to Google Drive...',
+      duration: 3000,
+    });
+    router.push('/collection');
+  };
 
   return (
     <div className="absolute inset-0 overflow-y-auto bg-[radial-gradient(circle_at_10%_0%,rgba(56,189,248,0.09),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(251,191,36,0.08),transparent_40%),var(--background)] px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
@@ -26,13 +36,10 @@ export default function AddMediaPage() {
         </div>
 
         <div className="w-full flex justify-center items-start pb-20">
-        <MediaForm
-          onSave={async (entry) => {
-            await addEntry(entry as MediaEntry);
-            router.push('/');
-          }}
-          onCancel={() => router.back()}
-        />
+          <MediaForm
+            onSave={handleSave}
+            onCancel={() => router.back()}
+          />
         </div>
       </div>
     </div>

@@ -38,14 +38,13 @@ export default function EditMediaPage() {
   }
 
   const handleSave = async (updatedEntry: MediaEntry) => {
-    try {
-      await updateEntry(updatedEntry);
-      toast.success("Entry updated successfully!");
-      router.push('/');
-    } catch (error) {
-      toast.error("Failed to update entry.");
-      console.error(error);
-    }
+    // updateEntry saves to localStorage immediately — no error expected here
+    await updateEntry(updatedEntry);
+    toast.success(`"${updatedEntry.title}" updated! ✓`, {
+      description: 'Changes saved and syncing to Drive...',
+      duration: 3000,
+    });
+    router.back();
   };
 
   return (

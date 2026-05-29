@@ -5,7 +5,7 @@ import { useState, useEffect, Suspense, useMemo, useRef } from 'react';
 import { useMedia } from '@/context/MediaContext';
 import MediaCard from '@/components/MediaCard';
 import { MediaDetailModal } from '@/components/MediaDetailModal';
-import { Plus, Film, X, Heart, Shuffle, Search, Settings, Terminal } from 'lucide-react';
+import { Plus, Film, Heart, Shuffle, Search, Settings, Terminal } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MediaEntry, isEpisodic } from '@/lib/db';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
@@ -24,15 +24,12 @@ function CollectionContent() {
     const [filter, setFilter] = useState<'All' | 'Movie' | 'Series' | 'Anime'>(typeParam || 'All');
 
     const [statusFilter, setStatusFilter] = useState<'All' | 'Completed' | 'Watching' | 'Plan to Watch'>('All');
-    const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
-    const [showFilters, setShowFilters] = useState(searchParams.get('filters') !== '0');
     const [favoritesOnly, setFavoritesOnly] = useState(false);
     const [sortBy, setSortBy] = useState<'Recent' | 'Rating' | 'Title'>('Recent');
     const [viewMode, setViewMode] = useState<'poster' | 'list'>('poster');
-    useEffect(() => {
-        setSearchQuery(searchParams.get('q') || '');
-        setShowFilters(searchParams.get('filters') !== '0');
-    }, [searchParams]);
+
+    const searchQuery = searchParams.get('q') || '';
+    const showFilters = searchParams.get('filters') !== '0';
 
     // Command Menu state
     const [isCmdOpen, setIsCmdOpen] = useState(false);
@@ -326,7 +323,7 @@ function CollectionContent() {
                 ) : sortedEntries.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
                         <p className="text-muted-foreground font-medium text-sm">No matches found for your filters.</p>
-                        <button onClick={() => { setSearchQuery(''); setFilter('All'); setStatusFilter('All'); setFavoritesOnly(false); router.push('/collection'); }} className="mt-4 text-primary font-semibold text-[13px] hover:underline">
+                        <button onClick={() => { setFilter('All'); setStatusFilter('All'); setFavoritesOnly(false); router.push('/collection'); }} className="mt-4 text-primary font-semibold text-[13px] hover:underline">
                             Clear all filters
                         </button>
                     </div>
@@ -339,7 +336,7 @@ function CollectionContent() {
                                         {s.label}: <span className="text-foreground">{s.value}</span>
                                     </button>
                                 ))}
-                                <button onClick={() => { setSearchQuery(''); setFilter('All'); setStatusFilter('All'); setFavoritesOnly(false); router.push('/collection'); }} className="rounded-full border border-border/70 bg-card/70 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground">
+                                <button onClick={() => { setFilter('All'); setStatusFilter('All'); setFavoritesOnly(false); router.push('/collection'); }} className="rounded-full border border-border/70 bg-card/70 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground">
                                     Reset
                                 </button>
                             </div>

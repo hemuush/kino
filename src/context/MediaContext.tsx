@@ -6,6 +6,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { MediaEntry, Tag, DEFAULT_GENRES, normalizeMediaType, normalizeWatchStatus } from '@/lib/db';
 import { useAuth } from '@/context/AuthContext';
 import { TokenExpiredError, downloadBackupFromDrive, uploadBackupToDrive, deleteBackupFromDrive, BackupData } from '@/lib/googleDrive';
+import { toast } from 'sonner';
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error';
 
@@ -20,6 +21,7 @@ interface MediaContextType {
   franchises: Tag[];
   setFranchises: (franchises: Tag[]) => void;
   syncStatus: SyncStatus;
+  lastSyncedAt: number | null;
   batchUpdateEntries: (entries: MediaEntry[]) => Promise<void>;
   wipeAllData: () => Promise<void>;
   importData: (data: { entries?: MediaEntry[], genres?: Tag[], franchises?: Tag[] }) => Promise<void>;
@@ -35,17 +37,16 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   const [franchises, setFranchises] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
+  const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
 
   const uploadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const latestDataRef = useRef<{ entries: MediaEntry[]; genres: Tag[]; franchises: Tag[]; }>({ entries: [], genres: [], franchises: [] });
   const hasFetchedFromDriveRef = useRef<boolean>(false);
   const cacheCorruptedRef = useRef<boolean>(false);
 
-  // BUG 3 FIX: Prevent tab closure data loss during debounce queue
+  // Warn before unload when upload is pending
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Warn only when there is a pending local upload debounce queue.
-      // Do not warn during background download/initial sync reads.
       if (uploadTimeoutRef.current) {
         e.preventDefault();
         e.returnValue = 'Data is currently saving to Google Drive. Are you sure you want to leave?';
@@ -56,13 +57,28 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [syncStatus]);
 
+  // updateStateAndRef: immediately write to localStorage and React state
   const updateStateAndRef = useCallback((newEntries?: MediaEntry[], newGenres?: Tag[], newFranchises?: Tag[]) => {
-    if (newEntries) { setEntries(newEntries); latestDataRef.current.entries = newEntries; localStorage.setItem('kino_entries', JSON.stringify(newEntries)); }
-    if (newGenres) { setGenres(newGenres); latestDataRef.current.genres = newGenres; localStorage.setItem('kino_genres', JSON.stringify(newGenres)); }
-    if (newFranchises) { setFranchises(newFranchises); latestDataRef.current.franchises = newFranchises; localStorage.setItem('kino_franchises', JSON.stringify(newFranchises)); }
-    localStorage.setItem('kino_timestamp', Date.now().toString());
+    const now = Date.now();
+    if (newEntries !== undefined) {
+      setEntries(newEntries);
+      latestDataRef.current.entries = newEntries;
+      try { localStorage.setItem('kino_entries', JSON.stringify(newEntries)); } catch {}
+    }
+    if (newGenres !== undefined) {
+      setGenres(newGenres);
+      latestDataRef.current.genres = newGenres;
+      try { localStorage.setItem('kino_genres', JSON.stringify(newGenres)); } catch {}
+    }
+    if (newFranchises !== undefined) {
+      setFranchises(newFranchises);
+      latestDataRef.current.franchises = newFranchises;
+      try { localStorage.setItem('kino_franchises', JSON.stringify(newFranchises)); } catch {}
+    }
+    try { localStorage.setItem('kino_timestamp', now.toString()); } catch {}
   }, []);
 
+  // Load from localStorage on mount (fast initial load)
   useEffect(() => {
     try {
       const storedEntries = localStorage.getItem('kino_entries');
@@ -72,7 +88,9 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         const parsedEntries = storedEntries ? JSON.parse(storedEntries) : [];
         const parsedGenres = storedGenres ? JSON.parse(storedGenres) : [];
         const parsedFranchises = storedFranchises ? JSON.parse(storedFranchises) : [];
-        setEntries(parsedEntries); setGenres(parsedGenres); setFranchises(parsedFranchises);
+        setEntries(parsedEntries);
+        setGenres(parsedGenres);
+        setFranchises(parsedFranchises);
         latestDataRef.current = { entries: parsedEntries, genres: parsedGenres, franchises: parsedFranchises };
       }
     } catch (error) {
@@ -81,27 +99,42 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const triggerUpload = useCallback(() => {
+  // triggerUpload: debounced Drive upload after every mutation
+  const triggerUpload = useCallback((silent = false) => {
     if (!accessToken) return;
     if (uploadTimeoutRef.current) clearTimeout(uploadTimeoutRef.current);
     setSyncStatus('syncing');
     uploadTimeoutRef.current = setTimeout(async () => {
       try {
         const { entries: currentEntries, genres: currentGenres, franchises: currentFranchises } = latestDataRef.current;
-        await uploadBackupToDrive(accessToken, { entries: currentEntries, genres: currentGenres, franchises: currentFranchises, timestamp: Date.now() });
+        await uploadBackupToDrive(accessToken, {
+          entries: currentEntries,
+          genres: currentGenres,
+          franchises: currentFranchises,
+          timestamp: Date.now()
+        });
         setSyncStatus('synced');
+        setLastSyncedAt(Date.now());
+        // Update localStorage timestamp after successful drive upload
+        try { localStorage.setItem('kino_timestamp', Date.now().toString()); } catch {}
+        if (!silent) {
+          // Update drive size cache
+        }
       } catch (error) {
         setSyncStatus('error');
         if (error instanceof TokenExpiredError || (error as Error).message?.includes('401')) {
-          console.warn("Session expired");
+          console.warn("Session expired during sync");
           logout(false);
+        } else {
+          console.error("Drive sync error:", error);
         }
       } finally {
         uploadTimeoutRef.current = null;
       }
-    }, 1000);
+    }, 800);
   }, [accessToken, logout]);
 
+  // Fetch from Drive on auth
   useEffect(() => {
     if (!accessToken) {
       setIsLoading(false);
@@ -134,13 +167,23 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         const cloudTimestamp = backup && 'timestamp' in backup && typeof backup.timestamp === 'number' ? backup.timestamp : 0;
         const localTimestamp = parseInt(localStorage.getItem('kino_timestamp') || '0', 10);
 
-        if (localTimestamp > cloudTimestamp && !cacheCorruptedRef.current) {
-          triggerUpload();
-        } else {
+        // FIXED: Always use the more recent data source
+        if (localTimestamp >= cloudTimestamp && !cacheCorruptedRef.current && latestDataRef.current.entries.length > 0) {
+          // Local data is newer or equal — upload local to Drive to sync
+          triggerUpload(true);
+        } else if (backup) {
+          // Drive data is newer — use Drive data
           if (fetchedGenres.length === 0) {
             fetchedGenres = DEFAULT_GENRES.map(name => ({ id: crypto.randomUUID(), name }));
           }
           updateStateAndRef(fetchedEntries, fetchedGenres, fetchedFranchises);
+          if (cloudTimestamp > 0) setLastSyncedAt(cloudTimestamp);
+        } else {
+          // No drive data, keep local data, ensure genres exist
+          if (latestDataRef.current.genres.length === 0) {
+            const defaultGenres = DEFAULT_GENRES.map(name => ({ id: crypto.randomUUID(), name }));
+            updateStateAndRef(undefined, defaultGenres, undefined);
+          }
         }
         setSyncStatus('synced');
       } catch (error) {
@@ -162,7 +205,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
       return updated || e;
     });
     updateStateAndRef(newEntries, undefined, undefined);
-    triggerUpload();
+    triggerUpload(true);
   };
 
   const importData = async (data: { entries?: MediaEntry[], genres?: Tag[], franchises?: Tag[] }) => {
@@ -260,6 +303,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     if (hasChanges) {
       updateStateAndRef(mergedEntries, mergedGenres, mergedFranchises);
       triggerUpload();
+      toast.success(`Import complete! ${data.entries?.length || 0} entries processed.`);
     }
   };
 
@@ -271,7 +315,9 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   };
 
   const updateEntry = async (updatedEntry: MediaEntry) => {
-    const updatedEntries = latestDataRef.current.entries.map(e => String(e.id) === String(updatedEntry.id) ? updatedEntry : e);
+    const updatedEntries = latestDataRef.current.entries.map(e =>
+      String(e.id) === String(updatedEntry.id) ? { ...updatedEntry, updatedAt: Date.now() } : e
+    );
     updateStateAndRef(updatedEntries, undefined, undefined);
     triggerUpload();
   };
@@ -284,12 +330,12 @@ export function MediaProvider({ children }: { children: ReactNode }) {
 
   const saveGenres = (newGenres: Tag[]) => {
     updateStateAndRef(undefined, newGenres, undefined);
-    triggerUpload();
+    triggerUpload(true);
   };
 
   const saveFranchises = (newFranchises: Tag[]) => {
     updateStateAndRef(undefined, undefined, newFranchises);
-    triggerUpload();
+    triggerUpload(true);
   };
 
   const wipeAllData = async () => {
@@ -301,21 +347,28 @@ export function MediaProvider({ children }: { children: ReactNode }) {
       setSyncStatus('error');
       console.error(error);
     }
-    localStorage.removeItem('kino_entries');
-    localStorage.removeItem('kino_genres');
-    localStorage.removeItem('kino_franchises');
-    localStorage.removeItem('kino_timestamp');
+    try {
+      localStorage.removeItem('kino_entries');
+      localStorage.removeItem('kino_genres');
+      localStorage.removeItem('kino_franchises');
+      localStorage.removeItem('kino_timestamp');
+    } catch {}
     const emptyGenres = DEFAULT_GENRES.map(name => ({ id: crypto.randomUUID(), name }));
     setEntries([]);
     setGenres(emptyGenres);
     setFranchises([]);
     latestDataRef.current = { entries: [], genres: emptyGenres, franchises: [] };
+    setLastSyncedAt(null);
     setSyncStatus('idle');
   };
 
   return (
     <MediaContext.Provider value={{
-      entries, isLoading, addEntry, updateEntry, deleteEntry, genres, setGenres: saveGenres, franchises, setFranchises: saveFranchises, syncStatus, batchUpdateEntries, wipeAllData, importData
+      entries, isLoading, addEntry, updateEntry, deleteEntry,
+      genres, setGenres: saveGenres,
+      franchises, setFranchises: saveFranchises,
+      syncStatus, lastSyncedAt,
+      batchUpdateEntries, wipeAllData, importData
     }}>
       {children}
     </MediaContext.Provider>

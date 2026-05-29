@@ -10,16 +10,17 @@ import { Moon, LogOut, LayoutDashboard, Library, Film, Settings, Search, Sliders
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { PageLoader } from "./ui/Loader";
 import Link from "next/link";
+import { useMedia } from "@/context/MediaContext";
 
 interface AppShellProps { children: ReactNode }
 
 export function AppShell({ children }: AppShellProps) {
   const { user, accessToken, isLoading, logout } = useAuth();
+  const { syncStatus } = useMedia();
   const pathname = usePathname();
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
   const [search, setSearch] = useState("");
-  const [q, setQ] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [isRouteLoading, setIsRouteLoading] = useState(false);
   const routeLoadingStartedAt = useRef(0);
@@ -27,8 +28,12 @@ export function AppShell({ children }: AppShellProps) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
-    setQ(sp.get("q") || "");
-    setFiltersOpen(sp.get("filters") !== "0");
+    const newQ = sp.get("q") || "";
+    const newFilters = sp.get("filters") !== "0";
+    Promise.resolve().then(() => {
+      setSearch(newQ);
+      setFiltersOpen(newFilters);
+    });
   }, [pathname]);
 
   useEffect(() => {
@@ -59,9 +64,7 @@ export function AppShell({ children }: AppShellProps) {
     return () => clearTimeout(timer);
   }, [pathname, isRouteLoading]);
 
-  useEffect(() => {
-    setSearch(q);
-  }, [q]);
+
 
   const isLoginPage = pathname === "/login";
   const showTopSearch = pathname !== "/settings";
@@ -157,6 +160,17 @@ export function AppShell({ children }: AppShellProps) {
             </div>
 
             <div className="flex items-center justify-end gap-2">
+              {/* Sync status indicator */}
+              {syncStatus === 'syncing' && (
+                <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground" title="Syncing to Google Drive...">
+                  <div className="w-3.5 h-3.5 border-2 border-muted-foreground/30 border-t-primary rounded-full animate-spin" />
+                </div>
+              )}
+              {syncStatus === 'error' && (
+                <div className="hidden md:flex items-center gap-1.5 text-xs text-red-500 font-medium" title="Sync failed — data saved locally">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                </div>
+              )}
               {user?.picture ? (
                 <img src={user.picture} alt={user.name || "User"} className="w-8 h-8 rounded-full border border-border object-cover" referrerPolicy="no-referrer" />
               ) : (

@@ -223,7 +223,7 @@ function DashboardContent() {
                       <div className="min-w-0">
                         <p className="truncate font-semibold text-sm">{entry.title}</p>
                         <p className="text-xs text-muted-foreground">{entry.type} - {entry.status || "Tracked"}</p>
-                        <p className="text-xs text-muted-foreground/80">{entry.runtime ? `${formatRuntime(entry.runtime)}${isEpisodic(entry) ? "/ep" : ""}` : "No runtime"}</p>
+                        <p className="text-xs text-muted-foreground/80">{(() => { const t = getWatchedRuntimeMinutes(entry); return t > 0 ? `${formatRuntime(t)} watched` : entry.runtime ? `${formatRuntime(entry.runtime)}/ep` : 'No runtime'; })()}</p>
                       </div>
                     </button>
                   ))
