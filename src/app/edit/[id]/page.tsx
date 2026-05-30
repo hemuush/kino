@@ -1,19 +1,20 @@
 // src/app/edit/[id]/page.tsx
 "use client";
 
+import React, { use } from 'react';
 import { MediaForm } from '@/components/MediaForm';
 import { useMedia } from '@/context/MediaContext';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { MediaEntry } from '@/lib/db';
 import { PageLoader } from '@/components/ui/Loader';
 import { toast } from 'sonner';
 
-export default function EditMediaPage() {
-  const params = useParams<{ id: string }>();
+export default function EditMediaPage(props: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(props.params);
   const router = useRouter();
   const { entries, updateEntry, isLoading } = useMedia();
 
-  const entry = !params?.id || isLoading ? null : entries.find(e => String(e.id) === String(params.id)) || null;
+  const entry = !resolvedParams?.id || isLoading ? null : entries.find(e => String(e.id) === String(resolvedParams.id)) || null;
 
   if (isLoading) {
     return <PageLoader text="Loading entry..." />;

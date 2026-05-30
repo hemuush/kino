@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useEffect, useState, use } from 'react';
+import { useRouter } from 'next/navigation';
 import { useMedia } from '@/context/MediaContext';
 import { MediaEntry, isEpisodic } from '@/lib/db';
 import { PageLoader } from '@/components/ui/Loader';
@@ -9,8 +9,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Star, Clock, Calendar, Edit3, Plus, Check, Heart, Film, CheckCircle2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function MediaDetailPage() {
-  const params = useParams<{ id: string }>();
+export default function MediaDetailPage(props: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(props.params);
   const router = useRouter();
   const { entries, isLoading, updateEntry, deleteEntry, genres, franchises } = useMedia();
   const [entry, setEntry] = useState<MediaEntry | null>(null);
@@ -18,15 +18,15 @@ export default function MediaDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && params?.id) {
-      const found = entries.find(e => String(e.id) === String(params.id));
+    if (!isLoading && resolvedParams?.id) {
+      const found = entries.find(e => String(e.id) === String(resolvedParams.id));
       if (found) {
         setEntry(found);
       } else {
         router.push('/');
       }
     }
-  }, [entries, isLoading, params?.id, router]);
+  }, [entries, isLoading, resolvedParams?.id, router]);
 
   if (isLoading || !entry) {
     return <PageLoader text="Loading media..." />;
