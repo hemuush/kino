@@ -206,10 +206,10 @@ export default function SagasPage() {
                               <img
                                 src={items[0].coverImage}
                                 alt=""
-                                className="w-full h-full object-cover opacity-40 group-hover:opacity-70 group-hover:scale-110 group-hover:rotate-1 transition-all duration-1000 ease-out"
+                                className="w-full h-full object-cover opacity-30 group-hover:opacity-50 group-hover:scale-110 group-hover:rotate-1 transition-all duration-1000 ease-out"
                               />
-                              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
-                              <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-transparent" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
+                              <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/40 to-transparent" />
                             </>
                           )}
                         </div>
