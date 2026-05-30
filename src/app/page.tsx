@@ -3,13 +3,14 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { Clock, Play, ListVideo, ChevronRight, Activity, Shuffle, Film, Star, CheckCircle2, Bookmark } from "lucide-react";
+import { Clock, Play, ListVideo, ChevronRight, Activity, Shuffle, Film, Star, CheckCircle2, Bookmark, Sparkles } from "lucide-react";
 import { useMedia } from "@/context/MediaContext";
 import { useAuth } from "@/context/AuthContext";
 import { MediaEntry, formatRuntime, getWatchedRuntimeMinutes, isEpisodic } from "@/lib/db";
 import { MediaDetailModal } from "@/components/MediaDetailModal";
 import MediaCard from "@/components/MediaCard";
 import { PageLoader } from "@/components/ui/Loader";
+import { RecapModal } from "@/components/dashboard/RecapModal";
 
 // Pick random items
 function pickRandomItems<T>(arr: T[], count: number) {
@@ -298,6 +299,8 @@ function SpotlightCard({ entry, setSelectedEntry, activeSlide, randomDeck, setAc
 function DashboardContent() {
   const { entries, isLoading, updateEntry, deleteEntry, genres } = useMedia();
   const [selectedEntry, setSelectedEntry] = useState<MediaEntry | null>(null);
+  const [showRecap, setShowRecap] = useState(false);
+  const [recapType, setRecapType] = useState<'weekly' | 'monthly'>('weekly');
 
   // Deck slideshow state
   const [randomDeck, setRandomDeck] = useState<MediaEntry[]>([]);
@@ -345,6 +348,50 @@ function DashboardContent() {
       setHasSetDefaultShelf(true);
     }
   }, [entries, isLoading, watching.length, planned.length, completed.length, hasSetDefaultShelf]);
+
+  // Date logic for displaying recap triggers
+  const now = new Date();
+  const isEarlyMonth = now.getDate() >= 1 && now.getDate() <= 5;
+  const isSunday = now.getDay() === 0;
+
+  // Handle automatic weekly and monthly recap popup
+  useEffect(() => {
+    if (isLoading || entries.length === 0) return;
+    try {
+      const now = new Date();
+      
+      // Monthly Recap Logic: Show in first 5 days of the month
+      const lastMonthly = localStorage.getItem('kino_last_monthly_recap');
+      const currentMonthStr = `${now.getFullYear()}-${now.getMonth()}`;
+      
+      if (isEarlyMonth && lastMonthly !== currentMonthStr) {
+        setRecapType('monthly');
+        setShowRecap(true);
+        return;
+      }
+      
+      // Weekly Recap Logic: Show only on Sundays
+      const lastWeekly = localStorage.getItem('kino_last_weekly_recap');
+      const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      
+      if (isSunday && (!lastWeekly || parseInt(lastWeekly) < oneWeekAgo)) {
+        setRecapType('weekly');
+        setShowRecap(true);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [isLoading, entries.length]);
+
+  const handleCloseRecap = () => {
+    setShowRecap(false);
+    if (recapType === 'monthly') {
+      const now = new Date();
+      localStorage.setItem('kino_last_monthly_recap', `${now.getFullYear()}-${now.getMonth()}`);
+    } else {
+      localStorage.setItem('kino_last_weekly_recap', Date.now().toString());
+    }
+  };
 
   // Watch statistics
   const stats = useMemo(() => {
@@ -415,9 +462,29 @@ function DashboardContent() {
             className="text-left space-y-2 max-w-2xl px-4 sm:px-8 lg:px-12"
           >
             <span className="text-[10px] font-mono tracking-[0.2em] text-primary uppercase font-bold">OVERVIEW & STATS</span>
-            <h3 className="text-xl sm:text-3xl lg:text-5xl font-display font-bold tracking-tight text-foreground leading-none">
-              Your cinema journey, in numbers.
-            </h3>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+              <h3 className="text-xl sm:text-3xl lg:text-5xl font-display font-bold tracking-tight text-foreground leading-none max-w-2xl">
+                Your cinema journey, in numbers.
+              </h3>
+              <div className="flex gap-2 shrink-0">
+                {isSunday && (
+                  <button 
+                    onClick={() => { setRecapType('weekly'); setShowRecap(true); }}
+                    className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
+                  >
+                    <Sparkles size={14} /> Weekly
+                  </button>
+                )}
+                {isEarlyMonth && (
+                  <button 
+                    onClick={() => { setRecapType('monthly'); setShowRecap(true); }}
+                    className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 border border-purple-500/20 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
+                  >
+                    <Sparkles size={14} /> Monthly
+                  </button>
+                )}
+              </div>
+            </div>
           </motion.div>
 
           <motion.div 
@@ -620,6 +687,14 @@ function DashboardContent() {
           }}
         />
       )}
+
+      <RecapModal 
+        isOpen={showRecap} 
+        onClose={handleCloseRecap} 
+        entries={entries} 
+        genres={genres} 
+        type={recapType}
+      />
     </div>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { Film, Tag, Database, Settings2 } from 'lucide-react';
+import { Film, Tag, Database, Settings2, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 interface SettingsSidebarProps {
     activeTab: 'sagas' | 'genres' | 'data';
@@ -65,6 +66,22 @@ export function SettingsSidebar({ activeTab, setActiveTab }: SettingsSidebarProp
                     );
                 })}
             </nav>
+            
+            {/* Legal Links */}
+            <div className="hidden lg:flex flex-col gap-3 mt-4 pt-6 border-t border-border/40 px-2">
+                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium tracking-wide uppercase">
+                    <Shield size={12} />
+                    <span>Legal & Privacy</span>
+                </div>
+                <div className="flex flex-col gap-2">
+                    <Link href="/privacy" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors w-fit">
+                        Privacy Policy
+                    </Link>
+                    <Link href="/terms" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors w-fit">
+                        Terms of Service
+                    </Link>
+                </div>
+            </div>
         </aside>
     );
 }

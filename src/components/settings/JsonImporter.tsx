@@ -145,6 +145,11 @@ export default function JsonImporter() {
                                 <h4 className="text-sm font-bold text-foreground mb-3">Required & Allowed Values (Strict Matching)</h4>
                                 <div className="grid gap-3 sm:grid-cols-2 text-xs">
                                     <div className="bg-background border border-border/40 p-3 rounded-lg">
+                                        <span className="font-bold text-primary mb-1 block">title (Required)</span>
+                                        <p className="text-muted-foreground">The exact title of the media.</p>
+                                        <code className="text-emerald-400">&quot;Dune: Part Two&quot;</code>
+                                    </div>
+                                    <div className="bg-background border border-border/40 p-3 rounded-lg">
                                         <span className="font-bold text-primary mb-1 block">type (Required)</span>
                                         <p className="text-muted-foreground">Must be exactly one of:</p>
                                         <code className="text-emerald-400">&quot;Movie&quot;</code>, <code className="text-emerald-400">&quot;TV Show&quot;</code>, or <code className="text-emerald-400">&quot;Anime&quot;</code>
@@ -171,7 +176,8 @@ export default function JsonImporter() {
                             <div className="border-t border-border/40 pt-4">
                                 <h4 className="text-sm font-bold text-foreground mb-2">JSON Structure Example</h4>
                                 <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
-                                    Notice how <b>TV Shows</b> can support a rich <code>episodes</code> array object tracking individual episodes, runtimes, and exact air dates.
+                                    Notice how <b>TV Shows</b> can support a rich <code>episodes</code> array object tracking individual episodes, runtimes, and exact air dates. <br/>
+                                    <strong className="text-primary">Note on Images:</strong> Please do <b>not</b> include <code>coverImage</code> links in your JSON. The system automatically fetches high-quality images from our database.
                                 </p>
                                 <pre className="bg-background border border-border/50 p-4 rounded-xl text-xs overflow-x-auto text-emerald-400 hide-scrollbar leading-relaxed">
                                     {`[
@@ -195,7 +201,18 @@ export default function JsonImporter() {
     "episodesTotal": 86,
     "seasonsCount": 6,
     "rating": 4.5,
-    "genre": ["Crime", "Drama"]
+    "genre": ["Crime", "Drama"],
+    "episodes": [
+      {
+        "title": "Pilot",
+        "season": 1,
+        "episode": 1,
+        "runtime": 60,
+        "releaseDate": "1999-01-10",
+        "watched": true,
+        "rating": 5
+      }
+    ]
   },
   {
     "title": "Attack on Titan",

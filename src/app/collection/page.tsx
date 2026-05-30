@@ -7,14 +7,12 @@ import { MediaDetailModal } from '@/components/MediaDetailModal';
 import { Plus, Film, Heart, Shuffle, Search, Settings, Terminal, LayoutGrid, List, SlidersHorizontal, Activity, Play, Star, CheckCircle, Clock } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MediaEntry, isEpisodic } from '@/lib/db';
-import { useAutoRefresh } from '@/hooks/useAutoRefresh';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PageLoader } from '@/components/ui/Loader';
 
 function CollectionContent() {
     const { entries, isLoading, updateEntry, deleteEntry, batchUpdateEntries, genres, franchises } = useMedia();
-    useAutoRefresh({ entries, batchUpdateEntries, isLoading });
     const searchParams = useSearchParams();
     const router = useRouter();
     const typeParam = searchParams.get('type') as 'All' | 'Movie' | 'Series' | 'Anime' | null;

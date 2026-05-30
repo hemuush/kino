@@ -27,6 +27,7 @@ export function AppShell({ children }: AppShellProps) {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isPending, startTransition] = useTransition();
   const routeLoadingStartedAt = useRef(0);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -154,14 +155,18 @@ export function AppShell({ children }: AppShellProps) {
                   onChange={(e) => {
                     const next = e.target.value;
                     setSearch(next);
-                    if (pathname === "/collection" || pathname === "/sagas") {
-                      startTransition(() => {
-                        const sp = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
-                        if (next.trim()) sp.set("q", next.trim());
-                        else sp.delete("q");
-                        router.replace(`${pathname}?${sp.toString()}`);
-                      });
-                    }
+                    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+                    
+                    searchTimeoutRef.current = setTimeout(() => {
+                      if (pathname === "/collection" || pathname === "/sagas") {
+                        startTransition(() => {
+                          const sp = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+                          if (next.trim()) sp.set("q", next.trim());
+                          else sp.delete("q");
+                          router.replace(`${pathname}?${sp.toString()}`, { scroll: false });
+                        });
+                      }
+                    }, 400);
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
@@ -198,21 +203,6 @@ export function AppShell({ children }: AppShellProps) {
               <button onClick={() => router.push("/settings")} className="hidden md:inline-flex p-2 sm:p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/8 text-muted-foreground hover:text-foreground transition" title="Settings">
                 <Settings size={16} />
               </button>
-              {pathname === "/collection" && (
-                <button
-                  onClick={() => {
-                    const sp = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
-                    if (filtersOpen) sp.delete("filters");
-                    else sp.set("filters", "1");
-                    setFiltersOpen(!filtersOpen);
-                    router.replace(`/collection?${sp.toString()}`);
-                  }}
-                  className={`p-2 rounded-full transition ${filtersOpen ? "bg-primary/15 text-primary" : "hover:bg-muted/70 text-muted-foreground hover:text-foreground"}`}
-                  title="Toggle Filters"
-                >
-                  <SlidersHorizontal size={16} />
-                </button>
-              )}
               <button onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} className="inline-flex p-2 sm:p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/8 text-muted-foreground hover:text-foreground transition" title="Theme">
                 {resolvedTheme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
               </button>
@@ -229,14 +219,18 @@ export function AppShell({ children }: AppShellProps) {
                 onChange={(e) => {
                   const next = e.target.value;
                   setSearch(next);
-                  if (pathname === "/collection" || pathname === "/sagas") {
-                    startTransition(() => {
-                      const sp = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
-                      if (next.trim()) sp.set("q", next.trim());
-                      else sp.delete("q");
-                      router.replace(`${pathname}?${sp.toString()}`);
-                    });
-                  }
+                  if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+                  
+                  searchTimeoutRef.current = setTimeout(() => {
+                    if (pathname === "/collection" || pathname === "/sagas") {
+                      startTransition(() => {
+                        const sp = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+                        if (next.trim()) sp.set("q", next.trim());
+                        else sp.delete("q");
+                        router.replace(`${pathname}?${sp.toString()}`, { scroll: false });
+                      });
+                    }
+                  }, 400);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {

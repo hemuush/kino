@@ -2,11 +2,11 @@
 
 import React, { useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Star, Film, Clock, Search, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Star, Film, Clock, Search, Video, Play, Calendar } from 'lucide-react';
 import { useMedia } from '@/context/MediaContext';
-import { MediaEntry, formatRuntime } from '@/lib/db';
+import { MediaEntry, formatRuntime, isEpisodic, EpisodeInfo } from '@/lib/db';
 import { PageLoader } from '@/components/ui/Loader';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import Link from 'next/link';
 
 function getYear(dateString?: string) {
@@ -15,16 +15,20 @@ function getYear(dateString?: string) {
   return Number.isNaN(date.getTime()) ? null : date.getFullYear().toString();
 }
 
-function statusTextColor(status?: string) {
-  if (status === 'Completed') return 'text-emerald-400';
-  if (status === 'Watching') return 'text-blue-400';
-  return 'text-amber-400';
-}
-
 function statusDotColor(status?: string) {
   if (status === 'Completed') return 'bg-emerald-500 shadow-[0_0_8px_#10b981]';
   if (status === 'Watching') return 'bg-blue-500 shadow-[0_0_8px_#3b82f6]';
   return 'bg-amber-500 shadow-[0_0_8px_#f59e0b]';
+}
+
+interface TimelineNode {
+  id: string;
+  type: 'movie' | 'season' | 'show';
+  media: MediaEntry;
+  seasonNumber?: number;
+  episodesCount?: number;
+  sortDate: number;
+  displayYear: string;
 }
 
 export default function SagasPage() {
@@ -34,6 +38,9 @@ export default function SagasPage() {
 
   const [selectedSaga, setSelectedSaga] = useState<string | null>(null);
   const queryParam = searchParams.get('q') || '';
+
+  const { scrollYProgress } = useScroll();
+  const backgroundY = useTransform(scrollYProgress, [0, 1], ['0%', '50%']);
 
   const groupedSagas = useMemo(() => {
     const groups: Record<string, MediaEntry[]> = {};
@@ -79,111 +86,164 @@ export default function SagasPage() {
     });
   }, [groupedSagas, sagaNames, queryParam]);
 
+  const timelineNodes = useMemo(() => {
+    if (!selectedSaga) return [];
+    const items = groupedSagas[selectedSaga] || [];
+    const nodes: TimelineNode[] = [];
+
+    items.forEach(media => {
+      if (isEpisodic(media) && media.episodes && media.episodes.length > 0) {
+        const seasons = new Map<number, EpisodeInfo[]>();
+        media.episodes.forEach(ep => {
+          const s = ep.season || 1;
+          if (!seasons.has(s)) seasons.set(s, []);
+          seasons.get(s)!.push(ep);
+        });
+        
+        seasons.forEach((eps, s) => {
+          const sortedEps = [...eps].sort((a,b) => (a.number || 0) - (b.number || 0));
+          const airDateStr = sortedEps.find(e => e.airDate)?.airDate;
+          const sortDate = airDateStr ? new Date(airDateStr).getTime() : (media.releaseDate ? new Date(media.releaseDate).getTime() : 0);
+          const displayYear = airDateStr ? getYear(airDateStr) || '' : (getYear(media.releaseDate) || '');
+          
+          nodes.push({
+            id: `${media.id}-s${s}`,
+            type: 'season',
+            media,
+            seasonNumber: s,
+            episodesCount: eps.length,
+            sortDate: isNaN(sortDate) ? 0 : sortDate,
+            displayYear: displayYear || 'N/A'
+          });
+        });
+      } else {
+         const sortDate = media.releaseDate ? new Date(media.releaseDate).getTime() : 0;
+         nodes.push({
+           id: `${media.id}`,
+           type: media.type === 'Movie' ? 'movie' : 'show',
+           media,
+           sortDate: isNaN(sortDate) ? 0 : sortDate,
+           displayYear: getYear(media.releaseDate) || 'N/A'
+         })
+      }
+    });
+
+    return nodes.sort((a, b) => a.sortDate - b.sortDate);
+  }, [selectedSaga, groupedSagas]);
+
+
   const currentSagaItems = selectedSaga ? groupedSagas[selectedSaga] || [] : [];
   const sagaRawRuntime = currentSagaItems.reduce((total, item) => total + (item.runtime || 0), 0);
 
-  const handleSelectSaga = (saga: string) => setSelectedSaga(saga);
-  const handleCloseSaga = () => setSelectedSaga(null);
-
-  if (isLoading) return <PageLoader text="Loading your Sagas..." />;
+  if (isLoading) return <PageLoader text="Loading Universes..." />;
 
   return (
-    <div className="absolute inset-0 overflow-y-auto bg-background text-foreground font-sans select-none hide-scrollbar pb-32 transition-colors duration-500">
-      {/* Premium Backing */}
-      <div className="fixed inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.06)_1px,transparent_1px)] dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none opacity-100 z-0" />
+    <div className="absolute inset-0 overflow-y-auto bg-background text-foreground font-sans select-none hide-scrollbar transition-colors duration-500">
+      {/* Immersive Background */}
+      <motion.div 
+        style={{ y: backgroundY }}
+        className="fixed inset-0 z-0 pointer-events-none opacity-40 dark:opacity-20"
+      >
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/20 blur-[120px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/20 blur-[120px]" />
+        <div className="absolute top-[40%] left-[60%] w-[30%] h-[30%] rounded-full bg-purple-500/20 blur-[100px]" />
+      </motion.div>
       
-      {/* Ambient glowing orbs */}
-      <div className="fixed top-0 right-1/4 w-[50%] h-[40%] bg-primary/5 rounded-full blur-[140px] pointer-events-none" />
-      <div className="fixed bottom-1/4 left-0 w-[40%] h-[30%] bg-purple-500/5 rounded-full blur-[140px] pointer-events-none" />
+      <div className="fixed inset-0 bg-[url('/noise.png')] opacity-[0.03] pointer-events-none z-0 mix-blend-overlay"></div>
 
-      <div className="mx-auto w-full max-w-[2400px] px-4 sm:px-8 lg:px-12 py-4 sm:py-6 relative z-10">
+      <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-8 lg:px-12 py-8 relative z-10 min-h-screen pb-32">
         
         <AnimatePresence mode="wait">
           {!selectedSaga ? (
             <motion.div
               key="grid-view"
-              initial={{ opacity: 0, filter: 'blur(10px)', y: 20 }}
-              animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
-              exit={{ opacity: 0, filter: 'blur(10px)', y: -20 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-              className="space-y-8"
+              initial={{ opacity: 0, scale: 0.98, filter: 'blur(8px)' }}
+              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, scale: 0.98, filter: 'blur(8px)', transition: { duration: 0.3 } }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="space-y-12 pt-8"
             >
 
 
               {filteredSagaNames.length === 0 && queryParam ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center border border-dashed border-border/40 rounded-[32px] bg-card/10 backdrop-blur-md">
-                  <Search size={40} className="text-muted-foreground/30 mb-6" />
-                  <p className="text-muted-foreground text-sm font-semibold">No matches found for &quot;{queryParam}&quot;</p>
-                  <button onClick={() => router.replace('/sagas')} className="mt-4 text-primary text-xs font-bold uppercase tracking-widest hover:underline cursor-pointer">
+                <div className="flex flex-col items-center justify-center py-32 text-center border border-dashed border-border/40 rounded-[32px] bg-card/5 backdrop-blur-sm">
+                  <Search size={48} className="text-muted-foreground/30 mb-6" />
+                  <p className="text-muted-foreground text-lg font-medium">No universes found matching &quot;{queryParam}&quot;</p>
+                  <button onClick={() => router.replace('/sagas')} className="mt-6 px-6 py-2.5 rounded-full bg-primary/10 text-primary text-sm font-bold uppercase tracking-widest hover:bg-primary/20 transition-colors">
                     Clear Filter
                   </button>
                 </div>
               ) : sagaNames.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 text-center border border-dashed border-border/40 rounded-[32px] bg-card/10 backdrop-blur-md">
-                  <Film size={48} className="text-muted-foreground/30 mb-6" />
-                  <p className="text-foreground text-lg font-bold">No franchises configured yet</p>
-                  <p className="text-muted-foreground/60 text-sm mt-3 max-w-sm leading-relaxed">
-                    Tag a &quot;Saga / Franchise&quot; name when creating or editing your media items to build customized chronological timelines here.
+                <div className="flex flex-col items-center justify-center py-32 text-center border border-dashed border-border/40 rounded-[32px] bg-card/5 backdrop-blur-sm">
+                  <Film size={64} className="text-muted-foreground/20 mb-8" />
+                  <p className="text-foreground text-2xl font-bold">No Sagas Configured</p>
+                  <p className="text-muted-foreground mt-4 max-w-md leading-relaxed text-lg">
+                    Tag a &quot;Franchise&quot; or &quot;Saga&quot; name when adding media to unlock custom chronological timelines.
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
                   {filteredSagaNames.map((saga, i) => {
                     const items = groupedSagas[saga];
                     const totalTime = items.reduce((t, m) => t + (m.runtime || 0), 0);
+                    const startYear = getYear(items[0]?.releaseDate) || '';
                     const latestYear = Math.max(0, ...items.map(m => Number(getYear(m.releaseDate) || 0)));
+                    const displayYears = startYear ? (startYear === latestYear.toString() ? startYear : `${startYear} - ${latestYear}`) : 'Timeline';
                     
                     return (
                       <motion.button
                         key={saga}
-                        initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        transition={{ delay: Math.min(i, 15) * 0.04, duration: 0.4, type: 'spring', stiffness: 100 }}
-                        onClick={() => handleSelectSaga(saga)}
-                        className="group relative flex flex-col text-left overflow-hidden rounded-[32px] border border-border/50 bg-card/40 dark:bg-[#0c0c0d]/60 backdrop-blur-2xl hover:border-primary/40 transition-all duration-500 hover:shadow-[0_8px_32px_-12px_rgba(var(--primary),0.2)] active:scale-[0.98]"
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: Math.min(i, 12) * 0.05, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                        onClick={() => setSelectedSaga(saga)}
+                        className="group relative flex flex-col text-left overflow-hidden rounded-[16px] bg-card/20 dark:bg-black/20 border border-border/30 backdrop-blur-xl hover:border-primary/50 transition-all duration-300 hover:shadow-[0_10px_20px_-10px_rgba(var(--primary),0.3)] hover:-translate-y-1 aspect-[4/3]"
                       >
-                        {/* Shimmer effect */}
-                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none z-20 overflow-hidden transition-opacity duration-500">
-                          <div className="absolute -inset-x-32 -inset-y-16 bg-gradient-to-tr from-transparent via-white/10 to-transparent rotate-12 -translate-x-full group-hover:translate-x-full transition-transform duration-[1.5s] ease-out" />
-                        </div>
-
-                        {/* Cinematic Image Cover */}
-                        <div className="relative w-full aspect-[21/9] sm:aspect-[16/10] overflow-hidden bg-muted/20">
-                          {items[0]?.coverImage ? (
-                            <img
-                              src={items[0].coverImage}
-                              alt=""
-                              loading="lazy"
-                              decoding="async"
-                              className="w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-muted-foreground/30 text-[10px] font-bold tracking-widest">NO COVER</div>
+                        {/* Cinematic Cover Background */}
+                        <div className="absolute inset-0 z-0">
+                          {items[0]?.coverImage && (
+                            <>
+                              <img
+                                src={items[0].coverImage}
+                                alt=""
+                                className="w-full h-full object-cover opacity-40 group-hover:opacity-70 group-hover:scale-110 group-hover:rotate-1 transition-all duration-1000 ease-out"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
+                              <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-transparent" />
+                            </>
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent z-10" />
-                          
-                          {/* Item count badge */}
-                          <div className="absolute top-4 right-4 z-20 px-3 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center gap-1.5 shadow-lg">
-                            <Film size={10} className="text-white/80" />
-                            <span className="text-[10px] font-mono tracking-widest text-white/90 font-bold">{items.length}</span>
-                          </div>
                         </div>
 
-                        {/* Card Content */}
-                        <div className="relative z-20 p-6 pt-2 flex-1 flex flex-col justify-end">
-                          <h3 className="font-display font-bold text-xl sm:text-2xl text-foreground group-hover:text-primary transition-colors leading-tight mb-3 line-clamp-2">
-                            {saga}
-                          </h3>
+                        {/* Content */}
+                        <div className="relative z-10 p-3 sm:p-4 flex-1 flex flex-col h-full">
                           
-                          <div className="flex items-center justify-between border-t border-border/40 pt-4 mt-auto">
-                            <span className="text-[10px] font-mono tracking-widest text-muted-foreground/80 uppercase">
-                              {latestYear > 0 ? `${items[0] && getYear(items[0].releaseDate) ? getYear(items[0].releaseDate) : ''} – ${latestYear}` : 'TIMELINE'}
-                            </span>
-                            {totalTime > 0 && (
-                              <span className="text-[10px] font-mono tracking-widest text-muted-foreground/80 uppercase">
-                                {formatRuntime(totalTime)}
-                              </span>
-                            )}
+                          <div className="flex justify-between items-start">
+                            <div className="px-4 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center gap-2 shadow-lg w-fit">
+                              <Film size={12} className="text-primary" />
+                              <span className="text-[10px] font-mono tracking-widest text-white font-bold">{items.length}</span>
+                            </div>
+                            <div className="w-10 h-10 rounded-full bg-background/20 backdrop-blur-md border border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-500">
+                               <ArrowLeft size={18} className="text-white rotate-180" />
+                            </div>
+                          </div>
+
+                          <div className="mt-auto">
+                            <h3 className="font-display font-black text-lg sm:text-xl text-white drop-shadow-md mb-2 leading-tight line-clamp-3 group-hover:text-primary transition-colors duration-300">
+                              {saga}
+                            </h3>
+                            
+                            <div className="flex flex-wrap items-center gap-4 text-white/70">
+                              <div className="flex items-center gap-1.5">
+                                <Calendar size={14} />
+                                <span className="text-[11px] font-mono tracking-widest uppercase">{displayYears}</span>
+                              </div>
+                              {totalTime > 0 && (
+                                <div className="flex items-center gap-1.5">
+                                  <Clock size={14} />
+                                  <span className="text-[10px] font-mono tracking-widest uppercase">{formatRuntime(totalTime)}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </motion.button>
@@ -195,140 +255,151 @@ export default function SagasPage() {
           ) : (
             <motion.div
               key="timeline-view"
-              initial={{ opacity: 0, filter: 'blur(10px)', y: 30 }}
-              animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
-              exit={{ opacity: 0, filter: 'blur(10px)', y: 30 }}
-              transition={{ duration: 0.5, type: 'spring', bounce: 0.2 }}
-              className="w-full max-w-[900px] mx-auto space-y-12"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.3 } }}
+              className="w-full max-w-[1200px] mx-auto pt-4"
             >
               {/* Timeline Header */}
-              <div className="space-y-8">
-                <button
-                  onClick={handleCloseSaga}
-                  className="group flex items-center gap-3 px-5 py-2.5 rounded-full border border-border/40 bg-card/40 dark:bg-[#0c0c0d]/60 backdrop-blur-xl hover:bg-card/80 text-foreground transition-all cursor-pointer active:scale-95 shadow-sm w-fit"
-                >
-                  <ArrowLeft size={16} className="text-muted-foreground group-hover:text-foreground transition-colors" />
-                  <span className="text-[10px] font-mono tracking-[0.2em] text-muted-foreground group-hover:text-foreground uppercase font-bold transition-colors">
-                    Back to Overview
-                  </span>
-                </button>
+              <motion.div 
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                className="sticky top-0 z-40 pb-8 pt-4 bg-background/80 backdrop-blur-2xl border-b border-border/40 mb-16 -mx-4 px-4 sm:mx-0 sm:px-0"
+              >
+                <div className="flex flex-col gap-6">
+                  <button
+                    onClick={() => setSelectedSaga(null)}
+                    className="group flex items-center gap-3 px-5 py-2.5 rounded-full border border-border/40 bg-card/40 hover:bg-card/80 text-foreground transition-all cursor-pointer shadow-sm w-fit"
+                  >
+                    <ArrowLeft size={16} className="text-muted-foreground group-hover:-translate-x-1 transition-transform" />
+                    <span className="text-xs font-mono tracking-widest uppercase font-bold">
+                      Back to Collections
+                    </span>
+                  </button>
 
-                <div className="space-y-6">
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-foreground leading-[1.1]">
-                    {selectedSaga}
-                  </h1>
+                  <div>
+                    <h1 className="text-5xl sm:text-7xl font-display font-black tracking-tight text-foreground leading-none mb-6">
+                      {selectedSaga}
+                    </h1>
 
-                  <div className="flex flex-wrap gap-3">
-                    <div className="flex items-center gap-2 rounded-full border border-border/50 bg-card/40 dark:bg-[#0c0c0d]/60 backdrop-blur-xl px-4 py-2 shadow-sm">
-                      <Film size={14} className="text-primary" />
-                      <span className="text-[11px] font-mono tracking-[0.15em] text-foreground font-bold uppercase">{currentSagaItems.length} Entries</span>
-                    </div>
-                    {sagaRawRuntime > 0 && (
-                      <div className="flex items-center gap-2 rounded-full border border-border/50 bg-card/40 dark:bg-[#0c0c0d]/60 backdrop-blur-xl px-4 py-2 shadow-sm">
-                        <Clock className="text-muted-foreground w-3.5 h-3.5" />
-                        <span className="text-[11px] font-mono tracking-[0.15em] text-foreground font-bold uppercase">{formatRuntime(sagaRawRuntime)} Total</span>
+                    <div className="flex flex-wrap gap-4">
+                      <div className="flex items-center gap-2 rounded-full border border-border/40 bg-card/30 px-5 py-2.5 shadow-sm backdrop-blur-md">
+                        <Film size={16} className="text-primary" />
+                        <span className="text-xs font-mono tracking-widest font-bold uppercase">{currentSagaItems.length} Titles</span>
                       </div>
-                    )}
+                      <div className="flex items-center gap-2 rounded-full border border-border/40 bg-card/30 px-5 py-2.5 shadow-sm backdrop-blur-md">
+                        <Video size={16} className="text-blue-500" />
+                        <span className="text-xs font-mono tracking-widest font-bold uppercase">{timelineNodes.length} Entries</span>
+                      </div>
+                      {sagaRawRuntime > 0 && (
+                        <div className="flex items-center gap-2 rounded-full border border-border/40 bg-card/30 px-5 py-2.5 shadow-sm backdrop-blur-md">
+                          <Clock className="text-purple-500 w-4 h-4" />
+                          <span className="text-xs font-mono tracking-widest font-bold uppercase">{formatRuntime(sagaRawRuntime)} Total</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
-              {/* High-End Timeline */}
-              <div className="relative pl-6 sm:pl-12 py-4 space-y-12 before:absolute before:left-[35px] sm:before:left-[59px] before:top-4 before:bottom-4 before:w-[2px] before:bg-gradient-to-b before:from-primary/50 before:via-border/30 before:to-transparent before:pointer-events-none">
+              {/* The Timeline */}
+              <div className="relative">
+                {/* Central Line for Desktop, Left Line for Mobile */}
+                <div className="absolute left-[28px] md:left-1/2 top-0 bottom-0 w-[2px] bg-gradient-to-b from-primary/50 via-border/30 to-transparent -translate-x-1/2" />
                 
-                {currentSagaItems.map((media, index) => {
-                  const year = getYear(media.releaseDate);
-
-                  return (
-                    <motion.div
-                      key={media.id || index}
-                      initial={{ opacity: 0, x: -20, filter: 'blur(5px)' }}
-                      animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-                      transition={{ delay: Math.min(index, 10) * 0.08, duration: 0.5, type: 'spring' }}
-                      className="relative flex flex-col sm:flex-row gap-6 sm:gap-10 group"
-                    >
-                      {/* Timeline Node */}
-                      <div className="absolute -left-[30px] sm:-left-[31px] top-6 z-10 flex items-center justify-center">
-                        <div className="w-5 h-5 rounded-full bg-background border-[3px] border-primary shadow-[0_0_15px_rgba(var(--primary),0.4)] group-hover:scale-125 group-hover:shadow-[0_0_20px_rgba(var(--primary),0.6)] transition-all duration-300" />
-                      </div>
-
-                      {/* Timeline Number (Mobile moves to card top, desktop left) */}
-                      <div className="hidden sm:flex flex-col items-end w-16 pt-5 shrink-0">
-                        <span className="text-[10px] font-mono tracking-[0.2em] text-muted-foreground/60 font-bold">PART</span>
-                        <span className="text-3xl font-display font-black text-foreground/20 group-hover:text-primary/40 transition-colors">
-                          {(index + 1).toString().padStart(2, '0')}
-                        </span>
-                      </div>
-
-                      {/* Content Card */}
-                      <div className="flex-1 flex flex-col sm:flex-row gap-5 p-5 rounded-[28px] border border-border/40 bg-card/40 dark:bg-[#0c0c0d]/60 backdrop-blur-2xl hover:border-primary/30 hover:bg-card/60 transition-all duration-500 hover:shadow-[0_8px_32px_-12px_rgba(var(--primary),0.15)] relative overflow-hidden">
-                        
-                        {/* Shimmer sweep */}
-                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-10">
-                          <div className="absolute -inset-x-32 -inset-y-16 bg-gradient-to-tr from-transparent via-white/5 to-transparent rotate-12 -translate-x-full group-hover:translate-x-full transition-transform duration-[1.5s] ease-out" />
+                <div className="space-y-8 md:space-y-16 py-8">
+                  {timelineNodes.map((node, index) => {
+                    const isEven = index % 2 === 0;
+                    
+                    return (
+                      <motion.div
+                        key={node.id}
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-100px" }}
+                        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                        className={`relative flex flex-col md:flex-row items-center gap-6 md:gap-12 group ${isEven ? 'md:flex-row' : 'md:flex-row-reverse'}`}
+                      >
+                        {/* Timeline Node Point */}
+                        <div className="absolute left-[28px] md:left-1/2 top-8 md:top-1/2 z-10 flex items-center justify-center -translate-x-1/2 md:-translate-y-1/2">
+                          <div className="w-5 h-5 rounded-full bg-background border-[4px] border-primary shadow-[0_0_20px_rgba(var(--primary),0.5)] group-hover:scale-150 group-hover:border-white transition-all duration-500" />
+                          <div className="absolute w-12 h-12 rounded-full bg-primary/20 animate-ping opacity-0 group-hover:opacity-100" />
                         </div>
 
-                        {/* Card Cover */}
-                        <div className="relative w-full sm:w-[120px] aspect-[16/9] sm:aspect-[2/3] shrink-0 rounded-[18px] overflow-hidden bg-muted/20 border border-border/40 shadow-inner">
-                          {media.coverImage ? (
-                            <img src={media.coverImage} loading="lazy" decoding="async" alt="" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center bg-muted/10 text-muted-foreground/30">
-                              <Film size={24} />
-                            </div>
-                          )}
+                        {/* Date / Metadata Side */}
+                        <div className={`hidden md:flex flex-col w-1/2 ${isEven ? 'items-end text-right' : 'items-start text-left'} px-12`}>
+                          <span className="text-3xl font-display font-black text-foreground/10 group-hover:text-primary/20 transition-colors duration-500 tracking-tighter">
+                            {node.displayYear}
+                          </span>
+                          <div className="mt-2 text-sm font-mono tracking-widest text-muted-foreground uppercase font-semibold flex items-center gap-2">
+                             Chronological Step {(index + 1).toString().padStart(2, '0')}
+                          </div>
                         </div>
 
-                        {/* Details */}
-                        <div className="flex-1 flex flex-col justify-center py-2 min-w-0">
-                          <div className="flex items-start justify-between gap-4 mb-3">
-                            <div>
-                              <div className="flex sm:hidden items-center gap-2 mb-2">
-                                <span className="text-[9px] font-mono tracking-[0.2em] text-primary font-bold uppercase">PART {(index + 1).toString().padStart(2, '0')}</span>
+                        {/* Card Side */}
+                        <div className="w-full md:w-1/2 pl-[70px] md:pl-0 px-4 md:px-12">
+                          <Link href={`/edit/${node.media.id}`} className="block">
+                            <div className="flex flex-col sm:flex-row gap-3 p-2 sm:p-3 rounded-[16px] border border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 hover:border-primary/40 transition-all duration-300 hover:shadow-[0_10px_20px_-10px_rgba(var(--primary),0.2)] hover:-translate-y-1 group/card">
+                              
+                              {/* Cover */}
+                              <div className="relative w-16 sm:w-[80px] shrink-0 aspect-[2/3] rounded-[12px] overflow-hidden bg-muted/20 border border-border/20 shadow-sm">
+                                {node.media.coverImage ? (
+                                  <img src={node.media.coverImage} alt="" className="h-full w-full object-cover transition-transform duration-700 group-hover/card:scale-110" />
+                                ) : (
+                                  <div className="h-full w-full flex items-center justify-center bg-muted/10 text-muted-foreground/30">
+                                    <Film size={20} />
+                                  </div>
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-2">
+                                   <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg transform translate-y-4 group-hover/card:translate-y-0 transition-transform duration-500">
+                                      <Play size={14} className="ml-0.5" />
+                                   </div>
+                                </div>
                               </div>
-                              <h3 className="text-lg sm:text-xl font-display font-bold text-foreground group-hover:text-primary transition-colors leading-tight line-clamp-2">
-                                {media.title}
-                              </h3>
+
+                              {/* Details */}
+                              <div className="flex-1 flex flex-col justify-center py-2">
+                                <div className="md:hidden text-xl font-display font-black text-foreground/10 mb-1">
+                                  {node.displayYear}
+                                </div>
+
+                                <h3 className="text-sm sm:text-base font-display font-bold text-foreground group-hover/card:text-primary transition-colors leading-tight mb-1">
+                                  {node.media.title}
+                                </h3>
+                                
+                                {node.type === 'season' && (
+                                  <div className="text-primary text-[10px] sm:text-xs font-bold tracking-wide mb-2">
+                                    Season {node.seasonNumber} • {node.episodesCount} Episodes
+                                  </div>
+                                )}
+                                {node.type === 'movie' && (
+                                  <div className="text-muted-foreground text-[10px] sm:text-xs font-bold tracking-wide mb-2 flex items-center gap-1.5">
+                                    <Film size={14} /> Movie Entry
+                                  </div>
+                                )}
+
+                                <div className="flex flex-wrap gap-2 mt-auto">
+                                  <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/40 bg-background/60 text-[10px] font-mono tracking-widest uppercase font-bold shadow-sm`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full inline-block ${statusDotColor(node.media.status)}`} />
+                                    {node.media.status || 'Completed'}
+                                  </span>
+                                  {node.media.rating > 0 && (
+                                    <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 text-[10px] font-mono tracking-widest text-amber-500 font-bold uppercase shadow-sm">
+                                      <Star size={10} className="fill-amber-500 text-amber-500" />
+                                      {node.media.rating}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
                             </div>
-                            <Link
-                              href={`/edit/${media.id}`}
-                              className="shrink-0 p-2 rounded-full bg-foreground/5 hover:bg-foreground/10 text-foreground/60 hover:text-foreground transition-colors z-20"
-                            >
-                              <ChevronRight size={16} />
-                            </Link>
-                          </div>
-
-                          <div className="flex flex-wrap gap-2 mt-auto relative z-20">
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-border/40 bg-background/50 text-[10px] font-mono tracking-widest text-primary font-bold uppercase backdrop-blur-md">
-                              {media.type}
-                            </span>
-                            {year && (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-border/40 bg-background/50 text-[10px] font-mono tracking-widest text-foreground/70 uppercase backdrop-blur-md">
-                                {year}
-                              </span>
-                            )}
-                            {media.runtime && (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-border/40 bg-background/50 text-[10px] font-mono tracking-widest text-foreground/70 uppercase backdrop-blur-md">
-                                {formatRuntime(media.runtime)}
-                              </span>
-                            )}
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border/40 bg-background/50 text-[10px] font-mono tracking-widest uppercase backdrop-blur-md font-bold ${statusTextColor(media.status)}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full inline-block ${statusDotColor(media.status)}`} />
-                              {media.status || 'Completed'}
-                            </span>
-                            {media.rating > 0 && (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-amber-500/20 bg-amber-500/5 text-[10px] font-mono tracking-widest text-amber-500 font-bold uppercase backdrop-blur-md">
-                                <Star size={10} className="fill-amber-500 text-amber-500" />
-                                {media.rating}
-                              </span>
-                            )}
-                          </div>
+                          </Link>
                         </div>
-
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                      </motion.div>
+                    );
+                  })}
+                </div>
               </div>
             </motion.div>
           )}
