@@ -169,7 +169,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
       runtime: runtime === '' ? undefined : Number(runtime),
       franchiseId: selectedFranchiseId || undefined,
       genreIds: selectedGenreIds,
-      rating,
+      rating: status === 'Completed' ? rating : 0,
       review: review.trim(),
       favorite,
       episodesWatched: currentIsEpisodic ? (status === 'Completed' && episodesTotal ? Number(episodesTotal) : Number(episodesWatched)) : undefined,
@@ -508,21 +508,23 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
                 </div>
 
                 <AnimatePresence>
-                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="flex-[2] min-w-0 bg-card border border-border px-4 sm:px-6 py-4 rounded-2xl shadow-sm">
-                    <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3 min-w-0">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 shrink-0"><Star size={16} /> Rating</span>
-                        <span className="text-lg sm:text-xl font-bold text-primary tabular-nums whitespace-nowrap">{displayRating}/10</span>
+                  {status === 'Completed' && (
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="flex-[2] min-w-0 bg-card border border-border px-4 sm:px-6 py-4 rounded-2xl shadow-sm">
+                      <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 shrink-0"><Star size={16} /> Rating</span>
+                          <span className="text-lg sm:text-xl font-bold text-primary tabular-nums whitespace-nowrap">{displayRating}/10</span>
+                        </div>
+                        <div className="grid grid-cols-5 sm:flex sm:items-center gap-1 sm:gap-0.5 shrink-0">
+                          {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
+                            <button key={value} type="button" onClick={() => setRating(value)} onMouseEnter={() => setHoveredStar(value)} onMouseLeave={() => setHoveredStar(null)} className="p-1 sm:p-0.5 transition-transform hover:scale-110 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-md">
+                              <Star className={`w-4.5 h-4.5 sm:w-5 sm:h-5 transition-colors ${value <= displayRating ? 'text-amber-400 fill-amber-400 drop-shadow-sm' : 'text-muted-foreground/20'}`} />
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <div className="grid grid-cols-5 sm:flex sm:items-center gap-1 sm:gap-0.5 shrink-0">
-                        {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
-                          <button key={value} type="button" onClick={() => setRating(value)} onMouseEnter={() => setHoveredStar(value)} onMouseLeave={() => setHoveredStar(null)} className="p-1 sm:p-0.5 transition-transform hover:scale-110 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-md">
-                            <Star className={`w-4.5 h-4.5 sm:w-5 sm:h-5 transition-colors ${value <= displayRating ? 'text-amber-400 fill-amber-400 drop-shadow-sm' : 'text-muted-foreground/20'}`} />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </motion.div>
+                    </motion.div>
+                  )}
                 </AnimatePresence>
               </div>
 

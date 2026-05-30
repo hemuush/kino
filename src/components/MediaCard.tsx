@@ -74,7 +74,7 @@ export default function MediaCard({
         </button>
 
         {/* Rating overlay label */}
-        {entry.rating > 0 && (
+        {entry.status === 'Completed' && entry.rating > 0 && (
           <div className="absolute top-2 left-2 flex items-center gap-0.5 bg-black/40 backdrop-blur-md border border-white/20 rounded-lg px-2 py-0.5 z-20">
             <Star size={9.5} className="fill-amber-400 text-amber-400" />
             <span className="text-[10px] font-display font-bold text-white leading-none mt-0.5">{entry.rating}</span>
