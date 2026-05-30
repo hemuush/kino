@@ -107,38 +107,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initAuth = async () => {
       const token = localStorage.getItem('kino_access_token');
       const expiryStr = localStorage.getItem('kino_token_expiry');
+      const sessionExpiryStr = localStorage.getItem('kino_session_expiry');
+      const storedUserStr = localStorage.getItem('kino_user_profile');
+      
       const expiry = expiryStr ? parseInt(expiryStr, 10) : 0;
+      const sessionExpiry = sessionExpiryStr ? parseInt(sessionExpiryStr, 10) : 0;
+      const now = Date.now();
 
-      if (token) {
-        const now = Date.now();
+      // If we have a valid 1-week session, restore the user immediately so they don't get kicked out
+      if (sessionExpiry > now && storedUserStr) {
+        try {
+          setUser(JSON.parse(storedUserStr));
+        } catch (e) {}
+      }
+
+      if (token && sessionExpiry > now) {
         if (expiry > 0 && expiry <= now) {
-          // Token is expired — clear it but keep local data
-          console.warn('[Auth] Stored token has expired');
-          localStorage.removeItem('kino_access_token');
-          localStorage.removeItem('kino_token_expiry');
-          setIsLoading(false);
-          return;
-        }
-
-        // Token appears valid — validate by fetching profile
-        const isValid = await fetchUserProfile(token);
-        if (isValid) {
-          setAccessToken(token);
-          // Schedule refresh if we know expiry time
-          if (expiry > 0) {
-            const remainingMs = expiry - Date.now();
-            if (remainingMs > TOKEN_REFRESH_MARGIN_MS) {
-              scheduleTokenRefresh(remainingMs);
+          // Token is expired but session is valid — trigger silent refresh
+          console.warn('[Auth] Stored token has expired, triggering silent refresh');
+          scheduleTokenRefresh(0); // Trigger immediately
+        } else {
+          // Token appears valid — validate by fetching profile
+          const isValid = await fetchUserProfile(token);
+          if (isValid) {
+            setAccessToken(token);
+            if (expiry > 0) {
+              const remainingMs = expiry - Date.now();
+              if (remainingMs > TOKEN_REFRESH_MARGIN_MS) {
+                scheduleTokenRefresh(remainingMs);
+              } else {
+                scheduleTokenRefresh(0);
+              }
+            } else {
+              scheduleTokenRefresh(60 * 60 * 1000);
             }
           } else {
-            // No expiry stored — treat as 1 hour from now (conservative)
-            scheduleTokenRefresh(60 * 60 * 1000);
+            // Token validation failed, try silent refresh
+            scheduleTokenRefresh(0);
           }
-        } else {
-          // Token validation failed — clear
-          localStorage.removeItem('kino_access_token');
-          localStorage.removeItem('kino_token_expiry');
         }
+      } else if (sessionExpiry <= now) {
+         // Session completely expired (past 1 week)
+         localStorage.removeItem('kino_access_token');
+         localStorage.removeItem('kino_token_expiry');
+         localStorage.removeItem('kino_session_expiry');
+         localStorage.removeItem('kino_user_profile');
       }
       setIsLoading(false);
     };
@@ -164,13 +177,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (token: string, expiresIn = 3600) => {
     setIsLoading(true);
-    const expiryTimestamp = Date.now() + expiresIn * 1000;
+    const now = Date.now();
+    const expiryTimestamp = now + expiresIn * 1000;
+    const sessionExpiryTimestamp = now + 7 * 24 * 60 * 60 * 1000; // 1 week session
+    
     try {
       localStorage.setItem('kino_access_token', token);
       localStorage.setItem('kino_token_expiry', String(expiryTimestamp));
+      localStorage.setItem('kino_session_expiry', String(sessionExpiryTimestamp));
     } catch {}
+    
     setAccessToken(token);
     await fetchUserProfile(token);
+    
+    // Store user profile in local storage for the 1 week session persistence
+    setUser((currentUser) => {
+      if (currentUser) {
+         localStorage.setItem('kino_user_profile', JSON.stringify(currentUser));
+      }
+      return currentUser;
+    });
+
     // Schedule proactive refresh
     scheduleTokenRefresh(expiresIn * 1000);
     setIsLoading(false);
@@ -187,6 +214,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.removeItem('kino_access_token');
       localStorage.removeItem('kino_token_expiry');
+      localStorage.removeItem('kino_session_expiry');
+      localStorage.removeItem('kino_user_profile');
     } catch {}
 
     if (forceWipe) {
