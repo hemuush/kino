@@ -11,6 +11,7 @@ import { MediaDetailModal } from "@/components/MediaDetailModal";
 import MediaCard from "@/components/MediaCard";
 import { PageLoader } from "@/components/ui/Loader";
 import { RecapModal } from "@/components/dashboard/RecapModal";
+import { useRouter } from "next/navigation";
 
 // Pick random items
 function pickRandomItems<T>(arr: T[], count: number) {
@@ -90,6 +91,7 @@ interface SpotlightCardProps {
 }
 
 function SpotlightCard({ entry, setSelectedEntry, activeSlide, randomDeck, setActiveSlide }: SpotlightCardProps) {
+  const router = useRouter();
   const activeColor = useMemo(() => colorFromTitle(entry?.title), [entry]);
 
   // Tech specifications grid layout
@@ -151,7 +153,7 @@ function SpotlightCard({ entry, setSelectedEntry, activeSlide, randomDeck, setAc
                 
                 <div className="space-y-3 min-w-0">
                   <h2 
-                    onClick={() => setSelectedEntry(entry)}
+                    onClick={() => router.push(`/media/${entry.id}`)}
                     className="text-2xl sm:text-4xl lg:text-6xl font-display font-bold tracking-tight leading-[1.05] cursor-pointer hover:text-primary transition-colors line-clamp-2 min-w-0"
                   >
                     {entry.title}
@@ -174,7 +176,7 @@ function SpotlightCard({ entry, setSelectedEntry, activeSlide, randomDeck, setAc
                 {/* Actions */}
                 <div className="pt-1 sm:pt-2 flex flex-wrap gap-2.5">
                   <button
-                    onClick={() => setSelectedEntry(entry)}
+                    onClick={() => router.push(`/media/${entry.id}`)}
                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-foreground text-background hover:bg-foreground/90 transition px-5 py-2.5 sm:px-6.5 sm:py-3.5 text-[10px] uppercase font-display tracking-widest font-bold cursor-pointer active:scale-95 shadow-md"
                   >
                     <Play size={12} className="fill-current" /> Quick Details
@@ -297,6 +299,7 @@ function SpotlightCard({ entry, setSelectedEntry, activeSlide, randomDeck, setAc
 }
 
 function DashboardContent() {
+  const router = useRouter();
   const { entries, isLoading, updateEntry, deleteEntry, genres } = useMedia();
   const [selectedEntry, setSelectedEntry] = useState<MediaEntry | null>(null);
   const [showRecap, setShowRecap] = useState(false);
@@ -334,6 +337,46 @@ function DashboardContent() {
   const watching = useMemo(() => entries.filter((e) => e.status === "Watching").slice(0, 24), [entries]);
   const planned = useMemo(() => entries.filter((e) => e.status === "Plan to Watch").slice(0, 24), [entries]);
   const completed = useMemo(() => [...entries].filter((e) => e.status === "Completed").sort((a, b) => (b.updatedAt ?? b.createdAt) - (a.updatedAt ?? a.createdAt)).slice(0, 24), [entries]);
+
+  // Release Calendar Timeline
+  const timelineItems = useMemo(() => {
+    return [...entries]
+      .filter(e => e.releaseDate)
+      .sort((a, b) => new Date(b.releaseDate!).getTime() - new Date(a.releaseDate!).getTime())
+      .slice(0, 15);
+  }, [entries]);
+
+  // Badges calculation
+  const badges = useMemo(() => {
+    const b = [];
+    const moviesWatched = entries.filter(e => e.type === 'Movie' && e.status === 'Completed').length;
+    const showsWatched = entries.filter(e => e.type === 'TV Show' && e.status === 'Completed').length;
+    const perfectScores = entries.filter(e => e.rating === 10).length;
+    const hasFranchise = entries.some(e => e.franchiseId);
+    
+    b.push({
+      id: 'first_blood', name: 'First Blood', desc: 'Added your first media',
+      unlocked: entries.length > 0, icon: '🎬', color: 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+    });
+    b.push({
+      id: 'cinephile', name: 'Cinephile', desc: 'Completed 50 Movies',
+      unlocked: moviesWatched >= 50, icon: '🎟️', color: 'bg-purple-500/10 text-purple-500 border-purple-500/20'
+    });
+    b.push({
+      id: 'binge_watcher', name: 'Binge Watcher', desc: 'Completed 10 TV Shows',
+      unlocked: showsWatched >= 10, icon: '📺', color: 'bg-green-500/10 text-green-500 border-green-500/20'
+    });
+    b.push({
+      id: 'perfectionist', name: 'Perfectionist', desc: 'Rated 5 items 10/10',
+      unlocked: perfectScores >= 5, icon: '⭐', color: 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+    });
+    b.push({
+      id: 'saga_master', name: 'Saga Master', desc: 'Tracked a Franchise',
+      unlocked: hasFranchise, icon: '📚', color: 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+    });
+    
+    return b;
+  }, [entries]);
 
   // Set default active shelf once based on items availability
   useEffect(() => {
@@ -521,6 +564,79 @@ function DashboardContent() {
           </motion.div>
         </div>
 
+        {/* Badges & Achievements Section */}
+        <div className="w-full space-y-4 lg:space-y-6 mt-8 sm:mt-12">
+          <div className="space-y-1 px-3 sm:px-8 lg:px-12">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-primary/85">YOUR JOURNEY</span>
+            <h4 className="text-lg sm:text-2xl lg:text-3.5xl font-bold tracking-tight text-foreground leading-none">Achievements</h4>
+          </div>
+          
+          <div className="w-full overflow-x-auto hide-scrollbar scroll-smooth pb-4 px-3 sm:px-8 lg:px-12">
+            <div className="flex gap-4 w-max">
+              {badges.map((badge) => (
+                <div 
+                  key={badge.id}
+                  className={`w-[140px] sm:w-[160px] shrink-0 rounded-2xl border-2 p-4 flex flex-col items-center text-center transition-all ${badge.unlocked ? `bg-card ${badge.color} border-border/40 shadow-sm` : 'bg-muted/30 border-dashed border-border/30 opacity-60 grayscale'}`}
+                >
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-3 shadow-inner ${badge.unlocked ? badge.color : 'bg-muted'}`}>
+                    {badge.icon}
+                  </div>
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-foreground">{badge.name}</span>
+                  <span className="text-[9px] mt-1 text-muted-foreground font-medium leading-tight">{badge.desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Interactive Release Calendar */}
+        {timelineItems.length > 0 && (
+          <div className="w-full space-y-6 lg:space-y-8 mt-12 mb-16">
+            <div className="space-y-1 px-3 sm:px-8 lg:px-12">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-primary/85">UPCOMING & RECENT</span>
+              <h4 className="text-lg sm:text-2xl lg:text-3.5xl font-bold tracking-tight text-foreground leading-none">Release Calendar</h4>
+            </div>
+            
+            <div className="w-full overflow-x-auto hide-scrollbar scroll-smooth pb-6 px-3 sm:px-8 lg:px-12">
+              <div className="flex items-center gap-6 w-max relative pt-6 pb-2">
+                {/* Connecting line */}
+                <div className="absolute top-[42px] left-0 right-0 h-0.5 bg-border/60 z-0" />
+                
+                {timelineItems.map((entry) => {
+                  const date = new Date(entry.releaseDate!);
+                  const isFuture = date.getTime() > Date.now();
+                  
+                  return (
+                    <div key={`timeline-${entry.id}`} className="relative z-10 flex flex-col items-center gap-4 w-[120px] sm:w-[140px] shrink-0 group cursor-pointer" onClick={() => router.push(`/media/${entry.id}`)}>
+                      {/* Date label */}
+                      <span className={`text-[9px] sm:text-[10px] font-mono tracking-widest font-bold px-2.5 py-1 rounded-md border shadow-sm ${isFuture ? 'text-primary bg-primary/10 border-primary/20' : 'text-muted-foreground bg-card border-border/60'}`}>
+                        {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                      
+                      {/* Node */}
+                      <div className={`w-3.5 h-3.5 rounded-full border-2 transition-transform duration-300 group-hover:scale-150 ${isFuture ? 'border-primary bg-primary shadow-[0_0_12px_rgba(var(--primary),0.6)]' : 'border-muted-foreground bg-background'}`} />
+                      
+                      {/* Card Thumbnail */}
+                      <div className="w-full aspect-[2/3] rounded-[14px] overflow-hidden shadow-md border border-border/40 group-hover:border-primary/50 group-hover:-translate-y-2 group-hover:shadow-xl group-hover:shadow-primary/20 transition-all duration-300 relative bg-card mt-2">
+                        {entry.coverImage ? (
+                          <img src={entry.coverImage} className="w-full h-full object-cover" alt={entry.title} />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-muted/30 p-2 text-center">
+                            <span className="text-[9px] font-bold uppercase">{entry.title}</span>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <span className="text-[10px] text-white font-bold truncate w-full text-center drop-shadow-md">{entry.title}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Section 3: Media Shelves Narratives */}
         <div className="w-full space-y-10 sm:space-y-14 lg:space-y-16">
           
@@ -556,7 +672,7 @@ function DashboardContent() {
                         <MediaCard
                           entry={entry}
                           index={i}
-                          onClick={() => setSelectedEntry(entry)}
+                          onClick={() => router.push(`/media/${entry.id}`)}
                           onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })}
                           onIncrementWatched={() => {
                             if (isEpisodic(entry)) {
@@ -620,7 +736,7 @@ function DashboardContent() {
                       <MediaCard
                         entry={entry}
                         index={i}
-                        onClick={() => setSelectedEntry(entry)}
+                        onClick={() => router.push(`/media/${entry.id}`)}
                         onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })}
                         onIncrementWatched={() => {}}
                         onStatusChange={(newStatus) => updateEntry({ ...entry, status: newStatus })}
@@ -658,7 +774,7 @@ function DashboardContent() {
                       <MediaCard
                         entry={entry}
                         index={i}
-                        onClick={() => setSelectedEntry(entry)}
+                        onClick={() => router.push(`/media/${entry.id}`)}
                         onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })}
                         onIncrementWatched={() => {}}
                         onStatusChange={(newStatus) => updateEntry({ ...entry, status: newStatus })}

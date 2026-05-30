@@ -207,7 +207,7 @@ function CollectionContent() {
                                         >
                                             <MediaCard
                                                 entry={entry}
-                                                onClick={() => setSelectedEntry(entry)}
+                                                onClick={() => router.push(`/media/${entry.id}`)}
                                                 onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })}
                                                 onIncrementWatched={() => handleIncrementWatched(entry)}
                                                 onStatusChange={(newStatus) => updateEntry({ ...entry, status: newStatus })}
@@ -228,7 +228,7 @@ function CollectionContent() {
                                             exit={{ opacity: 0, scale: 0.95 }}
                                             transition={{ duration: 0.2, delay: Math.min(i * 0.02, 0.2) }}
                                             className="rounded-[24px] border border-border/80 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-muted/50 transition-colors shadow-sm cursor-pointer group"
-                                            onClick={() => setSelectedEntry(entry)}
+                                            onClick={() => router.push(`/media/${entry.id}`)}
                                         >
                                             <div className="flex gap-4 flex-1 items-center">
                                                 <div className="w-12 h-16 sm:w-14 sm:h-20 rounded-xl overflow-hidden bg-muted shrink-0 border border-border/50">
