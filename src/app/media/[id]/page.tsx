@@ -6,7 +6,7 @@ import { useMedia } from '@/context/MediaContext';
 import { MediaEntry, isEpisodic } from '@/lib/db';
 import { PageLoader } from '@/components/ui/Loader';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Star, Clock, Calendar, Edit3, Plus, Check, Heart, Film } from 'lucide-react';
+import { ArrowLeft, Star, Clock, Calendar, Edit3, Plus, Check, Heart, Film, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function MediaDetailPage() {
@@ -14,6 +14,7 @@ export default function MediaDetailPage() {
   const router = useRouter();
   const { entries, isLoading, updateEntry, genres, franchises } = useMedia();
   const [entry, setEntry] = useState<MediaEntry | null>(null);
+  const [selectedSeason, setSelectedSeason] = useState<number>(1);
 
   useEffect(() => {
     if (!isLoading && params?.id) {
@@ -34,6 +35,21 @@ export default function MediaDetailPage() {
   const releaseYear = entry.releaseDate ? entry.releaseDate.split('-')[0] : '';
   const displayGenres = (entry.genreIds || []).map(id => genres.find(g => g.id === id)?.name).filter(Boolean);
   const sagaName = entry.franchiseId ? franchises.find(f => f.id === entry.franchiseId)?.name : null;
+
+  const displayEpisodes = (entry.episodes && entry.episodes.length > 0)
+    ? entry.episodes
+    : (entry.episodesTotal ? Array.from({ length: Number(entry.episodesTotal) }, (_, i) => ({ name: `Episode ${i + 1}`, season: 1, number: i + 1 })) : []);
+    
+  const seasons = Array.from(new Set(displayEpisodes.map(ep => ep.season || 1))).sort((a, b) => a - b);
+  
+  useEffect(() => {
+    if (seasons.length > 0 && !seasons.includes(selectedSeason)) {
+      setSelectedSeason(seasons[0]);
+    }
+  }, [displayEpisodes, selectedSeason, seasons]);
+
+  const filteredEpisodes = displayEpisodes.filter(ep => (ep.season || 1) === selectedSeason);
+  const episodesWatched = entry.episodesWatched || 0;
 
   const handleIncrementEpisode = async () => {
     if (!isEpisodicMedia) return;
@@ -235,6 +251,58 @@ export default function MediaDetailPage() {
                 </div>
               )}
             </motion.div>
+
+            {/* Episodes List (if Episodic) */}
+            {isEpisodicMedia && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="pt-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Episodes</h3>
+                  {seasons.length > 1 && (
+                    <div className="flex gap-2 overflow-x-auto hide-scrollbar">
+                      {seasons.map(s => (
+                        <button
+                          key={s}
+                          onClick={() => setSelectedSeason(s)}
+                          className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap border ${selectedSeason === s ? 'bg-primary/10 text-primary border-primary/20 shadow-sm' : 'bg-transparent text-muted-foreground border-transparent hover:bg-muted/30'}`}
+                        >
+                          Season {s}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  {filteredEpisodes.length === 0 ? (
+                    <div className="py-8 text-center bg-muted/10 rounded-2xl border border-border/50">
+                      <p className="text-muted-foreground text-sm font-semibold">No episodes logged for this season.</p>
+                      <button onClick={() => router.push(`/edit/${entry.id}`)} className="text-xs font-bold text-primary uppercase tracking-widest hover:underline mt-2">Edit to add episodes</button>
+                    </div>
+                  ) : (
+                    filteredEpisodes.map((ep, idx) => {
+                      const isWatched = episodesWatched >= (ep.number || idx + 1);
+                      return (
+                        <div
+                          key={`${ep.season}-${ep.number}-${idx}`}
+                          className={`rounded-xl border px-4 py-3.5 flex items-center gap-4 transition-all ${isWatched ? 'border-green-500/20 bg-green-500/5' : 'border-border/40 bg-muted/10 hover:border-border/80'}`}
+                        >
+                          <div className="w-10 h-10 flex items-center justify-center rounded-lg shrink-0 font-mono text-sm font-bold shadow-sm"
+                            style={{ background: isWatched ? 'rgba(34,197,94,0.15)' : 'rgba(128,128,128,0.1)', color: isWatched ? '#22c55e' : 'var(--muted-fg)' }}>
+                            {ep.number || idx + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-base font-bold truncate ${isWatched ? 'text-foreground' : 'text-foreground/80'}`}>
+                              {ep.name}
+                            </p>
+                          </div>
+                          {isWatched && <CheckCircle2 size={16} className="text-green-500 shrink-0 shadow-sm" />}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </motion.div>
+            )}
 
           </div>
         </div>
