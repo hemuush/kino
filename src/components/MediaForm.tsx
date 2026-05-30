@@ -13,6 +13,7 @@ interface MediaFormProps {
   onCancel: () => void;
   onSave: (entry: MediaEntry) => Promise<void> | void;
   initialData?: MediaEntry;
+  hideEpisodesTab?: boolean;
 }
 
 const mediaTypes: MediaType[] = ['Movie', 'TV Show', 'Anime'];
@@ -29,7 +30,7 @@ const FieldWrapper = ({ label, icon, children }: { label: React.ReactNode, icon?
   </div>
 );
 
-export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
+export function MediaForm({ onCancel, onSave, initialData, hideEpisodesTab }: MediaFormProps) {
   const { entries, genres: dbGenres, franchises: dbFranchises, setGenres, setFranchises } = useMedia();
   const isEditMode = !!initialData;
 
@@ -55,7 +56,6 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
 
   const [hoveredStar, setHoveredStar] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [imageInputMode, setImageInputMode] = useState<'url' | 'upload'>('url');
 
   const [genreSearch, setGenreSearch] = useState<string>('');
   const [franchiseSearch, setFranchiseSearch] = useState<string>('');
@@ -83,15 +83,52 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const timeWatched = useMemo(() => getWatchedRuntimeMinutes({
-    type,
-    animeType,
-    status,
-    runtime: runtime === '' ? undefined : Number(runtime),
-    episodesWatched: currentIsEpisodic ? Number(episodesWatched || 0) : undefined,
-    episodesTotal: currentIsEpisodic && episodesTotal !== '' ? Number(episodesTotal) : undefined,
-    episodes,
-  }), [type, animeType, currentIsEpisodic, status, runtime, episodesWatched, episodesTotal, episodes]);
+  const calculatedStats = useMemo(() => {
+    const watched = getWatchedRuntimeMinutes({
+      type,
+      animeType,
+      status,
+      runtime: runtime === '' ? undefined : Number(runtime),
+      episodesWatched: currentIsEpisodic ? Number(episodesWatched || 0) : undefined,
+      episodesTotal: currentIsEpisodic && episodesTotal !== '' ? Number(episodesTotal) : undefined,
+      episodes,
+    });
+
+    if (!currentIsEpisodic) {
+      return { avgRuntime: Number(runtime || 0), totalTime: Number(runtime || 0), watchedTime: watched };
+    }
+
+    const baseRuntime = Number(runtime || 0);
+    const epsTotal = Number(episodesTotal || 0);
+    const maxEps = Math.max(epsTotal, episodes.length);
+
+    if (baseRuntime > 0) {
+      return {
+        avgRuntime: baseRuntime,
+        totalTime: maxEps * baseRuntime,
+        watchedTime: watched
+      };
+    }
+    
+    let knownRuntimesSum = 0;
+    let knownRuntimesCount = 0;
+    for (const ep of episodes) {
+      if (ep.runtime && ep.runtime > 0) {
+        knownRuntimesSum += ep.runtime;
+        knownRuntimesCount++;
+      }
+    }
+
+    const avg = knownRuntimesCount > 0 ? Math.round(knownRuntimesSum / knownRuntimesCount) : 0;
+    const remainingEps = Math.max(0, maxEps - knownRuntimesCount);
+    const total = knownRuntimesSum + (remainingEps * avg);
+
+    return {
+      avgRuntime: avg,
+      totalTime: total,
+      watchedTime: watched
+    };
+  }, [type, animeType, status, runtime, currentIsEpisodic, episodesWatched, episodesTotal, episodes]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -157,6 +194,13 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
       }
     }
 
+    const finalEpisodesTotal = currentIsEpisodic && episodesTotal !== '' ? Number(episodesTotal) : undefined;
+    let finalEpisodesWatched = currentIsEpisodic ? (status === 'Completed' && finalEpisodesTotal ? finalEpisodesTotal : Number(episodesWatched || 0)) : undefined;
+    
+    if (finalEpisodesWatched !== undefined && finalEpisodesTotal !== undefined) {
+      finalEpisodesWatched = Math.min(finalEpisodesWatched, finalEpisodesTotal);
+    }
+
     const payload: MediaEntry = {
       ...(isEditMode && initialData ? initialData : { id: Date.now(), createdAt: Date.now() }),
       updatedAt: Date.now(),
@@ -172,8 +216,8 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
       rating: status === 'Completed' ? rating : 0,
       review: review.trim(),
       favorite,
-      episodesWatched: currentIsEpisodic ? (status === 'Completed' && episodesTotal ? Number(episodesTotal) : Number(episodesWatched)) : undefined,
-      episodesTotal: currentIsEpisodic && episodesTotal !== '' ? Number(episodesTotal) : undefined,
+      episodesWatched: finalEpisodesWatched,
+      episodesTotal: finalEpisodesTotal,
       seasonsCount: currentIsEpisodic && seasonsCount !== '' ? Number(seasonsCount) : undefined,
       episodes: currentIsEpisodic ? episodes : undefined,
     };
@@ -189,7 +233,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
   };
 
   const displayRating = hoveredStar !== null ? hoveredStar : rating;
-  const tabs: FormTabType[] = currentIsEpisodic ? ['General', 'Details', 'Episodes'] : ['General', 'Details'];
+  const tabs: FormTabType[] = currentIsEpisodic && !hideEpisodesTab ? ['General', 'Details', 'Episodes'] : ['General', 'Details'];
 
   // Pre-compute episode panel to avoid IIFE inside JSX (Turbopack parser limitation)
   const maxSeasonNum = Math.max(Number(seasonsCount) || 1, activeSeasonTab, ...episodes.map(e => e.season || 1));
@@ -401,20 +445,12 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
                         </>
                       ) : <ImageIcon size={28} className="text-muted-foreground/40" />}
                     </div>
-                    <div className="flex-1 space-y-3">
-                      <div className="flex bg-black/5 dark:bg-white/[0.03] p-1.5 rounded-xl border border-border/40 w-full">
-                        <button type="button" onClick={() => setImageInputMode('url')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${imageInputMode === 'url' ? 'bg-card shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>URL</button>
-                        <button type="button" onClick={() => setImageInputMode('upload')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${imageInputMode === 'upload' ? 'bg-card shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>Upload</button>
-                      </div>
-                      {imageInputMode === 'url' ? (
-                        <input type="url" value={coverImage} onChange={(e) => setCoverImage(e.target.value)} placeholder="https://..." className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3 text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
-                      ) : (
-                        <label className="flex flex-col items-center justify-center w-full bg-card hover:bg-muted/40 rounded-xl px-4 py-5 border-2 border-dashed border-border/80 cursor-pointer transition-colors group">
-                          <Upload size={18} className="mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
-                          <span className="text-muted-foreground font-semibold text-xs group-hover:text-foreground transition-colors">Click to upload file</span>
-                          <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                        </label>
-                      )}
+                    <div className="flex-1 flex flex-col justify-center">
+                      <label className="flex flex-col items-center justify-center w-full h-full bg-card hover:bg-muted/40 rounded-xl px-4 py-6 border-2 border-dashed border-border/80 cursor-pointer transition-colors group">
+                        <Upload size={20} className="mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <span className="text-muted-foreground font-semibold text-xs group-hover:text-foreground transition-colors">Click to upload image file</span>
+                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                      </label>
                     </div>
                   </div>
                 </FieldWrapper>
@@ -493,12 +529,18 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
           {formTab === 'Details' && (
             <motion.div key="details" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
               <div className="flex flex-col sm:flex-row gap-6">
-                <FieldWrapper label="Release Date">
-                  <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3.5 text-foreground text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
-                </FieldWrapper>
-                <FieldWrapper label={currentIsEpisodic ? "Avg Episode Length (min)" : "Runtime (min)"} icon={<Clock size={12} />}>
-                  <input type="number" min="1" value={runtime} onChange={(e) => setRuntime(e.target.value ? Number(e.target.value) : '')} placeholder="e.g. 120" className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3.5 text-foreground text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
-                </FieldWrapper>
+                <div className="flex-1">
+                  <FieldWrapper label="Release Date">
+                    <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3.5 text-foreground text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
+                  </FieldWrapper>
+                </div>
+                {!currentIsEpisodic && (
+                  <div className="flex-1">
+                    <FieldWrapper label="Runtime (min)" icon={<Clock size={12} />}>
+                      <input type="number" min="1" value={runtime} onChange={(e) => setRuntime(e.target.value ? Number(e.target.value) : '')} placeholder="e.g. 120" className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3.5 text-foreground text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
+                    </FieldWrapper>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col sm:flex-row gap-6 items-stretch">
@@ -537,7 +579,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
           {formTab === 'Episodes' && currentIsEpisodic && (
             <motion.div key="episodes" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="flex flex-col h-full space-y-6">
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 shrink-0">
                 <FieldWrapper label="Total Eps">
                   <input type="number" min="1" value={episodesTotal} onChange={(e) => setEpisodesTotal(e.target.value ? Number(e.target.value) : '')} className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3 text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
                 </FieldWrapper>
@@ -547,9 +589,17 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
                 <FieldWrapper label="Seasons">
                   <input type="number" min="1" value={seasonsCount} onChange={(e) => setSeasonsCount(e.target.value ? Number(e.target.value) : '')} className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3 text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
                 </FieldWrapper>
+                <FieldWrapper label="Avg Time / Ep" icon={<Clock size={12} />}>
+                  <input type="number" min="1" value={runtime} onChange={(e) => setRuntime(e.target.value ? Number(e.target.value) : '')} placeholder={calculatedStats.avgRuntime > 0 && calculatedStats.avgRuntime !== Number(runtime) ? `Auto: ${calculatedStats.avgRuntime}` : "e.g. 24"} className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3 text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
+                </FieldWrapper>
+                <FieldWrapper label="Total Time" icon={<Clock size={12} />}>
+                  <div className="w-full bg-black/5 dark:bg-black/40 text-foreground font-bold flex items-center px-4 py-3 rounded-xl border border-border/50 shadow-inner text-sm">
+                    {calculatedStats.totalTime} min
+                  </div>
+                </FieldWrapper>
                 <FieldWrapper label="Time Watched" icon={<Clock size={12} />}>
-                  <div className="w-full bg-primary/5 text-primary font-bold flex items-center px-4 py-3 rounded-xl border border-primary/20 shadow-sm text-sm">
-                    {timeWatched} min
+                  <div className="w-full bg-primary/10 text-primary font-bold flex items-center px-4 py-3 rounded-xl border border-primary/20 shadow-sm text-sm">
+                    {calculatedStats.watchedTime} min
                   </div>
                 </FieldWrapper>
               </div>

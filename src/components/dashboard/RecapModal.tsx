@@ -64,10 +64,16 @@ export function RecapModal({ isOpen, onClose, entries, genres, type }: RecapModa
   const [activeSlide, setActiveSlide] = useState(0);
   const [copied, setCopied] = useState(false);
 
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (isOpen) setNow(Date.now());
+  }, [isOpen]);
+
   // Calculate stats for the time period
   const stats = useMemo(() => {
     const days = type === 'weekly' ? 7 : 30;
-    const timeAgo = Date.now() - days * 24 * 60 * 60 * 1000;
+    const timeAgo = now - days * 24 * 60 * 60 * 1000;
     
     // Filter entries updated in the timeframe
     const recentEntries = entries.filter(e => (e.updatedAt || e.createdAt) >= timeAgo);
@@ -78,6 +84,7 @@ export function RecapModal({ isOpen, onClose, entries, genres, type }: RecapModa
     const completedCount = recentEntries.filter(e => e.status === 'Completed').length;
     const plannedTvCount = recentEntries.filter(e => e.type === 'TV Show' && e.status === 'Plan to Watch').length;
     const moviesWatchedCount = recentEntries.filter(e => e.type === 'Movie' && e.status === 'Completed').length;
+    const seriesWatchedCount = recentEntries.filter(e => (e.type === 'TV Show' || e.type === 'Anime') && e.status === 'Completed').length;
 
     recentEntries.forEach(entry => {
       // Calculate watch time
@@ -111,6 +118,7 @@ export function RecapModal({ isOpen, onClose, entries, genres, type }: RecapModa
       completedCount,
       plannedTvCount,
       moviesWatchedCount,
+      seriesWatchedCount,
       hours,
       typeCount,
       topGenreName,
@@ -121,7 +129,7 @@ export function RecapModal({ isOpen, onClose, entries, genres, type }: RecapModa
   useEffect(() => {
     if (!isOpen) {
       setTimeout(() => setActiveSlide(0), 300);
-      setCopied(false);
+      setTimeout(() => setCopied(false), 300);
     }
   }, [isOpen]);
 
@@ -133,6 +141,7 @@ export function RecapModal({ isOpen, onClose, entries, genres, type }: RecapModa
       c: stats.completedCount,
       g: stats.topGenreName,
       mw: stats.moviesWatchedCount,
+      sw: stats.seriesWatchedCount,
       tp: stats.plannedTvCount,
       tm: stats.topEntry?.title || "",
       tr: stats.topEntry?.rating || 0
@@ -207,7 +216,7 @@ export function RecapModal({ isOpen, onClose, entries, genres, type }: RecapModa
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }} className="text-muted-foreground uppercase tracking-widest text-sm font-bold">Hours Watched</motion.p>
           </div>
           <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2 }} className="text-sm sm:text-base text-foreground/80 bg-black/40 backdrop-blur-md p-4 rounded-2xl border border-blue-500/20 font-medium">
-            You completed <strong className="text-blue-400"><AnimatedNumber value={stats.moviesWatchedCount} /> movies</strong> and planned to watch <strong className="text-blue-400"><AnimatedNumber value={stats.plannedTvCount} /> TV shows</strong>!
+            You completed <strong className="text-blue-400"><AnimatedNumber value={stats.moviesWatchedCount} /> movies</strong> and <strong className="text-blue-400"><AnimatedNumber value={stats.seriesWatchedCount} /> series</strong>!
           </motion.p>
         </div>
       )

@@ -3,11 +3,12 @@
 import React, { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMedia } from '@/context/MediaContext';
-import { MediaEntry, isEpisodic } from '@/lib/db';
+import { MediaEntry, isEpisodic, EpisodeInfo } from '@/lib/db';
 import { PageLoader } from '@/components/ui/Loader';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Star, Clock, Calendar, Edit3, Plus, Check, Heart, Film, CheckCircle2, Trash2, Info } from 'lucide-react';
 import { toast } from 'sonner';
+import { MediaForm } from '@/components/MediaForm';
 
 export default function MediaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -15,6 +16,15 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
   const { entries, isLoading, updateEntry, deleteEntry, genres, franchises } = useMedia();
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editingStatus, setEditingStatus] = useState(false);
+  const [editingRating, setEditingRating] = useState(false);
+  const [editingField, setEditingField] = useState<'title' | 'releaseDate' | 'runtime' | 'coverImage' | 'review' | 'episodesTotal' | 'saga' | 'genres' | null>(null);
+  const [tempValue, setTempValue] = useState('');
+  const [editingEpisode, setEditingEpisode] = useState<EpisodeInfo | null>(null);
+  const [tempEpisodeName, setTempEpisodeName] = useState('');
+  const [tempEpisodeRuntime, setTempEpisodeRuntime] = useState<number | ''>('');
+  const [tempEpisodeAirDate, setTempEpisodeAirDate] = useState('');
+  const [hoveredStar, setHoveredStar] = useState<number | null>(null);
 
   const entry = React.useMemo(() => {
     if (isLoading || !id) return null;
@@ -29,14 +39,37 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
 
   const displayEpisodes = React.useMemo(() => {
     if (!entry) return [];
-    return (entry.episodes && entry.episodes.length > 0)
-      ? entry.episodes
-      : (entry.episodesTotal ? Array.from({ length: Number(entry.episodesTotal) }, (_, i) => ({ name: `Episode ${i + 1}`, season: 1, number: i + 1 })) : []);
-  }, [entry?.episodes, entry?.episodesTotal]);
+    if (entry.episodes && entry.episodes.length > 0) {
+      return [...entry.episodes].sort((a, b) => {
+        if ((a.season || 1) !== (b.season || 1)) return (a.season || 1) - (b.season || 1);
+        return (a.number || 1) - (b.number || 1);
+      });
+    }
+    const watchedCount = entry.episodesWatched || 0;
+    return entry.episodesTotal ? Array.from({ length: Math.max(0, Number(entry.episodesTotal)) }, (_, i) => ({ 
+      name: `Episode ${i + 1}`, 
+      season: 1, 
+      number: i + 1, 
+      watched: i < watchedCount
+    } as EpisodeInfo)) : [];
+  }, [entry?.episodes, entry?.episodesTotal, entry?.episodesWatched]);
     
   const seasons = React.useMemo(() => {
     return Array.from(new Set(displayEpisodes.map(ep => ep.season || 1))).sort((a, b) => a - b);
   }, [displayEpisodes]);
+
+  const getMaterializedEpisodes = () => {
+    let currentEpisodes = [...(entry?.episodes || [])];
+    if (currentEpisodes.length === 0 && entry?.episodesTotal) {
+      currentEpisodes = Array.from({ length: Math.max(0, Number(entry.episodesTotal)) }, (_, i) => ({ 
+        name: `Episode ${i + 1}`, 
+        season: 1, 
+        number: i + 1,
+        watched: i < (entry.episodesWatched || 0)
+      }));
+    }
+    return currentEpisodes;
+  };
   
   useEffect(() => {
     if (seasons.length > 0 && !seasons.includes(selectedSeason)) {
@@ -56,37 +89,244 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
   const filteredEpisodes = displayEpisodes.filter(ep => (ep.season || 1) === selectedSeason);
   const episodesWatched = entry.episodesWatched || 0;
 
-  const handleIncrementEpisode = async () => {
-    if (!isEpisodicMedia) return;
-    const current = entry.episodesWatched || 0;
-    const total = entry.episodesTotal;
+  const { totalRuntime, averageRuntime } = React.useMemo(() => {
+    if (!entry) return { totalRuntime: 0, averageRuntime: 0 };
+    if (!isEpisodicMedia) return { totalRuntime: entry.runtime || 0, averageRuntime: entry.runtime || 0 };
     
-    if (total && current >= total) {
-      toast.success("You've already finished this!");
-      return;
+    const epsTotal = Number(entry.episodesTotal || 0);
+    const episodes = entry.episodes || [];
+    const maxEps = Math.max(epsTotal, episodes.length);
+    
+    let knownSum = 0;
+    let knownCount = 0;
+    for (const ep of episodes) {
+      if (ep.runtime && ep.runtime > 0) {
+        knownSum += ep.runtime;
+        knownCount++;
+      }
     }
     
-    const newCount = current + 1;
-    const newStatus = (total && newCount >= total) ? 'Completed' : 'Watching';
+    const baseRuntime = Number(entry.runtime || 0);
+    const avg = knownCount > 0 ? Math.round(knownSum / knownCount) : baseRuntime;
+    const remainingEps = Math.max(0, maxEps - knownCount);
     
-    const updated = { ...entry, episodesWatched: newCount, status: newStatus as MediaEntry['status'] };
+    return {
+      totalRuntime: knownSum + (remainingEps * (avg > 0 ? avg : baseRuntime)),
+      averageRuntime: avg > 0 ? avg : baseRuntime
+    };
+  }, [entry, isEpisodicMedia]);
+
+  const handleIncrementEpisode = async () => {
+    if (!isEpisodicMedia) return;
+    const currentWatched = entry.episodesWatched || 0;
+    const newCount = currentWatched + 1;
+    
+    let currentEpisodes = getMaterializedEpisodes();
+    
+    const sortedEps = [...currentEpisodes].sort((a, b) => {
+      if ((a.season || 1) !== (b.season || 1)) return (a.season || 1) - (b.season || 1);
+      return (a.number || 1) - (b.number || 1);
+    });
+    
+    let unwatched = sortedEps.find(e => !e.watched);
+    
+    if (unwatched) {
+      currentEpisodes = currentEpisodes.map(e => 
+        (e.season === unwatched.season && e.number === unwatched.number) ? { ...e, watched: true } : e
+      );
+    } else {
+      const lastEp = sortedEps[sortedEps.length - 1];
+      const nextNum = lastEp ? (lastEp.number || 0) + 1 : 1;
+      const season = lastEp ? (lastEp.season || 1) : 1;
+      currentEpisodes.push({ name: `Episode ${nextNum}`, season, number: nextNum, watched: true });
+    }
+
+    let newStatus = entry.status;
+    if (entry.episodesTotal && newCount >= Number(entry.episodesTotal)) {
+      newStatus = 'Completed';
+    }
+
+    await updateEntry({ 
+      ...entry, 
+      episodesWatched: newCount,
+      episodes: currentEpisodes,
+      status: newStatus,
+      episodesTotal: Math.max(entry.episodesTotal || 0, currentEpisodes.length)
+    });
     
     if (newStatus === 'Completed') {
       toast.success(`Completed ${entry.title}! 🎉`);
     } else {
       toast.success(`Episode ${newCount} logged!`);
     }
-    
-    await updateEntry(updated);
   };
 
   const handleMarkCompleted = async () => {
     const updated = { ...entry, status: 'Completed' as MediaEntry['status'] };
-    if (isEpisodicMedia && entry.episodesTotal) {
-      updated.episodesWatched = entry.episodesTotal;
+    if (isEpisodicMedia) {
+      const currentEpisodes = getMaterializedEpisodes();
+      updated.episodes = currentEpisodes.map(ep => ({ ...ep, watched: true }));
+      updated.episodesWatched = updated.episodes.length;
     }
     toast.success(`Marked as Completed! 🎉`);
     await updateEntry(updated);
+  };
+
+  const handleUpdateStatus = async (newStatus: MediaEntry['status']) => {
+    const updated = { ...entry, status: newStatus };
+    if (newStatus === 'Completed' && isEpisodicMedia) {
+      const currentEpisodes = getMaterializedEpisodes();
+      updated.episodes = currentEpisodes.map(ep => ({ ...ep, watched: true }));
+      updated.episodesWatched = updated.episodes.length;
+    }
+    await updateEntry(updated);
+    setEditingStatus(false);
+    toast.success(`Status updated to ${newStatus}`);
+  };
+
+  const handleUpdateRating = async (newRating: number) => {
+    await updateEntry({ ...entry, rating: newRating });
+    setEditingRating(false);
+    toast.success(`Rating updated to ${newRating}/10`);
+  };
+
+  const handleSaveField = async () => {
+    if (!editingField || !entry) return;
+    
+    if (editingField === 'title' && !tempValue.trim()) {
+      toast.error('Title cannot be empty');
+      return;
+    }
+    
+    let newValue: any = tempValue;
+    if (editingField === 'runtime' || editingField === 'episodesTotal') {
+      newValue = tempValue === '' ? undefined : Math.max(0, Number(tempValue));
+    } else if (editingField === 'saga') {
+      newValue = tempValue === '' ? undefined : tempValue;
+      await updateEntry({ ...entry, franchiseId: newValue });
+      setEditingField(null);
+      toast.success('Updated successfully!');
+      return;
+    } else if (editingField === 'genres') {
+      newValue = JSON.parse(tempValue || '[]');
+      await updateEntry({ ...entry, genreIds: newValue });
+      setEditingField(null);
+      toast.success('Updated successfully!');
+      return;
+    }
+    
+    await updateEntry({ ...entry, [editingField]: newValue });
+    setEditingField(null);
+    toast.success('Updated successfully!');
+  };
+
+  const handleToggleEpisode = async (seasonNum: number, episodeNum: number) => {
+    if (!isEpisodicMedia) return;
+    
+    let currentEpisodes = getMaterializedEpisodes();
+
+    const epIndex = currentEpisodes.findIndex(e => (e.season || 1) === seasonNum && (e.number || 1) === episodeNum);
+    if (epIndex >= 0) {
+      currentEpisodes[epIndex] = { ...currentEpisodes[epIndex], watched: !currentEpisodes[epIndex].watched };
+    } else {
+      currentEpisodes.push({ name: `Episode ${episodeNum}`, season: seasonNum, number: episodeNum, watched: true });
+    }
+
+    const newWatchedCount = currentEpisodes.filter(e => e.watched).length;
+    
+    await updateEntry({ 
+      ...entry, 
+      episodes: currentEpisodes,
+      episodesWatched: newWatchedCount
+    });
+  };
+
+  const handleAddSeason = async () => {
+    if (!isEpisodicMedia) return;
+    const currentEpisodes = getMaterializedEpisodes();
+    const oldLength = currentEpisodes.length;
+    const maxSeason = currentEpisodes.length > 0 ? Math.max(...currentEpisodes.map(e => e.season || 1)) : 0;
+    const nextSeason = maxSeason + 1;
+    
+    currentEpisodes.push({ name: `Episode 1`, season: nextSeason, number: 1, watched: false });
+    
+    await updateEntry({ 
+      ...entry, 
+      episodes: currentEpisodes,
+      episodesTotal: entry.episodesTotal === oldLength ? currentEpisodes.length : Math.max(entry.episodesTotal || 0, currentEpisodes.length)
+    });
+    setSelectedSeason(nextSeason);
+    toast.success(`Season ${nextSeason} added`);
+  };
+
+  const handleAddEpisode = async () => {
+    if (!isEpisodicMedia) return;
+    const currentEpisodes = getMaterializedEpisodes();
+    const oldLength = currentEpisodes.length;
+    const sEps = currentEpisodes.filter(e => e.season === selectedSeason);
+    const nextNumber = sEps.length > 0 ? Math.max(...sEps.map(e => e.number || 1)) + 1 : 1;
+    
+    currentEpisodes.push({ name: `Episode ${nextNumber}`, season: selectedSeason, number: nextNumber, watched: false });
+    
+    await updateEntry({ 
+      ...entry, 
+      episodes: currentEpisodes,
+      episodesTotal: entry.episodesTotal === oldLength ? currentEpisodes.length : Math.max(entry.episodesTotal || 0, currentEpisodes.length)
+    });
+    toast.success(`Episode ${nextNumber} added to Season ${selectedSeason}`);
+  };
+
+  const handleSaveEpisodeEdit = async () => {
+    if (!editingEpisode || !isEpisodicMedia) return;
+    const currentEpisodes = getMaterializedEpisodes();
+    const oldLength = currentEpisodes.length;
+    const idx = currentEpisodes.findIndex(e => e.season === editingEpisode.season && e.number === editingEpisode.number);
+    
+    const updatedEp = {
+      ...editingEpisode,
+      name: tempEpisodeName,
+      runtime: tempEpisodeRuntime === '' ? undefined : Math.max(0, Number(tempEpisodeRuntime)),
+      airDate: tempEpisodeAirDate,
+    };
+
+    if (idx !== -1) {
+      currentEpisodes[idx] = { ...currentEpisodes[idx], ...updatedEp };
+    } else {
+      currentEpisodes.push(updatedEp);
+    }
+
+    await updateEntry({ 
+      ...entry, 
+      episodes: currentEpisodes,
+      episodesTotal: entry.episodesTotal === oldLength ? currentEpisodes.length : Math.max(entry.episodesTotal || 0, currentEpisodes.length)
+    });
+    setEditingEpisode(null);
+    toast.success('Episode details updated');
+  };
+
+  const handleDeleteEpisode = async () => {
+    if (!editingEpisode || !isEpisodicMedia) return;
+    const currentEpisodes = getMaterializedEpisodes();
+    const oldLength = currentEpisodes.length;
+    const idx = currentEpisodes.findIndex(e => e.season === editingEpisode.season && e.number === editingEpisode.number);
+    if (idx !== -1) {
+      currentEpisodes.splice(idx, 1);
+      const newWatchedCount = currentEpisodes.filter(e => e.watched).length;
+      await updateEntry({ 
+        ...entry, 
+        episodes: currentEpisodes,
+        episodesTotal: entry.episodesTotal === oldLength ? currentEpisodes.length : Math.max(entry.episodesTotal || 0, currentEpisodes.length),
+        episodesWatched: newWatchedCount
+      });
+      setEditingEpisode(null);
+      
+      const remainingInSeason = currentEpisodes.filter(e => e.season === editingEpisode.season);
+      if (remainingInSeason.length === 0 && selectedSeason === editingEpisode.season) {
+        setSelectedSeason(1);
+      }
+      
+      toast.success('Episode deleted');
+    }
   };
 
   const handleDelete = async () => {
@@ -114,12 +354,6 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
             className="w-10 h-10 rounded-full bg-red-500/80 text-white backdrop-blur-md flex items-center justify-center hover:bg-red-600 hover:scale-105 transition-all shadow-lg"
           >
             <Trash2 size={16} />
-          </button>
-          <button 
-            onClick={() => router.push(`/edit/${entry.id}`)} 
-            className="px-4 py-2 rounded-full bg-white text-black text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-xl transition-transform hover:scale-105"
-          >
-            <Edit3 size={14} /> Edit
           </button>
         </div>
       </div>
@@ -154,7 +388,7 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
             transition={{ type: 'spring', bounce: 0.4, duration: 0.8 }}
             className="w-[180px] sm:w-[220px] md:w-full relative group shadow-[0_20px_50px_-12px_rgba(0,0,0,0.8)] rounded-2xl md:rounded-3xl border border-white/10 bg-card overflow-hidden"
           >
-            <div className="aspect-[2/3] w-full">
+            <div className="aspect-[2/3] w-full cursor-pointer relative" onClick={() => { setEditingField('coverImage'); setTempValue(entry.coverImage || ''); }}>
               {entry.coverImage ? (
                 <img src={entry.coverImage} alt={entry.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
               ) : (
@@ -163,6 +397,9 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
                   <span className="text-muted-foreground font-display font-bold uppercase tracking-widest text-xs break-words">{entry.title}</span>
                 </div>
               )}
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none z-10">
+                <Edit3 className="text-white w-8 h-8" />
+              </div>
             </div>
 
             {/* Favorite Floating Badge */}
@@ -179,36 +416,56 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
           
           {/* Status Badges */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="flex flex-wrap justify-center md:justify-start items-center gap-2 mb-4">
-            <span className={`px-3 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-widest rounded-full border ${entry.status === 'Completed' ? 'bg-green-500/10 text-green-500 border-green-500/20' : entry.status === 'Watching' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-blue-500/10 text-blue-500 border-blue-500/20'}`}>
+            <button 
+              onClick={() => setEditingStatus(true)}
+              className={`cursor-pointer transition-transform hover:scale-105 px-3 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-widest rounded-full border ${entry.status === 'Completed' ? 'bg-green-500/10 text-green-500 border-green-500/20' : entry.status === 'Watching' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-blue-500/10 text-blue-500 border-blue-500/20'}`}
+            >
               {entry.status}
-            </span>
+            </button>
             <span className="px-3 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-widest rounded-full border border-white/10 bg-white/5 text-white/80 backdrop-blur-md">
               {entry.type === 'TV Show' ? 'Series' : entry.type}
             </span>
-            {sagaName && (
-              <span className="px-3 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-widest rounded-full border border-primary/20 bg-primary/10 text-primary flex items-center gap-1.5">
-                <Film size={12} /> {sagaName}
-              </span>
-            )}
+            <button 
+              onClick={() => { setEditingField('saga'); setTempValue(entry.franchiseId || ''); }}
+              className={`px-3 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-widest rounded-full border transition-colors cursor-pointer flex items-center gap-1.5 ${sagaName ? 'border-primary/20 bg-primary/10 text-primary hover:bg-primary/20' : 'border-white/10 bg-white/5 text-white/40 hover:bg-white/10 border-dashed'}`}
+            >
+              <Film size={12} /> {sagaName || 'Set Saga'}
+            </button>
           </motion.div>
 
           {/* Title & Meta */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="w-full">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-black leading-tight text-white tracking-tight drop-shadow-xl break-words mb-4">
+            <h1 
+              onClick={() => { setEditingField('title'); setTempValue(entry.title || ''); }} 
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-black leading-tight text-white tracking-tight drop-shadow-xl break-words mb-4 cursor-pointer hover:text-white/80 transition-colors inline-block"
+            >
               {entry.title}
             </h1>
             
             <div className="flex flex-wrap justify-center md:justify-start items-center gap-4 sm:gap-6 text-xs sm:text-sm font-semibold text-white/60 uppercase tracking-widest">
               {releaseYear && (
-                <div className="flex items-center gap-1.5"><Calendar size={14} className="text-white/40" /> {releaseYear}</div>
+                <button onClick={() => { setEditingField('releaseDate'); setTempValue(entry.releaseDate || ''); }} className="flex items-center gap-1.5 cursor-pointer hover:text-white transition-colors">
+                  <Calendar size={14} className="text-white/40" /> {releaseYear}
+                </button>
               )}
-              {entry.runtime && entry.runtime > 0 && (
-                <div className="flex items-center gap-1.5"><Clock size={14} className="text-white/40" /> {entry.runtime}m {isEpisodicMedia ? '/ ep' : ''}</div>
+              {totalRuntime > 0 && (
+                <button 
+                  onClick={() => { if (!isEpisodicMedia) { setEditingField('runtime'); setTempValue(entry.runtime?.toString() || ''); } }} 
+                  className={`flex items-center gap-1.5 transition-colors ${!isEpisodicMedia ? 'cursor-pointer hover:text-white' : 'cursor-default'}`}
+                  title={isEpisodicMedia ? 'Automatically calculated from episodes' : 'Edit runtime'}
+                >
+                  <Clock size={14} className="text-white/40" /> {totalRuntime}m {isEpisodicMedia ? 'Total' : ''}
+                </button>
               )}
-              {entry.status === 'Completed' && entry.rating > 0 && (
-                <div className="flex items-center gap-1 text-amber-400 bg-amber-400/10 px-2.5 py-1 rounded-md border border-amber-400/20">
-                  <Star size={14} className="fill-amber-400" /> <span className="pt-0.5">{entry.rating}/10</span>
-                </div>
+              {isEpisodicMedia && averageRuntime > 0 && (
+                <span className="flex items-center gap-1.5 text-white/50 cursor-default" title="Average runtime per episode">
+                  <Clock size={14} className="text-white/20" /> {averageRuntime}m Avg
+                </span>
+              )}
+              {entry.status === 'Completed' && (
+                <button onClick={() => setEditingRating(true)} className="cursor-pointer hover:scale-105 transition-transform flex items-center gap-1 text-amber-400 bg-amber-400/10 px-2.5 py-1 rounded-md border border-amber-400/20">
+                  <Star size={14} className="fill-amber-400" /> <span className="pt-0.5">{entry.rating || 0}/10</span>
+                </button>
               )}
             </div>
           </motion.div>
@@ -238,37 +495,46 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
             {isEpisodicMedia && (
               <div className="flex flex-col items-center md:items-start ml-2 md:ml-4 bg-white/5 border border-white/10 rounded-xl px-4 py-2">
                 <span className="text-[9px] sm:text-[10px] text-white/50 uppercase tracking-widest font-bold">Progress</span>
-                <div className="text-lg sm:text-xl font-display font-black text-white">
+                <button 
+                  onClick={() => { setEditingField('episodesTotal'); setTempValue(entry.episodesTotal?.toString() || ''); }}
+                  className="text-lg sm:text-xl font-display font-black text-white hover:text-primary transition-colors cursor-pointer"
+                >
                   {entry.episodesWatched || 0} <span className="text-white/30 text-sm font-sans font-semibold">/ {entry.episodesTotal || '?'}</span>
-                </div>
+                </button>
               </div>
             )}
           </motion.div>
 
           {/* Genres & Review */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="w-full mt-10 md:mt-12">
-            {displayGenres.length > 0 && (
-              <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-8">
-                {displayGenres.map(g => (
-                  <span key={g} className="px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[10px] sm:text-xs font-bold text-white/70 uppercase tracking-wider">{g}</span>
-                ))}
-              </div>
-            )}
+            <div 
+              onClick={() => { setEditingField('genres'); setTempValue(JSON.stringify(entry.genreIds || [])); }}
+              className="flex flex-wrap justify-center md:justify-start gap-2 mb-8 cursor-pointer group"
+            >
+              {displayGenres.length > 0 ? displayGenres.map(g => (
+                <span key={g} className="px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[10px] sm:text-xs font-bold text-white/70 uppercase tracking-wider group-hover:border-white/30 transition-colors">{g}</span>
+              )) : (
+                <span className="px-3 py-1 bg-white/5 border border-white/10 border-dashed rounded-lg text-[10px] sm:text-xs font-bold text-white/40 uppercase tracking-wider group-hover:text-white transition-colors">Add Genres</span>
+              )}
+            </div>
             
             <div className="text-left w-full space-y-3">
               <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
                 <Info size={14} /> Review & Notes
               </h3>
               {entry.review ? (
-                <div className="bg-white/5 border border-white/10 rounded-2xl p-5 sm:p-6 backdrop-blur-sm">
+                <div onClick={() => { setEditingField('review'); setTempValue(entry.review || ''); }} className="bg-white/5 border border-white/10 rounded-2xl p-5 sm:p-6 backdrop-blur-sm cursor-pointer hover:bg-white/10 transition-colors group">
                   <p className="text-sm sm:text-base leading-relaxed text-white/90 font-medium whitespace-pre-wrap break-words">
                     {entry.review}
                   </p>
+                  <div className="mt-4 flex items-center gap-1 text-[10px] text-white/30 uppercase tracking-widest font-bold group-hover:text-white/60 transition-colors">
+                    <Edit3 size={12} /> Edit Review
+                  </div>
                 </div>
               ) : (
-                <div className="p-6 rounded-2xl bg-white/5 border border-white/5 border-dashed text-center flex flex-col items-center justify-center space-y-3">
-                  <p className="text-sm text-white/40 font-semibold">No review or notes added yet.</p>
-                  <button onClick={() => router.push(`/edit/${entry.id}`)} className="text-xs font-bold text-white uppercase tracking-widest hover:text-primary transition-colors hover:underline">Write a Review</button>
+                <div onClick={() => { setEditingField('review'); setTempValue(''); }} className="p-6 rounded-2xl bg-white/5 border border-white/5 border-dashed text-center flex flex-col items-center justify-center space-y-3 cursor-pointer hover:bg-white/10 transition-colors group">
+                  <p className="text-sm text-white/40 font-semibold group-hover:text-white/60 transition-colors">No review or notes added yet.</p>
+                  <span className="text-xs font-bold text-white uppercase tracking-widest transition-colors hover:underline">Write a Review</span>
                 </div>
               )}
             </div>
@@ -278,50 +544,73 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
           {isEpisodicMedia && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="w-full mt-12 text-left">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 flex items-center gap-2">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-white/40 flex items-center gap-2 shrink-0">
                   <Film size={14} /> Episodes
                 </h3>
-                {seasons.length > 1 && (
-                  <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2 sm:pb-0">
-                    {seasons.map(s => (
-                      <button
-                        key={s}
-                        onClick={() => setSelectedSeason(s)}
-                        className={`px-4 py-1.5 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap border ${selectedSeason === s ? 'bg-white text-black border-white shadow-sm' : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'}`}
-                      >
-                        Season {s}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2 sm:pb-0 w-full sm:w-auto">
+                  {seasons.map(s => (
+                    <button
+                      key={s}
+                      onClick={() => setSelectedSeason(s)}
+                      className={`px-4 py-1.5 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap border ${selectedSeason === s ? 'bg-white text-black border-white shadow-sm' : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'}`}
+                    >
+                      Season {s}
+                    </button>
+                  ))}
+                  <button onClick={handleAddSeason} className="px-3 py-1.5 rounded-full bg-white/5 text-white/40 hover:bg-white/10 hover:text-white transition-colors border border-white/10 flex items-center gap-1 text-[10px] sm:text-xs font-bold uppercase tracking-widest whitespace-nowrap">
+                    <Plus size={12} /> Season
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-3">
                 {filteredEpisodes.length === 0 ? (
-                  <div className="py-10 text-center bg-white/5 rounded-2xl border border-white/10 border-dashed">
-                    <p className="text-white/40 text-sm font-semibold">No episodes logged for this season.</p>
+                  <div className="py-10 text-center bg-muted/10 rounded-2xl border border-border/50 border-dashed">
+                    <p className="text-muted-foreground text-sm font-semibold">No episodes logged for this season.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {filteredEpisodes.map((ep, idx) => {
-                      const isWatched = episodesWatched >= (ep.number || idx + 1);
+                    {filteredEpisodes.map((ep: any, idx) => {
+                      const isWatched = entry.status === 'Completed' || ep.watched === true;
                       return (
                         <div
                           key={`${ep.season}-${ep.number}-${idx}`}
-                          className={`rounded-xl border p-3 sm:p-4 flex items-center gap-4 transition-all ${isWatched ? 'border-green-500/30 bg-green-500/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`}
+                          className={`relative w-full text-left rounded-xl border p-3 sm:p-4 flex items-center gap-4 transition-all hover:scale-[1.02] active:scale-95 group ${isWatched ? 'border-green-500/30 bg-green-500/10' : 'border-border/50 bg-muted/30 hover:border-border'}`}
                         >
-                          <div className={`w-10 h-10 flex items-center justify-center rounded-lg shrink-0 font-mono text-xs sm:text-sm font-bold ${isWatched ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/50'}`}>
+                          <button
+                            className="absolute inset-0 w-full h-full cursor-pointer z-0"
+                            onClick={() => handleToggleEpisode(ep.season || 1, ep.number || idx + 1)}
+                            aria-label={`Toggle watched for ${ep.name}`}
+                          />
+                          <div className={`w-10 h-10 flex items-center justify-center rounded-lg shrink-0 font-mono text-xs sm:text-sm font-bold z-10 pointer-events-none ${isWatched ? 'bg-green-500/20 text-green-600 dark:text-green-400' : 'bg-muted/50 text-black/50 dark:text-white/50'}`}>
                             {ep.number || idx + 1}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm sm:text-base font-bold truncate break-words ${isWatched ? 'text-white' : 'text-white/80'}`}>
+                          <div className="flex-1 min-w-0 z-10 pointer-events-none">
+                            <p className={`text-sm sm:text-base font-bold truncate break-words ${isWatched ? 'text-black dark:text-white' : 'text-black/80 dark:text-white/80'}`}>
                               {ep.name}
                             </p>
+                            {ep.runtime && <p className="text-[10px] text-black/50 dark:text-white/50 font-bold uppercase tracking-widest">{ep.runtime} min</p>}
                           </div>
-                          {isWatched && <CheckCircle2 size={16} className="text-green-400 shrink-0" />}
+                          <div className="flex items-center gap-3 z-10">
+                             <button onClick={() => {
+                               setEditingEpisode(ep);
+                               setTempEpisodeName(ep.name);
+                               setTempEpisodeRuntime(ep.runtime || '');
+                               setTempEpisodeAirDate(ep.airDate || '');
+                             }} className="text-black/30 dark:text-white/30 hover:text-black dark:hover:text-white transition-colors p-1.5 rounded-md hover:bg-black/10 dark:hover:bg-white/10 z-10 relative cursor-pointer">
+                               <Edit3 size={14} />
+                             </button>
+                             {isWatched && <CheckCircle2 size={16} className="text-green-600 dark:text-green-400 shrink-0 pointer-events-none" />}
+                          </div>
                         </div>
                       );
                     })}
+                    
+                    {/* Add Episode Button */}
+                    <button onClick={handleAddEpisode} className="w-full h-full min-h-[72px] rounded-xl border border-dashed border-border/50 bg-muted/10 hover:bg-muted/20 hover:border-border transition-all flex flex-col items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer">
+                      <Plus size={20} className="mb-1 opacity-50" />
+                      <span className="text-xs font-bold uppercase tracking-widest">Add Episode</span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -358,6 +647,180 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
                 <button onClick={handleDelete} className="flex-1 py-3 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20">
                   Delete
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Inline Editors Modal */}
+      <AnimatePresence>
+        {editingStatus && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingStatus(false)} className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-sm bg-[#111] border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col items-center z-10">
+              <h3 className="text-lg font-bold tracking-tight text-white mb-6 uppercase tracking-widest">Update Status</h3>
+              <div className="flex flex-col gap-3 w-full">
+                {(['Plan to Watch', 'Watching', 'Completed'] as const).map(s => (
+                  <button key={s} onClick={() => handleUpdateStatus(s)} className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest text-xs transition-colors border ${entry.status === s ? 'bg-primary/20 text-primary border-primary/30' : 'bg-white/5 text-white hover:bg-white/10 border-white/10'}`}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {editingRating && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingRating(false)} className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-sm bg-[#111] border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col items-center z-10">
+              <h3 className="text-lg font-bold tracking-tight text-white mb-6 uppercase tracking-widest">Update Rating</h3>
+              <div className="flex gap-1 justify-center w-full mb-6" onMouseLeave={() => setHoveredStar(null)}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(star => {
+                  const displayRating = hoveredStar !== null ? hoveredStar : (entry.rating || 0);
+                  const active = star <= displayRating;
+                  return (
+                    <button
+                      key={star}
+                      type="button"
+                      onMouseEnter={() => setHoveredStar(star)}
+                      onClick={() => handleUpdateStatus('Completed').then(() => handleUpdateRating(star))}
+                      className="p-1 cursor-pointer transition-transform hover:scale-110 active:scale-95"
+                    >
+                      <Star size={24} className={active ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"} />
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-white/40 uppercase tracking-widest text-center font-bold">
+                {hoveredStar || entry.rating || 0} / 10
+              </p>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Inline Field Edit Modal */}
+      <AnimatePresence>
+        {editingField && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingField(null)} className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }} 
+              animate={{ scale: 1, opacity: 1, y: 0 }} 
+              exit={{ scale: 0.95, opacity: 0, y: 20 }} 
+              className="relative w-full max-w-sm bg-zinc-950 border border-white/10 p-6 rounded-3xl shadow-2xl flex flex-col items-center"
+            >
+              <h3 className="text-lg font-bold text-white mb-6 uppercase tracking-widest">
+                Update {editingField === 'coverImage' ? 'Cover' : editingField === 'releaseDate' ? 'Release Date' : editingField}
+              </h3>
+              
+              <div className="w-full space-y-4 text-left">
+                {editingField === 'title' && (
+                  <input autoFocus type="text" value={tempValue} onChange={e => setTempValue(e.target.value)} placeholder="Title" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30" />
+                )}
+                {editingField === 'coverImage' && (
+                  <input autoFocus type="url" value={tempValue} onChange={e => setTempValue(e.target.value)} placeholder="https://..." className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30" />
+                )}
+                {editingField === 'releaseDate' && (
+                  <input autoFocus type="date" value={tempValue} onChange={e => setTempValue(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30 [color-scheme:dark]" />
+                )}
+                {editingField === 'runtime' && (
+                  <input autoFocus type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} placeholder="Runtime in minutes" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30" />
+                )}
+                {editingField === 'episodesTotal' && (
+                  <input autoFocus type="number" value={tempValue} onChange={e => setTempValue(e.target.value)} placeholder="Total Episodes (e.g. 39)" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30" />
+                )}
+                {editingField === 'review' && (
+                  <textarea autoFocus value={tempValue} onChange={e => setTempValue(e.target.value)} placeholder="Write your thoughts..." rows={5} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30 resize-none" />
+                )}
+                {editingField === 'saga' && (
+                  <select 
+                    autoFocus 
+                    value={tempValue} 
+                    onChange={e => setTempValue(e.target.value)} 
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30"
+                  >
+                    <option value="" className="bg-[#111] text-white/50">No Saga</option>
+                    {franchises.map(f => (
+                      <option key={f.id} value={f.id} className="bg-[#111] text-white">{f.name}</option>
+                    ))}
+                  </select>
+                )}
+                {editingField === 'genres' && (
+                  <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                    {genres.map(g => {
+                      let selectedIds: string[] = [];
+                      try { selectedIds = JSON.parse(tempValue || '[]'); } catch (e) {}
+                      const isSelected = selectedIds.includes(g.id);
+                      return (
+                        <label key={g.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${isSelected ? 'bg-primary/20 border-primary/30 text-white' : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'}`}>
+                          <input 
+                            type="checkbox" 
+                            className="hidden"
+                            checked={isSelected}
+                            onChange={() => {
+                              const newIds = isSelected ? selectedIds.filter((id: string) => id !== g.id) : [...selectedIds, g.id];
+                              setTempValue(JSON.stringify(newIds));
+                            }}
+                          />
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-primary border-primary' : 'border-white/20'}`}>
+                            {isSelected && <Check size={12} className="text-primary-foreground" />}
+                          </div>
+                          <span className="font-bold uppercase tracking-widest text-xs">{g.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 w-full mt-8">
+                <button onClick={() => setEditingField(null)} className="flex-1 py-3 rounded-xl bg-white/5 text-white/70 font-bold hover:bg-white/10 transition-colors">Cancel</button>
+                <button onClick={handleSaveField} className="flex-1 py-3 rounded-xl bg-white text-black font-bold hover:bg-white/90 transition-colors">Save</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Episode Editing Modal */}
+      <AnimatePresence>
+        {editingEpisode && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingEpisode(null)} className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }} 
+              animate={{ scale: 1, opacity: 1, y: 0 }} 
+              exit={{ scale: 0.95, opacity: 0, y: 20 }} 
+              className="relative w-full max-w-sm bg-zinc-950 border border-white/10 p-6 rounded-3xl shadow-2xl flex flex-col items-center"
+            >
+              <div className="flex items-center justify-between w-full mb-6">
+                <h3 className="text-lg font-bold text-white">Edit Episode {editingEpisode.number}</h3>
+                <button onClick={handleDeleteEpisode} className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:scale-110 rounded-full transition-all cursor-pointer" title="Delete Episode">
+                  <Trash2 size={16} />
+                </button>
+              </div>
+              
+              <div className="w-full space-y-4 text-left">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase tracking-widest font-bold text-white/50">Episode Name</label>
+                  <input type="text" value={tempEpisodeName} onChange={e => setTempEpisodeName(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase tracking-widest font-bold text-white/50">Runtime (mins)</label>
+                  <input type="number" value={tempEpisodeRuntime} onChange={e => setTempEpisodeRuntime(e.target.value === '' ? '' : Number(e.target.value))} placeholder="Auto" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] uppercase tracking-widest font-bold text-white/50">Air Date</label>
+                  <input type="date" value={tempEpisodeAirDate} onChange={e => setTempEpisodeAirDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30 [color-scheme:dark]" />
+                </div>
+              </div>
+
+              <div className="flex gap-3 w-full mt-8">
+                <button onClick={() => setEditingEpisode(null)} className="flex-1 py-3 rounded-xl bg-white/5 text-white/70 font-bold hover:bg-white/10 transition-colors">Cancel</button>
+                <button onClick={handleSaveEpisodeEdit} className="flex-1 py-3 rounded-xl bg-white text-black font-bold hover:bg-white/90 transition-colors">Save</button>
               </div>
             </motion.div>
           </div>

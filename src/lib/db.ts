@@ -16,6 +16,7 @@ export interface EpisodeInfo {
   season?: number;
   number?: number;
   runtime?: number;
+  watched?: boolean;
 }
 
 export interface MediaEntry {
@@ -73,24 +74,57 @@ export function normalizeWatchStatus(status: unknown): WatchStatus {
 }
 
 export function getWatchedRuntimeMinutes(entry: Partial<MediaEntry>): number {
-  const runtime = Number(entry.runtime || 0);
-  if (runtime <= 0) return 0;
-
   if (!isEpisodic(entry)) {
+    const runtime = Number(entry.runtime || 0);
     return entry.status === 'Completed' || !entry.status ? runtime : 0;
   }
 
-  const watchedCount = Number(entry.episodesWatched || (entry.status === 'Completed' ? entry.episodesTotal || 0 : 0));
-  if (watchedCount <= 0) return 0;
+  // Episodic Logic
+  let totalWatchedMins = 0;
 
-  if (entry.episodes?.length) {
-    return entry.episodes.slice(0, watchedCount).reduce((total, episode) => {
-      const episodeRuntime = Number(episode.runtime || 0);
-      return total + (episodeRuntime > 0 ? episodeRuntime : runtime);
-    }, 0);
+  if (entry.episodes && entry.episodes.length > 0) {
+    const sortedEps = [...entry.episodes].sort((a, b) => {
+      if ((a.season || 1) !== (b.season || 1)) return (a.season || 1) - (b.season || 1);
+      return (a.number || 1) - (b.number || 1);
+    });
+
+    let knownSum = 0;
+    let knownCount = 0;
+    
+    // First pass: find average of known specific runtimes
+    for (const ep of sortedEps) {
+      if (ep.runtime && ep.runtime > 0) {
+        knownSum += ep.runtime;
+        knownCount++;
+      }
+    }
+    
+    const globalRuntime = Number(entry.runtime || 0);
+    const avgRuntime = knownCount > 0 ? (knownSum / knownCount) : globalRuntime;
+    
+    // Second pass: sum watched episodes using precise booleans if available
+    let manualWatchedCount = 0;
+    for (const ep of sortedEps) {
+      if (ep.watched || entry.status === 'Completed') {
+        totalWatchedMins += (ep.runtime && ep.runtime > 0 ? ep.runtime : avgRuntime);
+        manualWatchedCount++;
+      }
+    }
+    
+    // If show is completed, pad missing episodes (if total is higher than array length)
+    if (entry.status === 'Completed' && entry.episodesTotal && entry.episodesTotal > sortedEps.length) {
+      const diff = entry.episodesTotal - sortedEps.length;
+      totalWatchedMins += (diff * avgRuntime);
+    }
+    
+    return Math.round(totalWatchedMins);
+  } else {
+    // Legacy fallback (no episodes array tracking)
+    const runtime = Number(entry.runtime || 0);
+    if (runtime <= 0) return 0;
+    const fallbackCount = Number(entry.episodesWatched || (entry.status === 'Completed' ? (entry.episodesTotal || 0) : 0));
+    return fallbackCount * runtime;
   }
-
-  return watchedCount * runtime;
 }
 
 export function formatRuntime(minutes: number | undefined): string {
