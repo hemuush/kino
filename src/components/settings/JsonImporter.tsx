@@ -204,13 +204,11 @@ export default function JsonImporter() {
     "genre": ["Crime", "Drama"],
     "episodes": [
       {
-        "title": "Pilot",
+        "name": "Pilot",
         "season": 1,
-        "episode": 1,
+        "number": 1,
         "runtime": 60,
-        "releaseDate": "1999-01-10",
-        "watched": true,
-        "rating": 5
+        "airDate": "1999-01-10"
       }
     ]
   },

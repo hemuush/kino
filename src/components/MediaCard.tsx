@@ -85,7 +85,7 @@ export default function MediaCard({
         {entry.status === "Watching" && isEpisodic(entry) && (
           <button
             onClick={(e) => { e.stopPropagation(); onIncrementWatched(); }}
-            className="absolute bottom-2 left-2 right-2 z-20 flex items-center justify-center gap-1 bg-primary/90 text-white text-[11px] font-display font-bold uppercase tracking-wider py-2 rounded-xl border border-primary hover:bg-primary transition-all shadow-lg cursor-pointer opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 duration-300"
+            className="absolute bottom-2 left-2 right-2 z-20 flex items-center justify-center gap-1 bg-primary/90 text-white text-[11px] font-display font-bold uppercase tracking-wider py-2 rounded-xl border border-primary hover:bg-primary transition-all shadow-lg cursor-pointer opacity-100 lg:opacity-0 lg:group-hover:opacity-100 translate-y-0 lg:translate-y-1 lg:group-hover:translate-y-0 duration-300"
             title="Increment episode"
           >
             <Plus size={11} strokeWidth={3} />

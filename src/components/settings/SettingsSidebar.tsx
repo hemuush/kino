@@ -1,17 +1,18 @@
 "use client";
 
-import { Film, Tag, Database, Settings2, Shield } from 'lucide-react';
+import { Film, Tag, Database, Settings2, Shield, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 
 interface SettingsSidebarProps {
-    activeTab: 'sagas' | 'genres' | 'data';
-    setActiveTab: (tab: 'sagas' | 'genres' | 'data') => void;
+    activeTab: 'sagas' | 'genres' | 'data' | 'achievements';
+    setActiveTab: (tab: 'sagas' | 'genres' | 'data' | 'achievements') => void;
 }
 
 export function SettingsSidebar({ activeTab, setActiveTab }: SettingsSidebarProps) {
     const navItems = [
         { id: 'data', label: 'Data & Cloud', icon: Database, desc: 'Sync & Backups' },
+        { id: 'achievements', label: 'Achievements', icon: Trophy, desc: 'Milestones & Badges' },
         { id: 'sagas', label: 'Sagas', icon: Film, desc: 'Franchise Map' },
         { id: 'genres', label: 'Genres Matrix', icon: Tag, desc: 'Categories' },
     ] as const;
@@ -37,7 +38,7 @@ export function SettingsSidebar({ activeTab, setActiveTab }: SettingsSidebarProp
                         <button
                             key={item.id}
                             onClick={() => setActiveTab(item.id)}
-                            className={`relative flex items-center gap-4 p-3 sm:p-4 rounded-[20px] transition-all whitespace-nowrap lg:whitespace-normal snap-start text-left border overflow-hidden group w-full ${
+                            className={`relative flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-[20px] transition-all whitespace-nowrap snap-start text-left border overflow-hidden group shrink-0 lg:w-full ${
                                 isActive
                                     ? 'bg-card/80 dark:bg-[#0c0c0d]/90 border-primary/30 shadow-sm'
                                     : 'bg-card/40 dark:bg-[#0c0c0d]/40 border-border/50 hover:bg-card/60 hover:border-border/80'

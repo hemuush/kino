@@ -6,12 +6,13 @@ import { SettingsSidebar } from '@/components/settings/SettingsSidebar';
 import { SagasManager } from '@/components/settings/SagasManager';
 import { GenresManager } from '@/components/settings/GenresManager';
 import { DataManager } from '@/components/settings/DataManager';
+import { AchievementsManager } from '@/components/settings/AchievementsManager';
 import { PageLoader } from '@/components/ui/Loader';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function SettingsPage() {
   const { isLoading } = useMedia();
-  const [activeTab, setActiveTab] = useState<'sagas' | 'genres' | 'data'>('data');
+  const [activeTab, setActiveTab] = useState<'sagas' | 'genres' | 'data' | 'achievements'>('data');
 
   if (isLoading) {
     return <PageLoader text="Loading settings..." />;
@@ -47,6 +48,7 @@ export default function SettingsPage() {
                 {activeTab === 'sagas' && <SagasManager />}
                 {activeTab === 'genres' && <GenresManager />}
                 {activeTab === 'data' && <DataManager />}
+                {activeTab === 'achievements' && <AchievementsManager />}
               </motion.div>
             </AnimatePresence>
           </main>

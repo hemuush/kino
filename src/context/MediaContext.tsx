@@ -6,6 +6,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { MediaEntry, Tag, DEFAULT_GENRES, normalizeMediaType, normalizeWatchStatus } from '@/lib/db';
 import { useAuth } from '@/context/AuthContext';
 import { TokenExpiredError, downloadBackupFromDrive, uploadBackupToDrive, deleteBackupFromDrive, getBackupMetadataFromDrive, BackupData } from '@/lib/googleDrive';
+import { getLocalCache, setLocalCache, clearLocalCache } from '@/lib/idb';
 import { toast } from 'sonner';
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error';
@@ -57,8 +58,8 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [syncStatus]);
 
-  // updateStateAndRef: immediately write to localStorage and React state
-  const updateStateAndRef = useCallback((newEntries?: MediaEntry[], newGenres?: Tag[], newFranchises?: Tag[]) => {
+  // updateStateAndRef: immediately write to IDB and React state
+  const updateStateAndRef = useCallback((newEntries?: MediaEntry[], newGenres?: Tag[], newFranchises?: Tag[], skipIdb = false) => {
     const now = Date.now();
     if (newEntries !== undefined) {
       setEntries(newEntries);
@@ -72,7 +73,15 @@ export function MediaProvider({ children }: { children: ReactNode }) {
       setFranchises(newFranchises);
       latestDataRef.current.franchises = newFranchises;
     }
-
+    
+    if (!skipIdb) {
+      setLocalCache({
+        entries: latestDataRef.current.entries,
+        genres: latestDataRef.current.genres,
+        franchises: latestDataRef.current.franchises,
+        timestamp: now
+      }).catch(console.error);
+    }
   }, []);
 
   // Load defaults on mount if needed
@@ -114,7 +123,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     }, 800);
   }, [accessToken, logout]);
 
-  // Fetch from Drive on auth
+  // Fetch from Drive on auth, but load from IDB first for instant rendering
   useEffect(() => {
     if (!accessToken) {
       setIsLoading(false);
@@ -125,7 +134,21 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     if (hasFetchedFromDriveRef.current) return;
 
     const fetchFromDrive = async () => {
-      setIsLoading(true);
+      // First, try loading from local cache for instant UI
+      try {
+        const cache = await getLocalCache();
+        if (cache && cache.entries) {
+          updateStateAndRef(cache.entries, cache.genres, cache.franchises, true);
+          setIsLoading(false); // Render immediately!
+        }
+      } catch (e) {
+        console.warn("Error reading from local cache", e);
+      }
+
+      if (latestDataRef.current.entries.length === 0) {
+        setIsLoading(true); // If cache was empty, we must block until Drive fetches
+      }
+
       try {
         hasFetchedFromDriveRef.current = true;
         setSyncStatus('syncing');
@@ -145,11 +168,13 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         }
 
         const cloudTimestamp = backup && 'timestamp' in backup && typeof backup.timestamp === 'number' ? backup.timestamp : 0;
+        
         if (backup) {
           // Drive data exists — use Drive data
           if (fetchedGenres.length === 0) {
             fetchedGenres = DEFAULT_GENRES.map(name => ({ id: crypto.randomUUID(), name }));
           }
+          // Compare with cache: If drive data differs or is newer, update local state
           updateStateAndRef(fetchedEntries, fetchedGenres, fetchedFranchises);
           if (cloudTimestamp > 0) setLastSyncedAt(cloudTimestamp);
         } else {
@@ -372,6 +397,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     latestDataRef.current = { entries: [], genres: emptyGenres, franchises: [] };
     setLastSyncedAt(null);
     setSyncStatus('idle');
+    clearLocalCache().catch(console.error);
   };
 
   return (

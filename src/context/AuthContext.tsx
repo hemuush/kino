@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const sessionExpiry = sessionExpiryStr ? parseInt(sessionExpiryStr, 10) : 0;
       const now = Date.now();
 
-      // If we have a valid 1-week session, restore the user immediately so they don't get kicked out
+      // If we have a valid 30-day session, restore the user immediately so they don't get kicked out
       if (sessionExpiry > now && storedUserStr) {
         try {
           setUser(JSON.parse(storedUserStr));
@@ -147,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } else if (sessionExpiry <= now) {
-         // Session completely expired (past 1 week)
+         // Session completely expired (past 30 days)
          localStorage.removeItem('kino_access_token');
          localStorage.removeItem('kino_token_expiry');
          localStorage.removeItem('kino_session_expiry');
@@ -179,7 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     const now = Date.now();
     const expiryTimestamp = now + expiresIn * 1000;
-    const sessionExpiryTimestamp = now + 7 * 24 * 60 * 60 * 1000; // 1 week session
+    const sessionExpiryTimestamp = now + 30 * 24 * 60 * 60 * 1000; // 30 days session
     
     try {
       localStorage.setItem('kino_access_token', token);
@@ -190,7 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAccessToken(token);
     await fetchUserProfile(token);
     
-    // Store user profile in local storage for the 1 week session persistence
+    // Store user profile in local storage for the 30-day session persistence
     setUser((currentUser) => {
       if (currentUser) {
          localStorage.setItem('kino_user_profile', JSON.stringify(currentUser));

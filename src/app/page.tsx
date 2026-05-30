@@ -346,37 +346,7 @@ function DashboardContent() {
       .slice(0, 15);
   }, [entries]);
 
-  // Badges calculation
-  const badges = useMemo(() => {
-    const b = [];
-    const moviesWatched = entries.filter(e => e.type === 'Movie' && e.status === 'Completed').length;
-    const showsWatched = entries.filter(e => e.type === 'TV Show' && e.status === 'Completed').length;
-    const perfectScores = entries.filter(e => e.rating === 10).length;
-    const hasFranchise = entries.some(e => e.franchiseId);
-    
-    b.push({
-      id: 'first_blood', name: 'First Blood', desc: 'Added your first media',
-      unlocked: entries.length > 0, icon: '🎬', color: 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-    });
-    b.push({
-      id: 'cinephile', name: 'Cinephile', desc: 'Completed 50 Movies',
-      unlocked: moviesWatched >= 50, icon: '🎟️', color: 'bg-purple-500/10 text-purple-500 border-purple-500/20'
-    });
-    b.push({
-      id: 'binge_watcher', name: 'Binge Watcher', desc: 'Completed 10 TV Shows',
-      unlocked: showsWatched >= 10, icon: '📺', color: 'bg-green-500/10 text-green-500 border-green-500/20'
-    });
-    b.push({
-      id: 'perfectionist', name: 'Perfectionist', desc: 'Rated 5 items 10/10',
-      unlocked: perfectScores >= 5, icon: '⭐', color: 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-    });
-    b.push({
-      id: 'saga_master', name: 'Saga Master', desc: 'Tracked a Franchise',
-      unlocked: hasFranchise, icon: '📚', color: 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-    });
-    
-    return b;
-  }, [entries]);
+  // timelineItems calculation ends here
 
   // Set default active shelf once based on items availability
   useEffect(() => {
@@ -564,30 +534,7 @@ function DashboardContent() {
           </motion.div>
         </div>
 
-        {/* Badges & Achievements Section */}
-        <div className="w-full space-y-4 lg:space-y-6 mt-8 sm:mt-12">
-          <div className="space-y-1 px-3 sm:px-8 lg:px-12">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-primary/85">YOUR JOURNEY</span>
-            <h4 className="text-lg sm:text-2xl lg:text-3.5xl font-bold tracking-tight text-foreground leading-none">Achievements</h4>
-          </div>
-          
-          <div className="w-full overflow-x-auto hide-scrollbar scroll-smooth pb-4 px-3 sm:px-8 lg:px-12">
-            <div className="flex gap-4 w-max">
-              {badges.map((badge) => (
-                <div 
-                  key={badge.id}
-                  className={`w-[140px] sm:w-[160px] shrink-0 rounded-2xl border-2 p-4 flex flex-col items-center text-center transition-all ${badge.unlocked ? `bg-card ${badge.color} border-border/40 shadow-sm` : 'bg-muted/30 border-dashed border-border/30 opacity-60 grayscale'}`}
-                >
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-3 shadow-inner ${badge.unlocked ? badge.color : 'bg-muted'}`}>
-                    {badge.icon}
-                  </div>
-                  <span className="text-[11px] font-bold uppercase tracking-widest text-foreground">{badge.name}</span>
-                  <span className="text-[9px] mt-1 text-muted-foreground font-medium leading-tight">{badge.desc}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        {/* Space reserved for Dashboard metrics */}
 
         {/* Interactive Release Calendar */}
         {timelineItems.length > 0 && (

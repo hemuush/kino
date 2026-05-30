@@ -2,7 +2,7 @@
 "use client";
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { MediaEntry, EpisodeInfo, safeDateFormat, isEpisodic, formatRuntime, getWatchedRuntimeMinutes } from '@/lib/db';
 import { X, Edit2, Trash2, Calendar, Star, Heart, Plus, Minus, Clock, Film, CheckCircle2, PlayCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -60,11 +60,15 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
   const entryFranchise = entry.franchiseId ? franchises.find(f => f.id === entry.franchiseId) : null;
   const entryGenres = (entry.genreIds || []).map(id => genres.find(g => g.id === id)?.name).filter(Boolean);
 
-  const displayEpisodes: EpisodeInfo[] = (entry.episodes && entry.episodes.length > 0)
-    ? entry.episodes
-    : (entry.episodesTotal ? Array.from({ length: Number(entry.episodesTotal) }, (_, i) => ({ name: `Episode ${i + 1}`, season: 1, number: i + 1 })) : []);
+  const displayEpisodes = useMemo<EpisodeInfo[]>(() => {
+    return (entry.episodes && entry.episodes.length > 0)
+      ? entry.episodes
+      : (entry.episodesTotal ? Array.from({ length: Number(entry.episodesTotal) }, (_, i) => ({ name: `Episode ${i + 1}`, season: 1, number: i + 1 })) : []);
+  }, [entry.episodes, entry.episodesTotal]);
 
-  const seasons = Array.from(new Set(displayEpisodes.map(ep => ep.season || 1))).sort((a, b) => a - b);
+  const seasons = useMemo(() => {
+    return Array.from(new Set(displayEpisodes.map(ep => ep.season || 1))).sort((a, b) => a - b);
+  }, [displayEpisodes]);
 
   useEffect(() => {
     if (seasons.length > 0 && !seasons.includes(selectedSeason)) {
@@ -586,7 +590,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                               {entry.episodes && globalIdx >= 0 && (
                                 <button
                                   onClick={() => handleRemoveEpisode(globalIdx)}
-                                  className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all cursor-pointer"
+                                  className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all cursor-pointer"
                                 >
                                   <X size={13} />
                                 </button>

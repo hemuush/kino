@@ -306,7 +306,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
                     />
                   </div>
                   <div className="w-10 flex-shrink-0 flex justify-end">
-                    <button type="button" onClick={() => handleDeleteEpisode(idx)} className="text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all cursor-pointer p-2 rounded-lg hover:bg-red-500/10">
+                    <button type="button" onClick={() => handleDeleteEpisode(idx)} className="text-muted-foreground hover:text-red-500 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all cursor-pointer p-2 rounded-lg hover:bg-red-500/10">
                       <X size={16} />
                     </button>
                   </div>
