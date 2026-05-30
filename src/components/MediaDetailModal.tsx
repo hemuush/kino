@@ -201,32 +201,38 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center text-foreground">
+      <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center text-foreground">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-black/65 backdrop-blur-md"
+          className="absolute inset-0 bg-black/70 backdrop-blur-xl bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_1px,transparent_1px)] [background-size:20px_20px]"
           onClick={onClose}
         />
 
         <motion.div
-          initial={{ opacity: 0, y: 60, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 60, scale: 0.96 }}
+          initial={{ opacity: 0, y: 80 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 80 }}
           transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-          className={`relative w-full ${currentIsEpisodic ? 'max-w-2xl md:max-w-4xl lg:max-w-5xl' : 'max-w-2xl'} max-h-[92vh] sm:max-h-[88vh] bg-card rounded-t-[28px] sm:rounded-2xl overflow-hidden z-[101] flex flex-col shadow-2xl border border-border/80`}
+          className={`relative w-full ${currentIsEpisodic ? 'max-w-2xl md:max-w-4xl lg:max-w-5xl' : 'max-w-2xl'} h-full sm:h-auto max-h-full sm:max-h-[88vh] bg-card/80 dark:bg-[#0c0c0d]/90 backdrop-blur-3xl rounded-t-[28px] sm:rounded-[32px] overflow-hidden z-[201] flex flex-col shadow-[0_0_80px_-20px_rgba(0,0,0,0.5)] border border-border/60 border-b-0 sm:border-b`}
         >
           {/* Background blur from poster */}
           {entry.coverImage && (
-            <div className="absolute inset-0 h-[250px] overflow-hidden -z-10 pointer-events-none opacity-[0.05] blur-3xl">
-              <img src={entry.coverImage} className="w-full h-full object-cover scale-150" alt="bg" />
+            <div className="absolute inset-0 h-[300px] overflow-hidden -z-10 pointer-events-none opacity-15 dark:opacity-20 mix-blend-screen">
+              <img src={entry.coverImage} className="w-full h-full object-cover scale-150 blur-3xl" alt="bg" />
             </div>
           )}
 
+          {/* Mobile drag handle */}
+          <div className="sm:hidden flex justify-center pt-2.5 pb-0 shrink-0">
+            <div className="w-10 h-1 rounded-full bg-border/60" />
+          </div>
+
           {/* ─── Header ─── */}
-          <div className="sticky top-0 flex items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b border-border/60 z-20 bg-card/95 backdrop-blur-xl shadow-sm shrink-0">
-            <div className="flex flex-wrap items-center gap-2 min-w-0">
+          <div className="sticky top-0 flex items-center justify-between gap-2 px-3 sm:px-6 py-3 sm:py-3.5 border-b border-border/60 z-20 bg-gradient-to-r from-card/80 to-card/40 dark:from-[#0c0c0d]/90 dark:to-[#0c0c0d]/60 backdrop-blur-md shadow-sm shrink-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+              <span className="hidden sm:inline-block text-[9px] font-mono tracking-[0.2em] text-primary/80 uppercase font-bold mr-2">ENTRY // DETAILS</span>
               <Badge variant={entry.type === 'Movie' ? 'movie' : entry.type === 'TV Show' ? 'tv' : 'anime'}>
                 {entry.type === 'Anime' ? `Anime (${entry.animeType || 'Show'})` : entry.type}
               </Badge>
@@ -234,32 +240,37 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                 <Badge variant={entry.status === 'Watching' ? 'accent' : 'muted'}>{entry.status}</Badge>
               )}
               {entry.favorite && (
-                <Badge variant="primary">❤️ Favorite</Badge>
+                <Badge variant="primary" className="hidden sm:inline-flex">❤️ Fav</Badge>
               )}
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
               <button
                 onClick={handleToggleFavorite}
-                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all border cursor-pointer ${entry.favorite ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-muted border-border/60 hover:text-foreground'}`}
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all border shadow-sm backdrop-blur-sm cursor-pointer ${entry.favorite ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-card/50 border-border/60 hover:text-foreground hover:bg-card/80'}`}
                 title={entry.favorite ? 'Remove from favorites' : 'Add to favorites'}
               >
                 <Heart size={14} className={entry.favorite ? 'fill-red-500' : ''} />
               </button>
               <button
                 onClick={handleEdit}
-                className="w-8 h-8 rounded-xl bg-muted border border-border/60 flex items-center justify-center hover:bg-muted/80 transition-colors cursor-pointer hover:text-primary"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-card/50 border border-border/60 shadow-sm backdrop-blur-sm flex items-center justify-center hover:bg-card/80 transition-colors cursor-pointer hover:text-primary"
                 title="Edit"
               >
                 <Edit2 size={14} strokeWidth={2} />
               </button>
               <button
                 onClick={handleDeleteClick}
-                className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${showDeleteConfirm ? 'bg-red-500 border-red-600 text-white' : 'bg-muted border-border/60 hover:text-red-400'}`}
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full border shadow-sm backdrop-blur-sm flex items-center justify-center transition-all cursor-pointer ${showDeleteConfirm ? 'bg-red-500 border-red-600 text-white' : 'bg-card/50 border-border/60 hover:text-red-400 hover:bg-card/80'}`}
                 title={showDeleteConfirm ? 'Tap again to confirm delete' : 'Delete'}
               >
                 <Trash2 size={14} strokeWidth={2} />
               </button>
-              <button onClick={onClose} className="w-8 h-8 rounded-xl bg-muted border border-border/60 flex items-center justify-center hover:bg-muted/80 transition-colors cursor-pointer" title="Close">
+              {/* Close button — always visible and prominent */}
+              <button
+                onClick={onClose}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-foreground text-background shadow-md border border-border/60 flex items-center justify-center hover:opacity-90 transition-colors cursor-pointer ml-0.5"
+                title="Close"
+              >
                 <X size={15} strokeWidth={2.5} />
               </button>
             </div>
@@ -272,43 +283,62 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="bg-red-500/10 border-b border-red-500/20 px-4 py-2.5 shrink-0"
+                className="px-4 sm:px-6 py-2 shrink-0 bg-black/20"
               >
-                <p className="text-sm font-semibold text-red-500 text-center">
-                  ⚠️ Click delete again to confirm — this cannot be undone
-                </p>
+                <div className="bg-red-500/10 border border-red-500/20 backdrop-blur-md rounded-[16px] px-4 py-3 shadow-inner">
+                  <p className="text-sm font-semibold text-red-500 text-center flex items-center justify-center gap-2">
+                    <Trash2 size={15} /> Click delete again to confirm — this cannot be undone
+                  </p>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
 
           {/* ─── Body ─── */}
-          <div className="flex-1 overflow-hidden px-4 sm:px-6 py-5 flex flex-col sm:flex-row gap-5 sm:gap-6 md:gap-8 min-h-0">
-            {/* Left: Poster + metadata */}
-            <div className="w-full sm:w-[200px] md:w-[220px] shrink-0 mx-auto sm:mx-0 overflow-y-auto hide-scrollbar">
-              <div className="aspect-[2/3] rounded-2xl overflow-hidden bg-card border border-border/60 relative group shadow-xl">
-                {entry.coverImage ? (
-                  <img src={entry.coverImage} alt={entry.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center bg-muted/30 p-4">
-                    <Film size={32} className="text-muted-foreground/30 mb-2" />
-                    <span className="text-xs text-muted-foreground/50 font-bold uppercase text-center">{entry.title}</span>
+          <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row gap-4 sm:gap-6 md:gap-8 min-h-0">
+            {/* Left: Poster (compact on mobile, full column on sm+) */}
+            <div className="sm:w-[200px] md:w-[220px] shrink-0 sm:overflow-y-auto hide-scrollbar">
+              {/* Mobile: poster + title side by side */}
+              <div className="flex sm:block gap-3">
+                <div className="w-24 sm:w-full aspect-[2/3] rounded-2xl overflow-hidden bg-card border-2 border-border/40 relative group shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] shrink-0">
+                  {entry.coverImage ? (
+                    <img src={entry.coverImage} alt={entry.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-muted/30 p-4">
+                      <Film size={32} className="text-muted-foreground/30 mb-2" />
+                      <span className="text-xs text-muted-foreground/50 font-bold uppercase text-center">{entry.title}</span>
+                    </div>
+                  )}
+                </div>
+                {/* Mobile-only inline title + meta */}
+                <div className="sm:hidden flex flex-col justify-center gap-2 min-w-0 flex-1">
+                  <h2 className="font-display text-xl font-black tracking-tight break-words leading-tight">{entry.title}</h2>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                    {entry.type === 'TV Show' ? 'Series' : entry.type}
+                    {entry.releaseDate ? ` · ${entry.releaseDate.split('-')[0]}` : ''}
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${entry.status === 'Completed' ? 'bg-emerald-500' : entry.status === 'Watching' ? 'bg-primary' : 'bg-amber-500'}`} />
+                    <span className="text-[10px] text-muted-foreground font-medium">{entry.status}</span>
                   </div>
-                )}
+                  {entryFranchise && (
+                    <span className="text-[10px] font-mono text-primary/80 uppercase tracking-wider">📽 {entryFranchise.name}</span>
+                  )}
+                </div>
               </div>
 
               {entryFranchise && (
-                <div className="mt-4 bg-primary/8 border border-primary/20 rounded-xl p-3 text-center">
-                  <Film size={12} className="text-primary mx-auto mb-1" />
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-primary/70">Universe</p>
-                  <p className="text-[13px] font-bold text-foreground mt-0.5">{entryFranchise.name}</p>
+                <div className="hidden sm:block mt-5 bg-primary/10 border border-primary/20 backdrop-blur-sm rounded-[20px] p-4 text-center shadow-sm">
+                  <Film size={14} className="text-primary mx-auto mb-1.5 opacity-80" />
+                  <p className="text-[9px] font-mono uppercase tracking-widest text-primary/70">UNIVERSE</p>
+                  <p className="text-sm font-bold text-foreground mt-1">{entryFranchise.name}</p>
                 </div>
               )}
 
               {/* Rating widget (visible on desktop) */}
-              <div className="hidden sm:block mt-4">
-                {entry.status === 'Completed' ? (
-                  <div className="bg-card border border-border/60 rounded-xl p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Your Rating</p>
+              <div className="hidden sm:block mt-5">
+                  <div className="bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl border border-border/60 rounded-[20px] p-4 shadow-sm text-center">
+                    <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-3">Your Rating</p>
                     <div className="flex flex-wrap gap-0.5">
                       {Array.from({ length: 10 }, (_, i) => i + 1).map((v) => (
                         <button
@@ -330,12 +360,11 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                       <p className="text-center text-sm font-black text-primary mt-2">{displayRating}/10</p>
                     )}
                   </div>
-                ) : null}
               </div>
             </div>
 
             {/* Right: Details / Episodes */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            <div className="flex-1 flex flex-col min-w-0 sm:overflow-hidden">
               {/* Tab switcher */}
               {currentIsEpisodic && (
                 <div className="flex border-b border-border/60 shrink-0 mb-4 gap-6">
@@ -352,53 +381,49 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                 </div>
               )}
 
-              <div className="flex-1 overflow-y-auto pr-1 space-y-5 hide-scrollbar">
+              <div className="flex-1 overflow-y-auto sm:overflow-y-auto pr-1 space-y-4 hide-scrollbar">
                 {/* ─── Details Tab ─── */}
                 {viewTab === 'Details' && (
-                  <div className="space-y-5">
-                    {/* Title + genres */}
-                    <div>
-                      <h2 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight mb-3 break-words">{entry.title}</h2>
-                      <div className="flex flex-wrap gap-2">
+                  <div className="space-y-4">
+                    {/* Title + genres — hidden on mobile (shown in compact hero row above) */}
+                    <div className="hidden sm:block">
+                      <h2 className="font-display text-4xl lg:text-5xl font-black tracking-tight mb-3 break-words leading-none">{entry.title}</h2>
+                      <div className="flex flex-wrap gap-2.5">
                         {entryGenres.map((g) => (
-                          <span key={g} className="bg-muted border border-border/40 text-muted-foreground px-3 py-1 rounded-full text-[10px] font-bold uppercase">{g}</span>
+                          <span key={g} className="bg-card/50 backdrop-blur-sm border border-border/50 text-foreground px-3.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm">{g}</span>
                         ))}
                         {entry.runtime ? (
-                          <span className="bg-muted/50 border border-border/40 text-foreground px-3 py-1 rounded-full text-[10px] font-bold uppercase flex items-center gap-1">
-                            <Clock size={10} /> {formatRuntime(entry.runtime)}{currentIsEpisodic ? '/ep' : ''}
+                          <span className="bg-card/50 backdrop-blur-sm border border-border/50 text-foreground px-3.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1.5">
+                            <Clock size={11} className="text-muted-foreground" /> {formatRuntime(entry.runtime)}{currentIsEpisodic ? '/ep' : ''}
                           </span>
                         ) : null}
                         {entry.releaseDate && (
-                          <span className="bg-muted/50 border border-border/40 text-muted-foreground px-3 py-1 rounded-full text-[10px] font-bold uppercase flex items-center gap-1">
-                            <Calendar size={10} /> {safeDateFormat(entry.releaseDate)}
+                          <span className="bg-card/50 backdrop-blur-sm border border-border/50 text-foreground px-3.5 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1.5">
+                            <Calendar size={11} className="text-muted-foreground" /> {safeDateFormat(entry.releaseDate)}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    {/* Mobile action buttons */}
-                    <div className="flex gap-2 sm:hidden">
-                      <button
-                        onClick={handleToggleFavorite}
-                        className={`flex-1 py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 ${entry.favorite ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-card border-border text-muted-foreground'}`}
-                      >
-                        <Heart size={13} className={entry.favorite ? 'fill-red-500' : ''} /> Fav
-                      </button>
-                      <button onClick={handleEdit} className="flex-1 py-2.5 rounded-xl border border-primary/25 bg-primary/10 text-xs font-bold text-primary flex items-center justify-center gap-1.5">
-                        <Edit2 size={13} /> Edit
-                      </button>
-                      <button
-                        onClick={handleDeleteClick}
-                        className={`flex-1 py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 ${showDeleteConfirm ? 'border-red-500 bg-red-500 text-white' : 'border-red-500/25 bg-red-500/10 text-red-500'}`}
-                      >
-                        <Trash2 size={13} /> {showDeleteConfirm ? 'Sure?' : 'Delete'}
-                      </button>
-                    </div>
+
+
+                    {/* Mobile-only genres/tags compact row */}
+                    {(entryGenres.length > 0 || entry.runtime || entry.releaseDate) && (
+                      <div className="sm:hidden flex flex-wrap gap-1.5">
+                        {entryGenres.slice(0, 3).map((g) => (
+                          <span key={g} className="bg-card/50 border border-border/50 text-foreground px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider">{g}</span>
+                        ))}
+                        {entry.runtime && (
+                          <span className="bg-card/50 border border-border/50 text-foreground px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider flex items-center gap-1">
+                            <Clock size={9} /> {formatRuntime(entry.runtime)}{currentIsEpisodic ? '/ep' : ''}
+                          </span>
+                        )}
+                      </div>
+                    )}
 
                     {/* Rating (mobile) */}
-                    {entry.status === 'Completed' && (
-                      <div className="sm:hidden bg-card border border-border/60 rounded-xl p-4">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Your Rating</p>
+                      <div className="sm:hidden bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl border border-border/60 rounded-[24px] p-5 shadow-sm text-center">
+                        <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-4">Your Rating</p>
                         <div className="flex items-center gap-1">
                           {Array.from({ length: 10 }, (_, i) => i + 1).map((v) => (
                             <button key={v} type="button" onClick={() => handleSetRating(v)}
@@ -411,57 +436,59 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                         </div>
                         {entry.rating > 0 && <p className="text-center text-lg font-black text-primary mt-2">{displayRating}/10</p>}
                       </div>
-                    )}
 
                     {/* Episode progress */}
                     {currentIsEpisodic && (
-                      <div className="bg-card border border-border/60 rounded-2xl p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Progress</h3>
+                      <div className="bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl border border-border/60 rounded-3xl p-5 sm:p-6 shadow-sm relative overflow-hidden">
+                        {/* Ambient glow in corner */}
+                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 blur-3xl rounded-full pointer-events-none" />
+                        
+                        <div className="flex items-center justify-between mb-5 relative z-10">
+                          <h3 className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">PROGRESS // TRACKER</h3>
                           {watchedRuntimeMinutes > 0 && (
-                            <span className="text-xs font-semibold text-primary flex items-center gap-1">
-                              <Clock size={11} /> {formatRuntime(watchedRuntimeMinutes)} watched
+                            <span className="text-[11px] font-bold text-primary flex items-center gap-1.5 bg-primary/10 px-2.5 py-1 rounded-full border border-primary/20">
+                              <Clock size={11} /> {formatRuntime(watchedRuntimeMinutes)} total
                             </span>
                           )}
                         </div>
 
                         {/* Progress bar */}
                         {entry.episodesTotal && entry.episodesTotal > 0 && (
-                          <div className="mb-3">
-                            <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-                              <span>{episodesWatched}/{entry.episodesTotal} episodes</span>
-                              <span className="font-semibold text-foreground">{progressPercent}%</span>
+                          <div className="mb-5 relative z-10">
+                            <div className="flex justify-between text-[11px] font-bold text-muted-foreground mb-2">
+                              <span>{episodesWatched} / {entry.episodesTotal} EPISODES</span>
+                              <span className="text-foreground">{progressPercent}%</span>
                             </div>
-                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div className="h-2.5 bg-black/20 dark:bg-white/5 rounded-full overflow-hidden border border-border/40 shadow-inner">
                               <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${progressPercent}%` }}
-                                transition={{ duration: 0.5, ease: 'easeOut' }}
-                                className={`h-full rounded-full ${progressPercent === 100 ? 'bg-green-500' : 'bg-primary'}`}
+                                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                                className={`h-full rounded-full shadow-[0_0_10px_rgba(var(--primary),0.5)] ${progressPercent === 100 ? 'bg-green-500 shadow-green-500/50' : 'bg-primary'}`}
                               />
                             </div>
                           </div>
                         )}
 
                         {/* +/-1 episode controls */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-4 relative z-10">
                           <button
                             onClick={handleDecrementEpisode}
                             disabled={episodesWatched === 0 || isSaving}
-                            className="w-10 h-10 rounded-xl border border-border/60 bg-muted flex items-center justify-center hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                            className="w-12 h-12 rounded-xl border border-border/60 bg-card/80 backdrop-blur-md flex items-center justify-center hover:bg-muted/80 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-sm"
                           >
-                            <Minus size={16} />
+                            <Minus size={18} />
                           </button>
-                          <div className="flex-1 text-center">
-                            <p className="text-2xl font-black text-foreground">{episodesWatched}</p>
-                            <p className="text-[10px] text-muted-foreground">of {entry.episodesTotal || '?'} eps</p>
+                          <div className="flex-1 text-center bg-black/5 dark:bg-white/5 rounded-xl py-2 border border-border/40 shadow-inner">
+                            <p className="text-3xl font-display font-black text-foreground tracking-tighter leading-none">{episodesWatched}</p>
+                            <p className="text-[9px] font-mono tracking-widest uppercase text-muted-foreground mt-1">WATCHED</p>
                           </div>
                           <button
                             onClick={handleIncrementEpisode}
                             disabled={isSaving}
-                            className="w-10 h-10 rounded-xl border border-primary/30 bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-colors cursor-pointer disabled:opacity-50"
+                            className="w-12 h-12 rounded-xl border-2 border-primary/40 bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.4)] flex items-center justify-center hover:opacity-90 transition-all cursor-pointer disabled:opacity-50"
                           >
-                            <Plus size={16} />
+                            <Plus size={18} strokeWidth={2.5} />
                           </button>
                         </div>
 
@@ -475,15 +502,15 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
 
                     {/* Review */}
                     {entry.review && (
-                      <div className="rounded-xl border border-border/50 bg-muted/20 p-4">
-                        <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Review</h3>
+                      <div className="rounded-[24px] border border-border/60 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl p-5 shadow-sm">
+                        <h3 className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-3">YOUR NOTES</h3>
                         <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{entry.review}</p>
                       </div>
                     )}
 
                     {/* Status */}
                     {entry.status && (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-center gap-2 py-3 bg-muted/30 rounded-full border border-border/40 w-max px-6">
                         {entry.status === 'Completed' ? (
                           <CheckCircle2 size={16} className="text-green-500" />
                         ) : entry.status === 'Watching' ? (
@@ -491,7 +518,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                         ) : (
                           <Clock size={16} className="text-amber-500" />
                         )}
-                        <span className="text-sm font-semibold text-muted-foreground">{entry.status}</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{entry.status}</span>
                       </div>
                     )}
                   </div>
@@ -507,14 +534,14 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                           <button
                             key={season}
                             onClick={() => setSelectedSeason(season)}
-                            className={`px-4 py-2 rounded-full text-xs font-bold border transition-all cursor-pointer ${selectedSeason === season ? 'bg-primary/10 text-primary border-primary/30 shadow-sm' : 'bg-muted border-border/50 text-muted-foreground hover:text-foreground'}`}
+                            className={`px-4 py-2 rounded-xl text-xs font-display uppercase font-bold border transition-all cursor-pointer ${selectedSeason === season ? 'bg-primary/10 text-primary border-primary' : 'bg-muted border-border/50 text-muted-foreground hover:text-foreground'}`}
                           >
                             Season {season}
                           </button>
                         ))}
                         <button
                           onClick={handleOpenAddEpisode}
-                          className="px-4 py-2 rounded-full text-xs font-bold border border-dashed border-border/60 text-muted-foreground hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer flex items-center gap-1"
+                          className="px-4 py-2 rounded-xl text-xs font-display uppercase font-bold border border-dashed border-border/60 text-muted-foreground hover:text-primary hover:border-primary hover:bg-primary/5 transition-all cursor-pointer flex items-center gap-1"
                         >
                           <Plus size={12} /> Add Episode
                         </button>
@@ -590,11 +617,11 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                 initial={{ scale: 0.94, y: 16 }}
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.94, y: 16 }}
-                className="relative w-full max-w-sm bg-card border border-border/80 rounded-2xl shadow-2xl p-6 z-10"
+                className="relative w-full max-w-sm bg-card border border-border/80 rounded-[24px] shadow-2xl p-6 z-10"
               >
                 <div className="flex items-center justify-between mb-5">
-                  <h3 className="text-base font-bold text-foreground">Add New Episode</h3>
-                  <button onClick={() => setShowAddEpisode(false)} className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+                  <h3 className="text-base font-display uppercase tracking-widest font-bold text-foreground">Add Episode</h3>
+                  <button onClick={() => setShowAddEpisode(false)} className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
                     <X size={14} />
                   </button>
                 </div>

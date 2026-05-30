@@ -68,8 +68,8 @@ export function normalizeMediaType(type: unknown): MediaType {
 export function normalizeWatchStatus(status: unknown): WatchStatus {
   const value = String(status || '').trim().toLowerCase();
   if (value === 'watching' || value === 'in progress') return 'Watching';
-  if (value === 'plan to watch' || value === 'planned' || value === 'watchlist') return 'Plan to Watch';
-  return 'Completed';
+  if (value === 'completed' || value === 'finished' || value === 'done') return 'Completed';
+  return 'Plan to Watch';
 }
 
 export function getWatchedRuntimeMinutes(entry: Partial<MediaEntry>): number {

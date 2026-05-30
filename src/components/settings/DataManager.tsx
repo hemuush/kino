@@ -5,8 +5,9 @@ import JsonImporter from '@/components/settings/JsonImporter';
 import { useMedia } from '@/context/MediaContext';
 import { useAuth } from '@/context/AuthContext';
 import { getBackupMetadataFromDrive, BackupMetadata, TokenExpiredError } from '@/lib/googleDrive';
-import { Trash2, AlertTriangle, HardDriveUpload, Database, RefreshCw, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Trash2, AlertTriangle, Database, RefreshCw, CheckCircle, Clock, AlertCircle, Cloud, Server, Box } from 'lucide-react';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 function formatBytes(bytes: number) {
   if (!bytes || bytes <= 0) return '0 B';
@@ -24,7 +25,6 @@ function formatLocalStorageSize() {
       const val = localStorage.getItem(k);
       if (val) totalChars += val.length;
     });
-    // Each UTF-16 char is ~2 bytes
     return formatBytes(totalChars * 2);
   } catch {
     return 'Unknown';
@@ -43,13 +43,13 @@ function timeAgo(timestamp: number | null): string {
 }
 
 export function DataManager() {
-  const { wipeAllData, syncStatus, lastSyncedAt, entries, genres, franchises } = useMedia();
+  const { wipeAllData, importData, syncStatus, lastSyncedAt, entries, genres, franchises } = useMedia();
   const { accessToken, logout } = useAuth();
   const [backupMetadata, setBackupMetadata] = useState<BackupMetadata | null>(null);
   const [isMetadataLoading, setIsMetadataLoading] = useState(false);
 
   const localSize = formatLocalStorageSize();
-  const entryCount = entries.length;
+  const entryCount = Object.keys(entries || {}).length;
 
   const loadBackupMetadata = useCallback(async () => {
     if (!accessToken) return;
@@ -74,7 +74,6 @@ export function DataManager() {
     });
   }, [loadBackupMetadata]);
 
-  // Reload metadata after successful sync
   useEffect(() => {
     if (syncStatus === 'synced') {
       Promise.resolve().then(() => {
@@ -102,145 +101,157 @@ export function DataManager() {
     ? new Date(backupMetadata.modifiedTime).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
     : 'Not synced yet';
 
-  const syncIcon = syncStatus === 'synced'
-    ? <CheckCircle size={16} className="text-green-500" />
-    : syncStatus === 'syncing'
-    ? <RefreshCw size={16} className="text-primary animate-spin" />
-    : syncStatus === 'error'
-    ? <AlertCircle size={16} className="text-red-500" />
-    : <Clock size={16} className="text-muted-foreground" />;
-
-  const syncLabel = syncStatus === 'synced'
-    ? `Synced · ${timeAgo(lastSyncedAt)}`
-    : syncStatus === 'syncing'
-    ? 'Syncing to Drive...'
-    : syncStatus === 'error'
-    ? 'Sync failed — check connection'
-    : 'Not synced yet';
+  const isSynced = syncStatus === 'synced';
+  const isSyncing = syncStatus === 'syncing';
+  const isError = syncStatus === 'error';
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 gap-6 overflow-y-auto pr-2 pb-10 hide-scrollbar">
-
-      {/* ─── Sync Status Banner ─── */}
-      <section className="shrink-0 rounded-2xl border px-4 py-3 flex items-center justify-between gap-3"
-        style={{
-          borderColor: syncStatus === 'synced' ? 'rgba(34,197,94,0.2)' : syncStatus === 'error' ? 'rgba(239,68,68,0.2)' : 'rgba(41,151,255,0.2)',
-          background: syncStatus === 'synced' ? 'rgba(34,197,94,0.05)' : syncStatus === 'error' ? 'rgba(239,68,68,0.05)' : 'rgba(41,151,255,0.05)',
-        }}
+    <div className="flex flex-col flex-1 gap-8 pb-16">
+      
+      {/* Premium Dashboard Stats */}
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
       >
-        <div className="flex items-center gap-3 min-w-0">
-          {syncIcon}
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground">{syncLabel}</p>
-            <p className="text-[11px] text-muted-foreground">Auto-syncs after every change</p>
-          </div>
-        </div>
-        <div className="text-right shrink-0">
-          <p className="text-xs font-bold text-muted-foreground">{entryCount} entries</p>
-          <p className="text-[11px] text-muted-foreground">{localSize} local</p>
-        </div>
-      </section>
-
-      {/* ─── Google Drive Backup ─── */}
-      <section className="shrink-0 bg-card glass border border-border/60 rounded-3xl p-6 shadow-sm">
-        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-primary/10 rounded-xl text-primary">
-              <Database size={20} />
+        {[
+          { label: 'Total Entries', value: entryCount, icon: Database, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+          { label: 'Genres', value: genres.length, icon: Box, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+          { label: 'Sagas', value: franchises.length, icon: Cloud, color: 'text-sky-500', bg: 'bg-sky-500/10' },
+          { label: 'Local Cache', value: localSize, icon: Server, color: 'text-emerald-500', bg: 'bg-emerald-500/10' }
+        ].map((stat, i) => (
+          <div key={i} className="rounded-[24px] border border-border/80 bg-card/65 dark:bg-[#0c0c0d]/80 p-5 backdrop-blur-xl shadow-sm flex items-center gap-4">
+            <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color}`}>
+              <stat.icon size={24} />
             </div>
             <div>
-              <h3 className="text-lg font-bold font-display text-foreground">Google Drive Backup</h3>
-              <p className="text-sm text-muted-foreground">Your data is automatically saved to your private Drive folder.</p>
+              <p className="text-[10px] font-mono tracking-[0.2em] text-muted-foreground uppercase font-bold">{stat.label}</p>
+              <p className="text-3xl font-black text-foreground mt-1 font-display">{stat.value}</p>
             </div>
+          </div>
+        ))}
+      </motion.div>
+
+      {/* Sync Status Banner */}
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+        className={`relative overflow-hidden rounded-[24px] border px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 backdrop-blur-xl shadow-sm`}
+        style={{
+          borderColor: isSynced ? 'rgba(34,197,94,0.3)' : isError ? 'rgba(239,68,68,0.3)' : 'rgba(41,151,255,0.3)',
+          background: isSynced ? 'rgba(34,197,94,0.08)' : isError ? 'rgba(239,68,68,0.08)' : 'rgba(41,151,255,0.08)',
+        }}
+      >
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-[80px] -z-10 mix-blend-overlay"></div>
+        <div className="flex items-center gap-4 z-10">
+          <div className={`p-3 rounded-full ${isSynced ? 'bg-green-500/20 text-green-500' : isError ? 'bg-red-500/20 text-red-500' : 'bg-blue-500/20 text-blue-500'}`}>
+            {isSynced ? <CheckCircle size={24} /> : isSyncing ? <RefreshCw size={24} className="animate-spin" /> : isError ? <AlertCircle size={24} /> : <Clock size={24} />}
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-foreground">
+              {isSynced ? 'All changes saved to cloud' : isSyncing ? 'Syncing to Google Drive...' : isError ? 'Sync failed. Please check connection.' : 'Waiting for sync...'}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isSynced ? 'bg-green-400' : isSyncing ? 'bg-blue-400' : 'bg-red-400'}`}></span>
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${isSynced ? 'bg-green-500' : isSyncing ? 'bg-blue-500' : 'bg-red-500'}`}></span>
+              </span>
+              Auto-syncs invisibly in the background
+            </p>
+          </div>
+        </div>
+        <div className="text-right shrink-0 z-10 hidden sm:block">
+          <p className="text-[10px] font-mono tracking-[0.2em] text-muted-foreground uppercase font-bold">Last Synced</p>
+          <p className="text-sm font-semibold text-foreground mt-1">{isSynced ? timeAgo(lastSyncedAt) : 'N/A'}</p>
+        </div>
+      </motion.div>
+
+      {/* Google Drive Backup */}
+      <motion.section 
+        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+        className="rounded-[24px] border border-border/80 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl shadow-sm p-8"
+      >
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
+          <div>
+            <h3 className="font-display text-2xl font-bold tracking-tight text-foreground">Cloud Storage</h3>
+            <p className="text-sm text-muted-foreground mt-2">Manage your chunked architecture data in Google Drive.</p>
           </div>
           <button
             onClick={loadBackupMetadata}
             disabled={isMetadataLoading || !accessToken}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-50 cursor-pointer"
+            className="rounded-full border border-foreground/15 bg-foreground/5 hover:bg-foreground/10 px-6 py-3 text-sm font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            <RefreshCw size={15} className={isMetadataLoading ? 'animate-spin' : ''} />
-            Refresh
+            <RefreshCw size={16} className={isMetadataLoading ? 'animate-spin' : ''} />
+            Refresh Data
           </button>
         </header>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Drive Size</p>
-            <p className="mt-2 text-2xl font-black text-foreground">
-              {isMetadataLoading ? (
-                <span className="text-muted-foreground animate-pulse">...</span>
-              ) : backupMetadata ? (
-                formatBytes(Number(backupMetadata.size) || 0)
-              ) : (
-                <span className="text-sm text-muted-foreground font-normal">No backup found</span>
-              )}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Local Cache</p>
-            <p className="mt-2 text-2xl font-black text-foreground">{localSize}</p>
-          </div>
-          <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Last Cloud Sync</p>
-            <p className="mt-2 text-sm font-semibold text-foreground break-words">
-              {isMetadataLoading ? 'Checking...' : modifiedLabel}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">kino-backup.json</p>
-          </div>
-        </div>
-
-        {/* Library stats */}
-        <div className="mt-4 grid grid-cols-3 gap-3">
-          {[
-            { label: 'Entries', value: entryCount },
-            { label: 'Genres', value: genres.length },
-            { label: 'Sagas', value: franchises.length },
-          ].map((stat) => (
-            <div key={stat.label} className="rounded-xl bg-muted/30 px-4 py-3 text-center">
-              <p className="text-xl font-black text-foreground">{stat.value}</p>
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">{stat.label}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="rounded-[20px] border border-border/40 bg-background/40 p-6 flex flex-col justify-between h-[140px]">
+            <div>
+              <p className="text-[10px] font-mono tracking-[0.2em] text-muted-foreground uppercase font-bold">Drive Size</p>
+              <div className="mt-2 text-4xl font-black text-foreground font-display">
+                {isMetadataLoading ? (
+                  <span className="animate-pulse text-muted-foreground">--</span>
+                ) : backupMetadata ? (
+                  formatBytes(Number(backupMetadata.size) || 0)
+                ) : (
+                  <span className="text-lg text-muted-foreground font-normal">No backup found</span>
+                )}
+              </div>
             </div>
-          ))}
+            <p className="mt-auto text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Chunked Architecture</p>
+          </div>
+          <div className="rounded-[20px] border border-border/40 bg-background/40 p-6 flex flex-col justify-between h-[140px]">
+            <div>
+              <p className="text-[10px] font-mono tracking-[0.2em] text-muted-foreground uppercase font-bold">Cloud Modified</p>
+              <div className="mt-3 text-lg font-bold text-foreground">
+                {isMetadataLoading ? 'Checking...' : modifiedLabel}
+              </div>
+            </div>
+            <p className="mt-auto text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Synced from current device</p>
+          </div>
         </div>
-      </section>
+      </motion.section>
 
-      {/* ─── Import Section ─── */}
-      <section className="shrink-0 bg-card glass border border-border/60 rounded-3xl p-6 shadow-sm">
-        <header className="flex items-center gap-3 mb-6">
-          <div className="p-2.5 bg-primary/10 rounded-xl text-primary">
-            <HardDriveUpload size={20} />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold font-display text-foreground">Import Backup</h3>
-            <p className="text-sm text-muted-foreground">Restore your library from a JSON file.</p>
-          </div>
+      {/* Import Section */}
+      <motion.section 
+        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+        className="rounded-[24px] border border-border/80 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl shadow-sm p-8"
+      >
+        <header className="mb-6">
+          <h3 className="font-display text-2xl font-bold tracking-tight text-foreground">Import Manual Backup</h3>
+          <p className="text-sm text-muted-foreground mt-2">Restore your library from a raw JSON export file.</p>
         </header>
         <JsonImporter />
-      </section>
+      </motion.section>
 
-      {/* ─── Danger Zone ─── */}
-      <section className="shrink-0 bg-card border border-red-500/30 rounded-3xl p-6 shadow-sm relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-1 h-full bg-red-500" />
-        <header className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-red-500/10 rounded-xl text-red-500">
-            <AlertTriangle size={20} />
+
+
+      {/* Danger Zone */}
+      <motion.section 
+        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+        className="rounded-[24px] border border-red-500/20 bg-red-500/5 backdrop-blur-xl p-8 relative overflow-hidden"
+      >
+        <div className="absolute top-0 left-0 w-2 h-full bg-red-500/80"></div>
+        <header className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div>
+            <h3 className="font-display text-2xl font-bold tracking-tight text-red-500 flex items-center gap-3">
+              <AlertTriangle size={24} />
+              Danger Zone
+            </h3>
+            <p className="text-sm text-red-400/80 mt-2 max-w-xl">
+              This action will permanently delete all your entries, genres, and sagas from this device and your Google Drive. 
+              Ensure you have a manual export if you wish to retain your data.
+            </p>
           </div>
-          <h3 className="text-lg font-bold font-display text-red-500">Danger Zone</h3>
+          <button
+            onClick={handleWipeData}
+            className="rounded-full bg-red-500 text-white hover:bg-red-600 transition px-6 py-3.5 text-sm font-bold flex items-center justify-center gap-2 shrink-0 shadow-sm"
+          >
+            <Trash2 size={18} />
+            Wipe All Data
+          </button>
         </header>
-
-        <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-          This action will <b>permanently delete</b> all your entries, genres, and sagas from this device and your Google Drive.
-          Ensure you have a manual export if you wish to retain your data.
-        </p>
-
-        <button
-          onClick={handleWipeData}
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-2.5 px-6 rounded-xl transition-colors cursor-pointer text-sm shadow-sm"
-        >
-          <Trash2 size={16} />
-          Wipe All Data Permanently
-        </button>
-      </section>
+      </motion.section>
     </div>
   );
 }

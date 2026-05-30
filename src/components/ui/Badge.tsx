@@ -21,7 +21,7 @@ export function Badge({ children, variant = 'muted', className = '' }: BadgeProp
 
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase border select-none ${variantStyles[variant]} ${className}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-none text-[10px] font-display font-semibold tracking-wider uppercase border select-none ${variantStyles[variant]} ${className}`}
     >
       {children}
     </span>

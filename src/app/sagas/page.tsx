@@ -1,25 +1,10 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { 
-  ArrowLeft, 
-  Calendar, 
-  Clock, 
-  Film, 
-  Layers3, 
-  Star, 
-  Tv, 
-  Search, 
-  ChevronRight, 
-  ChevronLeft,
-  Award, 
-  Clock3,
-  Edit3,
-  BookOpen
-} from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { ArrowLeft, Star, Film, Clock, Search, ChevronRight } from 'lucide-react';
 import { useMedia } from '@/context/MediaContext';
-import { MediaEntry, formatRuntime, getWatchedRuntimeMinutes, isEpisodic } from '@/lib/db';
+import { MediaEntry, formatRuntime } from '@/lib/db';
 import { PageLoader } from '@/components/ui/Loader';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
@@ -31,26 +16,24 @@ function getYear(dateString?: string) {
 }
 
 function statusTextColor(status?: string) {
-  if (status === 'Completed') return 'text-emerald-500';
-  if (status === 'Watching') return 'text-blue-500';
-  return 'text-amber-500';
+  if (status === 'Completed') return 'text-emerald-400';
+  if (status === 'Watching') return 'text-blue-400';
+  return 'text-amber-400';
+}
+
+function statusDotColor(status?: string) {
+  if (status === 'Completed') return 'bg-emerald-500 shadow-[0_0_8px_#10b981]';
+  if (status === 'Watching') return 'bg-blue-500 shadow-[0_0_8px_#3b82f6]';
+  return 'bg-amber-500 shadow-[0_0_8px_#f59e0b]';
 }
 
 export default function SagasPage() {
   const { entries, franchises, isLoading } = useMedia();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [selectedSaga, setSelectedSaga] = useState<string | null>(null);
-  const [selectedMovie, setSelectedMovie] = useState<MediaEntry | null>(null);
-  const [mobileView, setMobileView] = useState<'timeline' | 'details'>('timeline');
   const queryParam = searchParams.get('q') || '';
-  const [searchTerm, setSearchTerm] = useState(queryParam);
-  const [prevQueryParam, setPrevQueryParam] = useState(queryParam);
-
-  if (queryParam !== prevQueryParam) {
-    setPrevQueryParam(queryParam);
-    setSearchTerm(queryParam);
-  }
 
   const groupedSagas = useMemo(() => {
     const groups: Record<string, MediaEntry[]> = {};
@@ -84,7 +67,7 @@ export default function SagasPage() {
   const sagaNames = useMemo(() => Object.keys(groupedSagas).sort(), [groupedSagas]);
 
   const filteredSagaNames = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
+    const query = queryParam.trim().toLowerCase();
     if (!query) return sagaNames;
     return sagaNames.filter((name) => {
       const items = groupedSagas[name] || [];
@@ -94,494 +77,263 @@ export default function SagasPage() {
       ].join(' ').toLowerCase();
       return query.split(/\s+/).every((token) => haystack.includes(token));
     });
-  }, [groupedSagas, sagaNames, searchTerm]);
+  }, [groupedSagas, sagaNames, queryParam]);
 
   const currentSagaItems = selectedSaga ? groupedSagas[selectedSaga] || [] : [];
-
-  // Stats for the active saga
-  const sagaTotalRuntime = currentSagaItems.reduce((total, item) => total + getWatchedRuntimeMinutes(item), 0);
   const sagaRawRuntime = currentSagaItems.reduce((total, item) => total + (item.runtime || 0), 0);
-  const totalSagaEntries = Object.values(groupedSagas).reduce((total, items) => total + items.length, 0);
 
-  // Navigation for active saga
-  const currentIndex = selectedMovie ? currentSagaItems.findIndex((item) => item.id === selectedMovie.id) : -1;
-  const prevMovie = currentIndex > 0 ? currentSagaItems[currentIndex - 1] : null;
-  const nextMovie = currentIndex >= 0 && currentIndex < currentSagaItems.length - 1 ? currentSagaItems[currentIndex + 1] : null;
-
-  const handleSelectSaga = (saga: string) => {
-    setSelectedSaga(saga);
-    setSelectedMovie(groupedSagas[saga][0] || null);
-    setMobileView('timeline');
-  };
-
-  const handleCloseSaga = () => {
-    setSelectedSaga(null);
-    setSelectedMovie(null);
-  };
+  const handleSelectSaga = (saga: string) => setSelectedSaga(saga);
+  const handleCloseSaga = () => setSelectedSaga(null);
 
   if (isLoading) return <PageLoader text="Loading your Sagas..." />;
 
   return (
-    <div className="absolute inset-0 bg-[#08090c] text-slate-200 overflow-hidden flex flex-col font-sans selection:bg-white/10">
+    <div className="absolute inset-0 overflow-y-auto bg-background text-foreground font-sans select-none hide-scrollbar pb-32 transition-colors duration-500">
+      {/* Premium Backing */}
+      <div className="fixed inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.06)_1px,transparent_1px)] dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none opacity-100 z-0" />
       
-      {/* Subtle single background glow to keep it clean */}
-      <div className="absolute top-0 right-0 w-[40%] h-[30%] bg-white/[0.01] rounded-full blur-[120px] pointer-events-none" />
+      {/* Ambient glowing orbs */}
+      <div className="fixed top-0 right-1/4 w-[50%] h-[40%] bg-primary/5 rounded-full blur-[140px] pointer-events-none" />
+      <div className="fixed bottom-1/4 left-0 w-[40%] h-[30%] bg-purple-500/5 rounded-full blur-[140px] pointer-events-none" />
 
-      {/* ─── Main Content Wrapper ─── */}
-      <div className="flex-1 flex overflow-hidden relative z-10">
+      <div className="mx-auto w-full max-w-[2400px] px-4 sm:px-8 lg:px-12 py-4 sm:py-6 relative z-10">
         
-        {/* ─── LEFT PANEL: Timeline Sidebar (Desktop only) ─── */}
-        <AnimatePresence>
-          {selectedSaga && (
-            <motion.aside
-              initial={{ x: -280, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -280, opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className="hidden md:flex md:relative md:max-w-[260px] lg:max-w-[300px] flex-col bg-[#0b0c10] border-r border-white/5 shrink-0"
+        <AnimatePresence mode="wait">
+          {!selectedSaga ? (
+            <motion.div
+              key="grid-view"
+              initial={{ opacity: 0, filter: 'blur(10px)', y: 20 }}
+              animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
+              exit={{ opacity: 0, filter: 'blur(10px)', y: -20 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="space-y-8"
             >
-              {/* Header */}
-              <div className="px-5 py-5 border-b border-white/5 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-3 min-w-0">
-                  <button
-                    onClick={handleCloseSaga}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/[0.03] border border-white/5 text-slate-450 hover:bg-white/[0.08] hover:text-white transition-all shrink-0 active:scale-95"
-                  >
-                    <ArrowLeft size={14} />
-                  </button>
-                  <div className="min-w-0">
-                    <h2 className="font-bold text-[14px] text-slate-100 truncate leading-tight">{selectedSaga}</h2>
-                    <p className="text-[9px] text-slate-500 font-bold mt-0.5 tracking-wider uppercase">{currentSagaItems.length} Entries</p>
-                  </div>
-                </div>
-              </div>
 
-              {/* Chronological List */}
-              <div className="flex-1 overflow-y-auto px-3 py-5 space-y-2 relative custom-scrollbar">
-                {/* Minimal Vertical Line */}
-                <div className="absolute left-[26px] top-6 bottom-6 w-[1px] bg-white/5 pointer-events-none" />
 
-                {currentSagaItems.map((media, index) => {
-                  const isActive = selectedMovie?.id === media.id;
-                  
-                  return (
-                    <div key={media.id || index} className="flex gap-3 relative group">
-                      
-                      {/* Timeline Dot */}
-                      <div className="relative flex flex-col items-center shrink-0 mt-3 z-10 w-7">
-                        <button
-                          onClick={() => setSelectedMovie(media)}
-                          className={`w-[6px] h-[6px] rounded-full transition-all duration-300 ${
-                            isActive
-                              ? 'bg-white scale-125 shadow-[0_0_8px_rgba(255,255,255,0.8)]'
-                              : 'bg-slate-800 hover:bg-slate-500'
-                          }`}
-                        />
-                        <span className="text-[8px] font-bold text-slate-655 mt-1.5">{(index + 1).toString().padStart(2, '0')}</span>
-                      </div>
-
-                      {/* Card Content */}
-                      <button
-                        onClick={() => setSelectedMovie(media)}
-                        className={`flex-1 flex items-center gap-3 rounded-xl p-2 text-left border transition-all duration-200 relative overflow-hidden ${
-                          isActive
-                            ? 'bg-white/[0.03] border-white/10 pl-2.5'
-                            : 'bg-transparent border-transparent hover:bg-white/[0.01]'
-                        }`}
-                      >
-                        <div className="relative w-8 h-11 shrink-0 rounded-md overflow-hidden bg-slate-900 border border-white/5">
-                          {media.coverImage ? (
-                            <img src={media.coverImage} alt="" className="h-full w-full object-cover" />
-                          ) : (
-                            <div className="h-full w-full bg-slate-800" />
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className={`text-xs font-bold truncate transition-colors ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-200'}`}>
-                            {media.title}
-                          </p>
-                          <p className="text-[9px] text-slate-500 font-semibold mt-0.5">
-                            {getYear(media.releaseDate) || 'TBA'}
-                          </p>
-                        </div>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Stats Footer */}
-              {sagaRawRuntime > 0 && (
-                <div className="shrink-0 p-4 border-t border-white/5 bg-[#0b0c10]">
-                  <div className="grid grid-cols-2 gap-2 text-center text-[10px] text-slate-500">
-                    <div>
-                      <p className="font-medium">Total Time</p>
-                      <p className="font-bold text-slate-300 mt-0.5">{formatRuntime(sagaRawRuntime)}</p>
-                    </div>
-                    <div className="border-l border-white/5">
-                      <p className="font-medium">Watched</p>
-                      <p className="font-bold text-slate-300 mt-0.5">
-                        {sagaTotalRuntime > 0 ? formatRuntime(sagaTotalRuntime) : '—'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </motion.aside>
-          )}
-        </AnimatePresence>
-
-        {/* ─── RIGHT PANEL: Main Content ─── */}
-        <main className="flex-1 flex flex-col min-w-0 overflow-y-auto relative z-10 custom-scrollbar">
-          
-          {/* 1. Sagas Grid View (Overview) */}
-          {!selectedSaga && (
-            <div className="w-full max-w-[1400px] mx-auto p-6 sm:p-10 lg:p-16 space-y-12">
-              
-              {/* Minimal Typography Header */}
-              <div className="space-y-4 text-left border-b border-white/5 pb-8">
-                <div className="inline-flex items-center gap-1.5 text-slate-500 text-[10px] font-bold uppercase tracking-widest">
-                  <Layers3 size={11} /> Library universes
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
-                  Franchises &amp; Sagas
-                </h1>
-                <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
-                  A unified view of chronological cinematic timelines, grouped automatically by franchises.
-                </p>
-              </div>
-
-              {/* Search Bar */}
-              <div className="max-w-md w-full relative group border-b border-white/5 pb-1">
-                <Search size={14} className="absolute left-1 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-slate-450 transition-colors" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Filter timelines..."
-                  className="w-full pl-7 pr-4 py-2 bg-transparent text-slate-200 placeholder-slate-600 text-sm outline-none transition-all duration-300"
-                />
-              </div>
-
-              {/* Minimal Grid display */}
-              {sagaNames.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center border border-white/5 rounded-2xl bg-white/[0.01]">
-                  <p className="text-slate-450 text-xs font-semibold">No Franchises Configured</p>
-                  <p className="text-slate-600 text-[11px] mt-1 max-w-xs">
-                    Tag a &quot;Saga / Franchise&quot; name when editing your movies or series to populate this library view.
-                  </p>
-                </div>
-              ) : filteredSagaNames.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <p className="text-slate-550 text-xs font-medium">No matches found for &quot;{searchTerm}&quot;</p>
-                  <button onClick={() => setSearchTerm('')} className="mt-2 text-slate-350 text-[11px] font-semibold hover:underline">
+              {filteredSagaNames.length === 0 && queryParam ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center border border-dashed border-border/40 rounded-[32px] bg-card/10 backdrop-blur-md">
+                  <Search size={40} className="text-muted-foreground/30 mb-6" />
+                  <p className="text-muted-foreground text-sm font-semibold">No matches found for &quot;{queryParam}&quot;</p>
+                  <button onClick={() => router.replace('/sagas')} className="mt-4 text-primary text-xs font-bold uppercase tracking-widest hover:underline cursor-pointer">
                     Clear Filter
                   </button>
                 </div>
+              ) : sagaNames.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 text-center border border-dashed border-border/40 rounded-[32px] bg-card/10 backdrop-blur-md">
+                  <Film size={48} className="text-muted-foreground/30 mb-6" />
+                  <p className="text-foreground text-lg font-bold">No franchises configured yet</p>
+                  <p className="text-muted-foreground/60 text-sm mt-3 max-w-sm leading-relaxed">
+                    Tag a &quot;Saga / Franchise&quot; name when creating or editing your media items to build customized chronological timelines here.
+                  </p>
+                </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6">
                   {filteredSagaNames.map((saga, i) => {
                     const items = groupedSagas[saga];
                     const totalTime = items.reduce((t, m) => t + (m.runtime || 0), 0);
                     const latestYear = Math.max(0, ...items.map(m => Number(getYear(m.releaseDate) || 0)));
-
+                    
                     return (
                       <motion.button
                         key={saga}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: Math.min(i, 12) * 0.02, duration: 0.3, ease: "easeOut" }}
+                        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        transition={{ delay: Math.min(i, 15) * 0.04, duration: 0.4, type: 'spring', stiffness: 100 }}
                         onClick={() => handleSelectSaga(saga)}
-                        className="group flex flex-col justify-between p-5 rounded-2xl border border-white/5 bg-slate-900/10 hover:bg-slate-900/30 hover:border-white/10 transition-all duration-300 relative overflow-hidden text-left"
+                        className="group relative flex flex-col text-left overflow-hidden rounded-[32px] border border-border/50 bg-card/40 dark:bg-[#0c0c0d]/60 backdrop-blur-2xl hover:border-primary/40 transition-all duration-500 hover:shadow-[0_8px_32px_-12px_rgba(var(--primary),0.2)] active:scale-[0.98]"
                       >
-                        <div className="space-y-4">
-                          {/* Single elegant poster thumbnail */}
-                          <div className="w-full aspect-[16/10] rounded-xl overflow-hidden bg-slate-950/80 border border-white/5 relative shadow-inner">
-                            {items[0]?.coverImage ? (
-                              <img 
-                                src={items[0].coverImage} 
-                                alt="" 
-                                className="w-full h-full object-cover grayscale opacity-40 group-hover:grayscale-0 group-hover:opacity-75 transition-all duration-500" 
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-slate-800 text-[10px] font-bold">NO POSTER</div>
-                            )}
-                          </div>
+                        {/* Shimmer effect */}
+                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 pointer-events-none z-20 overflow-hidden transition-opacity duration-500">
+                          <div className="absolute -inset-x-32 -inset-y-16 bg-gradient-to-tr from-transparent via-white/10 to-transparent rotate-12 -translate-x-full group-hover:translate-x-full transition-transform duration-[1.5s] ease-out" />
+                        </div>
 
-                          <div className="space-y-1">
-                            <h3 className="font-bold text-sm text-slate-200 group-hover:text-white transition-colors truncate">
-                              {saga}
-                            </h3>
-                            <p className="text-[11px] text-slate-500">
-                              {items.length} {items.length === 1 ? 'entry' : 'entries'}
-                            </p>
+                        {/* Cinematic Image Cover */}
+                        <div className="relative w-full aspect-[21/9] sm:aspect-[16/10] overflow-hidden bg-muted/20">
+                          {items[0]?.coverImage ? (
+                            <img
+                              src={items[0].coverImage}
+                              alt=""
+                              loading="lazy"
+                              decoding="async"
+                              className="w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700 ease-out"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground/30 text-[10px] font-bold tracking-widest">NO COVER</div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent z-10" />
+                          
+                          {/* Item count badge */}
+                          <div className="absolute top-4 right-4 z-20 px-3 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center gap-1.5 shadow-lg">
+                            <Film size={10} className="text-white/80" />
+                            <span className="text-[10px] font-mono tracking-widest text-white/90 font-bold">{items.length}</span>
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between text-[10px] text-slate-600 border-t border-white/5 pt-3 mt-4">
-                          <span>{latestYear > 0 ? `${items[0] ? getYear(items[0].releaseDate) : ''} – ${latestYear}` : 'Timeline'}</span>
-                          {totalTime > 0 && <span>{formatRuntime(totalTime)}</span>}
+                        {/* Card Content */}
+                        <div className="relative z-20 p-6 pt-2 flex-1 flex flex-col justify-end">
+                          <h3 className="font-display font-bold text-xl sm:text-2xl text-foreground group-hover:text-primary transition-colors leading-tight mb-3 line-clamp-2">
+                            {saga}
+                          </h3>
+                          
+                          <div className="flex items-center justify-between border-t border-border/40 pt-4 mt-auto">
+                            <span className="text-[10px] font-mono tracking-widest text-muted-foreground/80 uppercase">
+                              {latestYear > 0 ? `${items[0] && getYear(items[0].releaseDate) ? getYear(items[0].releaseDate) : ''} – ${latestYear}` : 'TIMELINE'}
+                            </span>
+                            {totalTime > 0 && (
+                              <span className="text-[10px] font-mono tracking-widest text-muted-foreground/80 uppercase">
+                                {formatRuntime(totalTime)}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </motion.button>
                     );
                   })}
                 </div>
               )}
-            </div>
-          )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="timeline-view"
+              initial={{ opacity: 0, filter: 'blur(10px)', y: 30 }}
+              animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
+              exit={{ opacity: 0, filter: 'blur(10px)', y: 30 }}
+              transition={{ duration: 0.5, type: 'spring', bounce: 0.2 }}
+              className="w-full max-w-[900px] mx-auto space-y-12"
+            >
+              {/* Timeline Header */}
+              <div className="space-y-8">
+                <button
+                  onClick={handleCloseSaga}
+                  className="group flex items-center gap-3 px-5 py-2.5 rounded-full border border-border/40 bg-card/40 dark:bg-[#0c0c0d]/60 backdrop-blur-xl hover:bg-card/80 text-foreground transition-all cursor-pointer active:scale-95 shadow-sm w-fit"
+                >
+                  <ArrowLeft size={16} className="text-muted-foreground group-hover:text-foreground transition-colors" />
+                  <span className="text-[10px] font-mono tracking-[0.2em] text-muted-foreground group-hover:text-foreground uppercase font-bold transition-colors">
+                    Back to Overview
+                  </span>
+                </button>
 
-          {/* 2. Mobile Timeline Screen View */}
-          {selectedSaga && mobileView === 'timeline' && (
-            <div className="md:hidden flex-1 flex flex-col min-h-0 bg-[#08090c] overflow-y-auto animate-in fade-in duration-200 pb-8">
-              {/* Header */}
-              <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between sticky top-0 z-10 bg-[#08090c]/90 backdrop-blur-md">
-                <div className="flex items-center gap-3 min-w-0">
-                  <button
-                    onClick={handleCloseSaga}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-slate-400 transition-all shrink-0 active:scale-95"
-                  >
-                    <ArrowLeft size={14} />
-                  </button>
-                  <div className="min-w-0">
-                    <h2 className="font-bold text-[14px] text-slate-200 truncate leading-tight">{selectedSaga}</h2>
-                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">{currentSagaItems.length} Chronological Entries</p>
+                <div className="space-y-6">
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-foreground leading-[1.1]">
+                    {selectedSaga}
+                  </h1>
+
+                  <div className="flex flex-wrap gap-3">
+                    <div className="flex items-center gap-2 rounded-full border border-border/50 bg-card/40 dark:bg-[#0c0c0d]/60 backdrop-blur-xl px-4 py-2 shadow-sm">
+                      <Film size={14} className="text-primary" />
+                      <span className="text-[11px] font-mono tracking-[0.15em] text-foreground font-bold uppercase">{currentSagaItems.length} Entries</span>
+                    </div>
+                    {sagaRawRuntime > 0 && (
+                      <div className="flex items-center gap-2 rounded-full border border-border/50 bg-card/40 dark:bg-[#0c0c0d]/60 backdrop-blur-xl px-4 py-2 shadow-sm">
+                        <Clock className="text-muted-foreground w-3.5 h-3.5" />
+                        <span className="text-[11px] font-mono tracking-[0.15em] text-foreground font-bold uppercase">{formatRuntime(sagaRawRuntime)} Total</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Chronological List */}
-              <div className="flex-1 px-5 py-6 space-y-3 relative">
-                {/* Visual Connector Line */}
-                <div className="absolute left-[33px] top-6 bottom-6 w-[1px] bg-white/5 pointer-events-none" />
-
+              {/* High-End Timeline */}
+              <div className="relative pl-6 sm:pl-12 py-4 space-y-12 before:absolute before:left-[35px] sm:before:left-[59px] before:top-4 before:bottom-4 before:w-[2px] before:bg-gradient-to-b before:from-primary/50 before:via-border/30 before:to-transparent before:pointer-events-none">
+                
                 {currentSagaItems.map((media, index) => {
-                  const isActive = selectedMovie?.id === media.id;
                   const year = getYear(media.releaseDate);
-                  
+
                   return (
-                    <div key={media.id || index} className="flex gap-4 relative group">
-                      
+                    <motion.div
+                      key={media.id || index}
+                      initial={{ opacity: 0, x: -20, filter: 'blur(5px)' }}
+                      animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                      transition={{ delay: Math.min(index, 10) * 0.08, duration: 0.5, type: 'spring' }}
+                      className="relative flex flex-col sm:flex-row gap-6 sm:gap-10 group"
+                    >
                       {/* Timeline Node */}
-                      <div className="relative flex flex-col items-center shrink-0 mt-3.5 z-10 w-7">
-                        <button
-                          onClick={() => {
-                            setSelectedMovie(media);
-                            setMobileView('details');
-                          }}
-                          className={`w-[6px] h-[6px] rounded-full transition-all duration-300 ${
-                            isActive ? 'bg-white scale-125' : 'bg-slate-800'
-                          }`}
-                        />
-                        <span className="text-[8px] font-bold text-slate-600 mt-1.5">{(index + 1).toString().padStart(2, '0')}</span>
+                      <div className="absolute -left-[30px] sm:-left-[31px] top-6 z-10 flex items-center justify-center">
+                        <div className="w-5 h-5 rounded-full bg-background border-[3px] border-primary shadow-[0_0_15px_rgba(var(--primary),0.4)] group-hover:scale-125 group-hover:shadow-[0_0_20px_rgba(var(--primary),0.6)] transition-all duration-300" />
                       </div>
 
-                      {/* Card Content */}
-                      <button
-                        onClick={() => {
-                          setSelectedMovie(media);
-                          setMobileView('details');
-                        }}
-                        className="flex-1 flex gap-3.5 rounded-xl p-2 text-left border bg-white/[0.01] border-white/5 active:scale-[0.98] transition-all relative overflow-hidden"
-                      >
-                        <div className="relative w-10 h-14 shrink-0 rounded-md overflow-hidden bg-slate-900 border border-white/5">
+                      {/* Timeline Number (Mobile moves to card top, desktop left) */}
+                      <div className="hidden sm:flex flex-col items-end w-16 pt-5 shrink-0">
+                        <span className="text-[10px] font-mono tracking-[0.2em] text-muted-foreground/60 font-bold">PART</span>
+                        <span className="text-3xl font-display font-black text-foreground/20 group-hover:text-primary/40 transition-colors">
+                          {(index + 1).toString().padStart(2, '0')}
+                        </span>
+                      </div>
+
+                      {/* Content Card */}
+                      <div className="flex-1 flex flex-col sm:flex-row gap-5 p-5 rounded-[28px] border border-border/40 bg-card/40 dark:bg-[#0c0c0d]/60 backdrop-blur-2xl hover:border-primary/30 hover:bg-card/60 transition-all duration-500 hover:shadow-[0_8px_32px_-12px_rgba(var(--primary),0.15)] relative overflow-hidden">
+                        
+                        {/* Shimmer sweep */}
+                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-10">
+                          <div className="absolute -inset-x-32 -inset-y-16 bg-gradient-to-tr from-transparent via-white/5 to-transparent rotate-12 -translate-x-full group-hover:translate-x-full transition-transform duration-[1.5s] ease-out" />
+                        </div>
+
+                        {/* Card Cover */}
+                        <div className="relative w-full sm:w-[120px] aspect-[16/9] sm:aspect-[2/3] shrink-0 rounded-[18px] overflow-hidden bg-muted/20 border border-border/40 shadow-inner">
                           {media.coverImage ? (
-                            <img src={media.coverImage} alt="" className="h-full w-full object-cover" />
+                            <img src={media.coverImage} loading="lazy" decoding="async" alt="" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
                           ) : (
-                            <div className="h-full w-full bg-slate-800" />
+                            <div className="h-full w-full flex items-center justify-center bg-muted/10 text-muted-foreground/30">
+                              <Film size={24} />
+                            </div>
                           )}
                         </div>
-                        <div className="min-w-0 flex-1 flex flex-col justify-center">
-                          <p className="text-xs font-bold text-slate-350 truncate">
-                            {media.title}
-                          </p>
-                          <div className="flex items-center gap-1.5 mt-1 text-[10px] text-slate-500 font-semibold">
-                            {year && <span>{year}</span>}
-                            <span className="w-0.5 h-0.5 rounded-full bg-slate-700" />
-                            <span className={statusTextColor(media.status)}>{media.status || 'Completed'}</span>
+
+                        {/* Details */}
+                        <div className="flex-1 flex flex-col justify-center py-2 min-w-0">
+                          <div className="flex items-start justify-between gap-4 mb-3">
+                            <div>
+                              <div className="flex sm:hidden items-center gap-2 mb-2">
+                                <span className="text-[9px] font-mono tracking-[0.2em] text-primary font-bold uppercase">PART {(index + 1).toString().padStart(2, '0')}</span>
+                              </div>
+                              <h3 className="text-lg sm:text-xl font-display font-bold text-foreground group-hover:text-primary transition-colors leading-tight line-clamp-2">
+                                {media.title}
+                              </h3>
+                            </div>
+                            <Link
+                              href={`/edit/${media.id}`}
+                              className="shrink-0 p-2 rounded-full bg-foreground/5 hover:bg-foreground/10 text-foreground/60 hover:text-foreground transition-colors z-20"
+                            >
+                              <ChevronRight size={16} />
+                            </Link>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 mt-auto relative z-20">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-border/40 bg-background/50 text-[10px] font-mono tracking-widest text-primary font-bold uppercase backdrop-blur-md">
+                              {media.type}
+                            </span>
+                            {year && (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-border/40 bg-background/50 text-[10px] font-mono tracking-widest text-foreground/70 uppercase backdrop-blur-md">
+                                {year}
+                              </span>
+                            )}
+                            {media.runtime && (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-border/40 bg-background/50 text-[10px] font-mono tracking-widest text-foreground/70 uppercase backdrop-blur-md">
+                                {formatRuntime(media.runtime)}
+                              </span>
+                            )}
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border/40 bg-background/50 text-[10px] font-mono tracking-widest uppercase backdrop-blur-md font-bold ${statusTextColor(media.status)}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full inline-block ${statusDotColor(media.status)}`} />
+                              {media.status || 'Completed'}
+                            </span>
+                            {media.rating > 0 && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-amber-500/20 bg-amber-500/5 text-[10px] font-mono tracking-widest text-amber-500 font-bold uppercase backdrop-blur-md">
+                                <Star size={10} className="fill-amber-500 text-amber-500" />
+                                {media.rating}
+                              </span>
+                            )}
                           </div>
                         </div>
-                      </button>
-                    </div>
+
+                      </div>
+                    </motion.div>
                   );
                 })}
               </div>
-
-              {/* Stats Footer */}
-              {sagaRawRuntime > 0 && (
-                <div className="shrink-0 p-4 border-t border-white/5 bg-[#08090c] mt-auto mx-5">
-                  <div className="grid grid-cols-2 gap-2 text-center text-[10px] text-slate-500">
-                    <div>
-                      <p className="font-medium">Total Time</p>
-                      <p className="font-bold text-slate-350 mt-0.5">{formatRuntime(sagaRawRuntime)}</p>
-                    </div>
-                    <div className="border-l border-white/5">
-                      <p className="font-medium">Watched</p>
-                      <p className="font-bold text-slate-350 mt-0.5">
-                        {sagaTotalRuntime > 0 ? formatRuntime(sagaTotalRuntime) : '—'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            </motion.div>
           )}
+        </AnimatePresence>
 
-          {/* 3. Saga Detail Interactive Screen */}
-          {selectedSaga && selectedMovie && (
-            <div className={`${mobileView === 'details' ? 'flex' : 'hidden'} md:flex flex-1 flex-col min-h-0 relative animate-in fade-in duration-200 overflow-y-auto pb-12`}>
-              
-              {/* Back button for mobile at top */}
-              <div className="md:hidden flex items-center gap-3 p-4 bg-[#08090c] border-b border-white/5 sticky top-0 z-25">
-                <button
-                  onClick={() => setMobileView('timeline')}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 border border-white/10 text-slate-400 transition-all duration-200 active:scale-95"
-                >
-                  <ArrowLeft size={14} />
-                </button>
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-wider leading-none">Back to list</h3>
-                  <p className="text-xs font-bold text-slate-200 truncate mt-0.5">{selectedSaga}</p>
-                </div>
-              </div>
-
-              {/* Minimal Spotlight Showcase Info Header */}
-              <div className="w-full max-w-5xl mx-auto px-6 sm:px-10 pt-8 sm:pt-12 pb-6 flex flex-col md:flex-row gap-6 md:gap-8 items-start md:items-end border-b border-white/5">
-                
-                {/* Clean Poster frame */}
-                <div className="shrink-0 relative hidden md:block">
-                  <div className="w-28 md:w-36 aspect-[2/3] rounded-lg overflow-hidden border border-white/5 bg-slate-900">
-                    {selectedMovie.coverImage ? (
-                      <img src={selectedMovie.coverImage} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-slate-850" />
-                    )}
-                  </div>
-                </div>
-
-                {/* Main Text Metadata */}
-                <div className="flex-1 text-left space-y-3.5">
-                  <div className="hidden md:flex items-center gap-1.5 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-                    <button onClick={handleCloseSaga} className="hover:text-slate-350 transition-colors">Sagas</button>
-                    <ChevronRight size={10} className="text-slate-700" />
-                    <span>{selectedSaga}</span>
-                    <ChevronRight size={10} className="text-slate-700" />
-                    <span className="text-slate-350">{selectedMovie.title}</span>
-                  </div>
-
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight">
-                    {selectedMovie.title}
-                  </h1>
-
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-slate-405 font-medium">
-                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{selectedMovie.type}</span>
-                    <span className="w-1 h-1 rounded-full bg-slate-800" />
-                    {getYear(selectedMovie.releaseDate) && (
-                      <>
-                        <span>{getYear(selectedMovie.releaseDate)}</span>
-                        <span className="w-1 h-1 rounded-full bg-slate-800" />
-                      </>
-                    )}
-                    {selectedMovie.runtime && (
-                      <>
-                        <span>{formatRuntime(selectedMovie.runtime)}{isEpisodic(selectedMovie) ? '/ep' : ''}</span>
-                        <span className="w-1 h-1 rounded-full bg-slate-800" />
-                      </>
-                    )}
-                    <span className={statusTextColor(selectedMovie.status)}>{selectedMovie.status || 'Completed'}</span>
-                    {selectedMovie.rating > 0 && (
-                      <>
-                        <span className="w-1 h-1 rounded-full bg-slate-800" />
-                        <span className="flex items-center gap-1 text-amber-500">
-                          <Star size={12} className="fill-amber-500 text-amber-500" /> {selectedMovie.rating}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Edit Button */}
-                <div className="shrink-0 w-full md:w-auto">
-                  <Link
-                    href={`/edit/${selectedMovie.id}`}
-                    className="inline-flex items-center justify-center gap-2 w-full md:w-auto px-4 py-2 rounded-lg bg-white/5 border border-white/5 text-slate-300 hover:bg-white/10 hover:text-white text-xs font-semibold tracking-wide transition-all active:scale-95 shadow-sm"
-                  >
-                    <Edit3 size={12} /> Edit entry
-                  </Link>
-                </div>
-              </div>
-
-              {/* Details Columns */}
-              <div className="w-full max-w-5xl mx-auto px-6 sm:px-10 py-8 flex flex-col lg:flex-row gap-8">
-                
-                {/* 1. Review & Overview (Left Column) */}
-                <div className="flex-1 space-y-6">
-                  
-                  {/* Overview Card */}
-                  <div className="space-y-3">
-                    <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                      <BookOpen size={12} /> Review &amp; notes
-                    </h3>
-                    {selectedMovie.review ? (
-                      <p className="text-slate-300 leading-relaxed text-sm whitespace-pre-wrap font-medium">
-                        {selectedMovie.review}
-                      </p>
-                    ) : (
-                      <p className="text-slate-600 italic text-[11px]">
-                        No review logged. Edit entry to add thoughts.
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Progress Indicator for Series/Anime */}
-                  {selectedMovie.episodesTotal && selectedMovie.episodesTotal > 0 && (
-                    <div className="pt-4 border-t border-white/5 space-y-2">
-                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-550">
-                        <span>Episode Progress</span>
-                        <span className="text-slate-300">
-                          {selectedMovie.episodesWatched || 0} / {selectedMovie.episodesTotal}
-                        </span>
-                      </div>
-                      <div className="w-full h-1.5 bg-slate-900 border border-white/5 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-slate-400 rounded-full transition-all duration-500"
-                          style={{ width: `${Math.min(100, ((selectedMovie.episodesWatched || 0) / selectedMovie.episodesTotal) * 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 2. Timeline Navigator (Right Column) */}
-                <div className="w-full lg:w-[320px] shrink-0">
-                  <div className="border border-white/5 bg-slate-950/20 p-5 rounded-2xl space-y-4">
-                    <div className="flex items-center justify-between text-[10px] text-slate-500 font-bold uppercase tracking-wide">
-                      <span>Chronology</span>
-                      <span>Entry {currentIndex + 1} of {currentSagaItems.length}</span>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        disabled={!prevMovie}
-                        onClick={() => setSelectedMovie(prevMovie)}
-                        className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-white/5 bg-white/[0.01] hover:bg-white/[0.05] text-xs font-semibold text-slate-300 hover:text-white transition-all disabled:opacity-25 disabled:pointer-events-none active:scale-95"
-                      >
-                        <ChevronLeft size={13} /> Prev
-                      </button>
-                      <button
-                        disabled={!nextMovie}
-                        onClick={() => setSelectedMovie(nextMovie)}
-                        className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-white/5 bg-white/[0.01] hover:bg-white/[0.05] text-xs font-semibold text-slate-300 hover:text-white transition-all disabled:opacity-25 disabled:pointer-events-none active:scale-95"
-                      >
-                        Next <ChevronRight size={13} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          )}
-        </main>
       </div>
     </div>
   );

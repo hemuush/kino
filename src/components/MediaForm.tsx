@@ -36,7 +36,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
   const [title, setTitle] = useState<string>(initialData?.title || '');
   const [type, setType] = useState<MediaType>(initialData?.type || 'Movie');
   const [animeType, setAnimeType] = useState<AnimeType>(initialData?.animeType || 'Show');
-  const [status, setStatus] = useState<WatchStatus>(initialData?.status || 'Completed');
+  const [status, setStatus] = useState<WatchStatus>(initialData?.status || 'Plan to Watch');
   const [coverImage, setCoverImage] = useState<string>(initialData?.coverImage || '');
   const [releaseDate, setReleaseDate] = useState<string>(initialData?.releaseDate || new Date().toISOString().split('T')[0]);
   const [runtime, setRuntime] = useState<number | ''>(initialData?.runtime || '');
@@ -169,7 +169,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
       runtime: runtime === '' ? undefined : Number(runtime),
       franchiseId: selectedFranchiseId || undefined,
       genreIds: selectedGenreIds,
-      rating: status === 'Completed' ? rating : 0,
+      rating,
       review: review.trim(),
       favorite,
       episodesWatched: currentIsEpisodic ? (status === 'Completed' && episodesTotal ? Number(episodesTotal) : Number(episodesWatched)) : undefined,
@@ -191,40 +191,189 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
   const displayRating = hoveredStar !== null ? hoveredStar : rating;
   const tabs: FormTabType[] = currentIsEpisodic ? ['General', 'Details', 'Episodes'] : ['General', 'Details'];
 
-  return (
-    <div className="w-full max-w-4xl bg-card rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col border border-border shadow-xl mx-auto h-full max-h-[100dvh] sm:max-h-[90vh] lg:max-h-[850px]">
-      <div className="flex items-center justify-between px-4 sm:px-8 py-4 sm:py-5 bg-muted/30 border-b border-border shrink-0">
-        <h2 className="font-display text-xl font-bold tracking-tight text-foreground">{isEditMode ? 'Edit Media' : 'Add to Collection'}</h2>
-      </div>
+  // Pre-compute episode panel to avoid IIFE inside JSX (Turbopack parser limitation)
+  const maxSeasonNum = Math.max(Number(seasonsCount) || 1, activeSeasonTab, ...episodes.map(e => e.season || 1));
+  const availableSeasons = Array.from({ length: maxSeasonNum }, (_, i) => i + 1);
+  const currentTab = activeSeasonTab;
+  const seasonEpisodes = episodes.filter(e => e.season === currentTab);
 
-      <div className="flex px-4 sm:px-8 pt-4 gap-6 sm:gap-8 border-b border-border bg-background shrink-0 overflow-x-auto hide-scrollbar">
-        {tabs.map(tab => (
+  const handleAddSingleEpisode = (season: number) => {
+    setEpisodes(prev => {
+      const sEps = prev.filter(e => e.season === season);
+      const nextNumber = sEps.length > 0 ? Math.max(...sEps.map(e => e.number || 1)) + 1 : 1;
+      return [...prev, { name: `Episode ${nextNumber}`, season, number: nextNumber, runtime: undefined, airDate: '' }];
+    });
+  };
+
+  const handleBulkGenerate = (season: number, count: number) => {
+    setEpisodes(prev => {
+      const sEps = prev.filter(e => e.season === season);
+      let nextNumber = sEps.length > 0 ? Math.max(...sEps.map(e => e.number || 1)) + 1 : 1;
+      const newEps: EpisodeInfo[] = [];
+      for (let i = 0; i < count; i++) {
+        newEps.push({ name: `Episode ${nextNumber}`, season, number: nextNumber, runtime: undefined, airDate: '' });
+        nextNumber++;
+      }
+      return [...prev, ...newEps];
+    });
+  };
+
+  const handleDeleteEpisode = (idx: number) => {
+    setEpisodes(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const renderEpisodePanel = (
+    <div className="border border-border/80 rounded-2xl overflow-hidden bg-card shadow-sm flex flex-col flex-1 min-h-[350px]">
+      <div className="flex items-center gap-2 p-3 bg-muted/30 overflow-x-auto hide-scrollbar border-b border-border/80 shrink-0">
+        {availableSeasons.map(s => (
           <button
-            key={tab}
+            key={s}
             type="button"
-            onClick={() => setFormTab(tab)}
-            className={`pb-4 text-xs font-bold tracking-wider uppercase transition-all border-b-2 outline-none relative cursor-pointer ${formTab === tab ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
-              }`}
+            onClick={() => setActiveSeasonTab(s)}
+            className={`px-5 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer ${currentTab === s ? 'bg-primary text-primary-foreground shadow-md' : 'bg-background border border-border text-muted-foreground hover:bg-muted hover:text-foreground'}`}
           >
-            {tab}
+            Season {s}
           </button>
         ))}
+        <button type="button" onClick={() => { setActiveSeasonTab(Math.max(...availableSeasons) + 1); setSeasonsCount(prev => Number(prev) + 1); }} className="px-4 py-2 text-xs font-bold rounded-xl bg-transparent border-2 border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors whitespace-nowrap ml-2 cursor-pointer">
+          + Add Season
+        </button>
       </div>
 
-      <form id="media-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8 pb-24 sm:pb-28 bg-background/50">
+      <div className="flex-1 overflow-y-auto overflow-x-auto p-2">
+        {seasonEpisodes.length === 0 ? (
+          <div className="h-full min-h-[250px] flex flex-col items-center justify-center p-6 text-center">
+            <span className="text-muted-foreground text-sm mb-6 font-medium">No episodes added for Season {currentTab} yet.</span>
+            <div className="flex flex-col sm:flex-row gap-5 items-center bg-background p-6 rounded-2xl border border-border shadow-sm">
+              <button type="button" onClick={() => handleAddSingleEpisode(currentTab)} className="bg-primary text-primary-foreground px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity shadow-sm cursor-pointer whitespace-nowrap flex items-center gap-2">
+                <ListPlus size={16} /> Add 1 Episode
+              </button>
+              <span className="text-muted-foreground/40 text-xs font-bold uppercase tracking-widest">OR</span>
+              <div className="flex bg-card border border-border rounded-xl overflow-hidden focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-all shadow-sm h-12 shrink-0">
+                <input id={`bulk-${currentTab}`} type="number" min="1" placeholder="Generate multiple..." className="w-32 sm:w-40 px-4 py-2 text-sm bg-transparent outline-none font-medium placeholder:text-muted-foreground/50" />
+                <button type="button" onClick={() => {
+                  const input = document.getElementById(`bulk-${currentTab}`) as HTMLInputElement;
+                  const count = Number(input.value);
+                  if (count > 0) handleBulkGenerate(currentTab, count);
+                }} className="bg-muted hover:bg-muted/80 px-5 text-xs font-bold border-l border-border transition-colors text-foreground cursor-pointer">Generate</button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2 min-w-[600px] p-2">
+            <div className="flex px-4 pb-2 pt-1 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+              <div className="w-12 text-center">Ep</div>
+              <div className="flex-1 ml-3">Title</div>
+              <div className="w-24 text-center">Runtime (m)</div>
+              <div className="w-[130px] pl-3">Air Date</div>
+              <div className="w-10"></div>
+            </div>
+            {episodes.map((ep, idx) => {
+              if (ep.season !== currentTab) return null;
+              return (
+                <div key={`${ep.season}-${ep.number || idx}`} className="flex items-center gap-3 bg-background border border-border/60 rounded-xl p-2 hover:border-primary/40 hover:shadow-sm transition-all group">
+                  <div className="w-12 text-xs font-bold text-muted-foreground font-mono flex-shrink-0 text-center bg-muted/40 rounded-lg py-2.5 cursor-default">
+                    {ep.number || 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <input
+                      type="text"
+                      value={ep.name}
+                      onChange={(e) => setEpisodes(prev => prev.map((item, i) => i === idx ? { ...item, name: e.target.value } : item))}
+                      className="w-full bg-transparent border-none outline-none focus:text-primary transition-colors font-semibold text-sm px-3 py-2 placeholder:text-muted-foreground/40 rounded-md focus:bg-muted/30"
+                      placeholder="Episode Title"
+                    />
+                  </div>
+                  <div className="w-24 flex-shrink-0">
+                    <div className="flex items-center gap-1.5 bg-muted/30 rounded-lg px-3 py-2 focus-within:bg-card focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/40 border border-transparent transition-all">
+                      <Clock size={12} className="text-muted-foreground shrink-0" />
+                      <input
+                        type="number"
+                        min="1"
+                        value={ep.runtime || ''}
+                        onChange={(e) => setEpisodes(prev => prev.map((item, i) => i === idx ? { ...item, runtime: e.target.value ? Number(e.target.value) : undefined } : item))}
+                        placeholder="Auto"
+                        className="w-full bg-transparent border-none outline-none text-xs text-center font-medium"
+                      />
+                    </div>
+                  </div>
+                  <div className="w-[130px] flex-shrink-0">
+                    <input
+                      type="date"
+                      value={ep.airDate || ''}
+                      onChange={(e) => setEpisodes(prev => prev.map((item, i) => i === idx ? { ...item, airDate: e.target.value } : item))}
+                      className="w-full bg-muted/30 hover:bg-muted/60 border-none outline-none text-muted-foreground text-xs rounded-lg px-3 py-2 transition-colors cursor-pointer focus:ring-1 focus:ring-primary/40"
+                    />
+                  </div>
+                  <div className="w-10 flex-shrink-0 flex justify-end">
+                    <button type="button" onClick={() => handleDeleteEpisode(idx)} className="text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all cursor-pointer p-2 rounded-lg hover:bg-red-500/10">
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            <button type="button" onClick={() => handleAddSingleEpisode(currentTab)} className="mt-2 w-full py-4 border-2 border-dashed border-border rounded-xl text-muted-foreground font-bold text-sm hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+              <ListPlus size={16} /> Add Episode
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="w-full max-w-[95%] sm:max-w-4xl rounded-[32px] overflow-hidden flex flex-col border border-white/10 bg-card/60 dark:bg-[#0c0c0d]/70 backdrop-blur-3xl shadow-2xl mx-auto h-full max-h-[850px] relative z-10">
+      <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent dark:from-white/[0.02] pointer-events-none rounded-[32px]" />
+      
+      {/* Header */}
+      <div className="flex flex-col items-center justify-center px-4 sm:px-8 pt-8 pb-4 shrink-0 relative z-10">
+        <span className="text-[10px] font-mono tracking-[0.2em] text-primary/80 uppercase font-bold mb-2">{isEditMode ? 'EDIT_ENTRY' : 'NEW_ENTRY'}</span>
+        <h2 className="font-display text-3xl font-black tracking-tight text-foreground">{isEditMode ? 'Edit Media' : 'Add to Collection'}</h2>
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex justify-center px-6 sm:px-8 pb-4 shrink-0 z-10 relative">
+        <div className="flex p-1.5 bg-black/5 dark:bg-black/40 border border-white/5 backdrop-blur-xl rounded-full shadow-inner w-full max-w-md relative">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setFormTab(tab)}
+              className={`relative z-10 flex-1 py-2.5 text-xs font-bold tracking-wider uppercase transition-all rounded-full cursor-pointer ${
+                formTab === tab
+                  ? 'text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {formTab === tab && (
+                <motion.div
+                  layoutId="activeFormTab"
+                  className="absolute inset-0 bg-white/10 dark:bg-white/10 border border-white/10 shadow-md rounded-full -z-10"
+                  transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                />
+              )}
+              {tab}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Form body */}
+      <form id="media-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8 pb-6 relative z-10">
         <AnimatePresence mode="wait">
           {formTab === 'General' && (
-            <motion.div key="general" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
+            <motion.div key="general" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-4 sm:space-y-8">
 
               <div className="flex flex-col sm:flex-row gap-6">
-                <div className="flex-[2]">
+                  <div className="flex-[2]">
                   <FieldWrapper label="Title">
-                    <input autoFocus type="text" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="e.g. Inception" className="w-full bg-card hover:bg-muted/30 focus:bg-background rounded-xl px-4 py-3.5 text-foreground text-sm border border-border outline-none transition-all focus:ring-2 focus:ring-primary/40 focus:border-primary shadow-sm" />
+                    <input autoFocus type="text" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="e.g. Inception" className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3.5 text-foreground text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
                   </FieldWrapper>
                 </div>
                 <div className="flex-[1]">
                   <FieldWrapper label="Type">
-                    <select value={type} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setType(e.target.value as MediaType)} className="w-full bg-card hover:bg-muted/30 focus:bg-background rounded-xl px-4 py-3.5 text-foreground text-sm border border-border outline-none transition-all cursor-pointer focus:ring-2 focus:ring-primary/40 focus:border-primary shadow-sm appearance-none">
+                    <select value={type} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setType(e.target.value as MediaType)} className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3.5 text-foreground text-sm border border-border/50 focus:border-primary/50 outline-none transition-all cursor-pointer focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50 appearance-none">
                       {mediaTypes.map(mt => <option key={mt} value={mt}>{mt}</option>)}
                     </select>
                   </FieldWrapper>
@@ -232,20 +381,20 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
               </div>
 
               {type === 'Anime' && (
-                <div className="flex gap-2 p-1.5 bg-muted/40 rounded-xl border border-border/60 w-max">
+                <div className="flex p-1.5 bg-black/5 dark:bg-white/[0.03] rounded-xl border border-border/40 w-max">
                   {(['Show', 'Movie'] as AnimeType[]).map((at) => (
-                    <button key={at} type="button" onClick={() => setAnimeType(at)} className={`px-6 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${animeType === at ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground'}`}>{at}</button>
+                    <button key={at} type="button" onClick={() => setAnimeType(at)} className={`px-6 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${animeType === at ? 'bg-primary/15 text-primary border border-primary/30 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{at}</button>
                   ))}
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                 <FieldWrapper label="Cover Image">
                   <div className="flex flex-col xs:flex-row gap-4 sm:gap-5 items-start">
                     <div className="w-[96px] h-[144px] sm:w-[100px] sm:h-[150px] rounded-xl overflow-hidden bg-muted/30 border border-border shrink-0 flex items-center justify-center shadow-sm relative group">
                       {coverImage ? (
                         <>
-                          <img src={coverImage} alt="Poster" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                          <img src={coverImage} alt="Poster" loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                             <ImageIcon className="text-white w-6 h-6" />
                           </div>
@@ -253,12 +402,12 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
                       ) : <ImageIcon size={28} className="text-muted-foreground/40" />}
                     </div>
                     <div className="flex-1 space-y-3">
-                      <div className="flex bg-muted/30 p-1.5 rounded-xl border border-border w-full">
-                        <button type="button" onClick={() => setImageInputMode('url')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${imageInputMode === 'url' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>URL</button>
-                        <button type="button" onClick={() => setImageInputMode('upload')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${imageInputMode === 'upload' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>Upload</button>
+                      <div className="flex bg-black/5 dark:bg-white/[0.03] p-1.5 rounded-xl border border-border/40 w-full">
+                        <button type="button" onClick={() => setImageInputMode('url')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${imageInputMode === 'url' ? 'bg-card shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>URL</button>
+                        <button type="button" onClick={() => setImageInputMode('upload')} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors cursor-pointer ${imageInputMode === 'upload' ? 'bg-card shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>Upload</button>
                       </div>
                       {imageInputMode === 'url' ? (
-                        <input type="url" value={coverImage} onChange={(e) => setCoverImage(e.target.value)} placeholder="https://..." className="w-full bg-card focus:bg-background rounded-xl px-4 py-3 text-sm border border-border outline-none transition-all focus:ring-2 focus:ring-primary/40 focus:border-primary shadow-sm" />
+                        <input type="url" value={coverImage} onChange={(e) => setCoverImage(e.target.value)} placeholder="https://..." className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3 text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
                       ) : (
                         <label className="flex flex-col items-center justify-center w-full bg-card hover:bg-muted/40 rounded-xl px-4 py-5 border-2 border-dashed border-border/80 cursor-pointer transition-colors group">
                           <Upload size={18} className="mb-2 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -270,7 +419,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
                   </div>
                 </FieldWrapper>
 
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   <div className="space-y-2 relative" ref={franchiseRef}>
                     <FieldWrapper label="Saga / Franchise" icon={<Film size={12} />}>
                       {selectedFranchiseId ? (
@@ -281,7 +430,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
                       ) : (
                         <div className="relative">
                           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                          <input type="text" value={franchiseSearch} onFocus={() => setShowFranchiseDropdown(true)} onChange={(e) => setFranchiseSearch(e.target.value)} placeholder="Search or add saga..." className="w-full pl-11 pr-4 py-3 bg-card focus:bg-background rounded-xl text-sm border border-border outline-none transition-all focus:ring-2 focus:ring-primary/40 focus:border-primary shadow-sm" />
+                          <input type="text" value={franchiseSearch} onFocus={() => setShowFranchiseDropdown(true)} onChange={(e) => setFranchiseSearch(e.target.value)} placeholder="Search or add saga..." className="w-full pl-11 pr-4 py-3 bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
                         </div>
                       )}
                       {showFranchiseDropdown && !selectedFranchiseId && (
@@ -290,7 +439,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
                             <div key={f.id} onClick={() => { setSelectedFranchiseId(f.id); setShowFranchiseDropdown(false); setFranchiseSearch(''); }} className="px-4 py-3 text-sm hover:bg-muted cursor-pointer font-medium border-b border-border/40 last:border-0 transition-colors">{f.name}</div>
                           ))}
                           {franchiseSearch.trim() && !dbFranchises.find(f => f.name.toLowerCase() === franchiseSearch.toLowerCase()) && (
-                            <div onClick={handleCreateFranchise} className="px-4 py-3 text-sm text-primary hover:bg-primary/10 cursor-pointer font-bold flex items-center gap-2 transition-colors"><ListPlus size={16} /> Create "{franchiseSearch}"</div>
+                            <div onClick={handleCreateFranchise} className="px-4 py-3 text-sm text-primary hover:bg-primary/10 cursor-pointer font-bold flex items-center gap-2 transition-colors"><ListPlus size={16} /> Create &quot;{franchiseSearch}&quot;</div>
                           )}
                         </div>
                       )}
@@ -298,9 +447,9 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
                   </div>
 
                   <FieldWrapper label="Status">
-                    <div className="flex p-1.5 bg-muted/40 rounded-xl border border-border shadow-sm">
+                    <div className="flex p-1.5 bg-black/5 dark:bg-white/[0.03] rounded-xl border border-border/40">
                       {statuses.map((st) => (
-                        <button key={st} type="button" onClick={() => setStatus(st)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${status === st ? 'bg-card text-foreground shadow border border-border/50' : 'text-muted-foreground hover:text-foreground'}`}>{st}</button>
+                        <button key={st} type="button" onClick={() => setStatus(st)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${status === st ? 'bg-primary/15 text-primary border border-primary/30 shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>{st}</button>
                       ))}
                     </div>
                   </FieldWrapper>
@@ -313,7 +462,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
                             const g = dbGenres.find(x => x.id === id);
                             if (!g) return null;
                             return (
-                              <span key={id} className="bg-primary/10 border border-primary/20 text-primary px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                              <span key={id} className="bg-primary/10 border border-primary/20 text-primary px-3 py-1.5 rounded-[10px] text-xs font-bold flex items-center gap-1.5 shadow-sm">
                                 {g.name} <button type="button" onClick={() => setSelectedGenreIds(selectedGenreIds.filter(x => x !== id))} className="hover:text-red-500 hover:bg-red-500/10 rounded-sm transition-colors cursor-pointer"><X size={14} /></button>
                               </span>
                             )
@@ -322,7 +471,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
                       )}
                       <div className="relative">
                         <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                        <input type="text" value={genreSearch} onFocus={() => setShowGenreDropdown(true)} onChange={(e) => setGenreSearch(e.target.value)} placeholder="Add genre..." className="w-full pl-11 pr-4 py-3 bg-card focus:bg-background rounded-xl text-sm border border-border outline-none transition-all focus:ring-2 focus:ring-primary/40 focus:border-primary shadow-sm" />
+                        <input type="text" value={genreSearch} onFocus={() => setShowGenreDropdown(true)} onChange={(e) => setGenreSearch(e.target.value)} placeholder="Add genre..." className="w-full pl-11 pr-4 py-3 bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
                       </div>
                       {showGenreDropdown && (
                         <div className="absolute top-full mt-2 w-full bg-card border border-border rounded-xl shadow-xl z-50 max-h-[200px] overflow-y-auto">
@@ -330,7 +479,7 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
                             <div key={g.id} onClick={() => { setSelectedGenreIds([...selectedGenreIds, g.id]); setShowGenreDropdown(false); setGenreSearch(''); }} className="px-4 py-3 text-sm hover:bg-muted cursor-pointer font-medium border-b border-border/40 last:border-0 transition-colors">{g.name}</div>
                           ))}
                           {genreSearch.trim() && !dbGenres.find(g => g.name.toLowerCase() === genreSearch.toLowerCase()) && (
-                            <div onClick={handleCreateGenre} className="px-4 py-3 text-sm text-primary hover:bg-primary/10 cursor-pointer font-bold flex items-center gap-2 transition-colors"><ListPlus size={16} /> Create "{genreSearch}"</div>
+                            <div onClick={handleCreateGenre} className="px-4 py-3 text-sm text-primary hover:bg-primary/10 cursor-pointer font-bold flex items-center gap-2 transition-colors"><ListPlus size={16} /> Create &quot;{genreSearch}&quot;</div>
                           )}
                         </div>
                       )}
@@ -345,10 +494,10 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
             <motion.div key="details" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} className="space-y-8">
               <div className="flex flex-col sm:flex-row gap-6">
                 <FieldWrapper label="Release Date">
-                  <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} className="w-full bg-card hover:bg-muted/30 focus:bg-background rounded-xl px-4 py-3.5 text-foreground text-sm border border-border outline-none transition-all focus:ring-2 focus:ring-primary/40 focus:border-primary shadow-sm" />
+                  <input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3.5 text-foreground text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
                 </FieldWrapper>
                 <FieldWrapper label={currentIsEpisodic ? "Avg Episode Length (min)" : "Runtime (min)"} icon={<Clock size={12} />}>
-                  <input type="number" min="1" value={runtime} onChange={(e) => setRuntime(e.target.value ? Number(e.target.value) : '')} placeholder="e.g. 120" className="w-full bg-card hover:bg-muted/30 focus:bg-background rounded-xl px-4 py-3.5 text-foreground text-sm border border-border outline-none transition-all focus:ring-2 focus:ring-primary/40 focus:border-primary shadow-sm" />
+                  <input type="number" min="1" value={runtime} onChange={(e) => setRuntime(e.target.value ? Number(e.target.value) : '')} placeholder="e.g. 120" className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3.5 text-foreground text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
                 </FieldWrapper>
               </div>
 
@@ -359,28 +508,26 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
                 </div>
 
                 <AnimatePresence>
-                  {status === 'Completed' && (
-                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="flex-[2] min-w-0 bg-card border border-border px-4 sm:px-6 py-4 rounded-2xl shadow-sm">
-                      <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3 min-w-0">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 shrink-0"><Star size={16} /> Rating</span>
-                          <span className="text-lg sm:text-xl font-bold text-primary tabular-nums whitespace-nowrap">{displayRating}/10</span>
-                        </div>
-                        <div className="grid grid-cols-5 sm:flex sm:items-center gap-1 sm:gap-0.5 shrink-0">
-                          {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
-                            <button key={value} type="button" onClick={() => setRating(value)} onMouseEnter={() => setHoveredStar(value)} onMouseLeave={() => setHoveredStar(null)} className="p-1 sm:p-0.5 transition-transform hover:scale-110 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-md">
-                              <Star className={`w-4.5 h-4.5 sm:w-5 sm:h-5 transition-colors ${value <= displayRating ? 'text-amber-400 fill-amber-400 drop-shadow-sm' : 'text-muted-foreground/20'}`} />
-                            </button>
-                          ))}
-                        </div>
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="flex-[2] min-w-0 bg-card border border-border px-4 sm:px-6 py-4 rounded-2xl shadow-sm">
+                    <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 shrink-0"><Star size={16} /> Rating</span>
+                        <span className="text-lg sm:text-xl font-bold text-primary tabular-nums whitespace-nowrap">{displayRating}/10</span>
                       </div>
-                    </motion.div>
-                  )}
+                      <div className="grid grid-cols-5 sm:flex sm:items-center gap-1 sm:gap-0.5 shrink-0">
+                        {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
+                          <button key={value} type="button" onClick={() => setRating(value)} onMouseEnter={() => setHoveredStar(value)} onMouseLeave={() => setHoveredStar(null)} className="p-1 sm:p-0.5 transition-transform hover:scale-110 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-md">
+                            <Star className={`w-4.5 h-4.5 sm:w-5 sm:h-5 transition-colors ${value <= displayRating ? 'text-amber-400 fill-amber-400 drop-shadow-sm' : 'text-muted-foreground/20'}`} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
                 </AnimatePresence>
               </div>
 
               <FieldWrapper label="Review / Notes">
-                <textarea value={review} onChange={(e) => setReview(e.target.value)} placeholder="What did you think?" className="w-full bg-card focus:bg-background rounded-xl px-5 py-4 text-foreground text-sm border border-border outline-none transition-all focus:ring-2 focus:ring-primary/40 focus:border-primary shadow-sm resize-none min-h-[180px]" />
+                <textarea value={review} onChange={(e) => setReview(e.target.value)} placeholder="What did you think?" className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-5 py-4 text-foreground text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50 resize-none min-h-[180px]" />
               </FieldWrapper>
             </motion.div>
           )}
@@ -390,13 +537,13 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
                 <FieldWrapper label="Total Eps">
-                  <input type="number" min="1" value={episodesTotal} onChange={(e) => setEpisodesTotal(e.target.value ? Number(e.target.value) : '')} className="w-full bg-card focus:bg-background rounded-xl px-4 py-3 text-sm border border-border outline-none transition-all focus:ring-2 focus:ring-primary/40 shadow-sm" />
+                  <input type="number" min="1" value={episodesTotal} onChange={(e) => setEpisodesTotal(e.target.value ? Number(e.target.value) : '')} className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3 text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
                 </FieldWrapper>
                 <FieldWrapper label="Watched Eps">
-                  <input type="number" min="0" max={episodesTotal || undefined} value={episodesWatched} onChange={(e) => setEpisodesWatched(e.target.value ? Number(e.target.value) : '')} className="w-full bg-card focus:bg-background rounded-xl px-4 py-3 text-sm border border-border outline-none transition-all focus:ring-2 focus:ring-primary/40 shadow-sm" />
+                  <input type="number" min="0" max={episodesTotal || undefined} value={episodesWatched} onChange={(e) => setEpisodesWatched(e.target.value ? Number(e.target.value) : '')} className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3 text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
                 </FieldWrapper>
                 <FieldWrapper label="Seasons">
-                  <input type="number" min="1" value={seasonsCount} onChange={(e) => setSeasonsCount(e.target.value ? Number(e.target.value) : '')} className="w-full bg-card focus:bg-background rounded-xl px-4 py-3 text-sm border border-border outline-none transition-all focus:ring-2 focus:ring-primary/40 shadow-sm" />
+                  <input type="number" min="1" value={seasonsCount} onChange={(e) => setSeasonsCount(e.target.value ? Number(e.target.value) : '')} className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3 text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
                 </FieldWrapper>
                 <FieldWrapper label="Time Watched" icon={<Clock size={12} />}>
                   <div className="w-full bg-primary/5 text-primary font-bold flex items-center px-4 py-3 rounded-xl border border-primary/20 shadow-sm text-sm">
@@ -405,146 +552,17 @@ export function MediaForm({ onCancel, onSave, initialData }: MediaFormProps) {
                 </FieldWrapper>
               </div>
 
-              {(() => {
-                const maxSeasonNum = Math.max(Number(seasonsCount) || 1, activeSeasonTab, ...episodes.map(e => e.season || 1));
-                const availableSeasons = Array.from({ length: maxSeasonNum }, (_, i) => i + 1);
-                const currentTab = activeSeasonTab;
-                const seasonEpisodes = episodes.filter(e => e.season === currentTab);
-
-                const handleAddSingleEpisode = (season: number) => {
-                  setEpisodes(prev => {
-                    const sEps = prev.filter(e => e.season === season);
-                    const nextNumber = sEps.length > 0 ? Math.max(...sEps.map(e => e.number || 1)) + 1 : 1;
-                    return [...prev, { name: `Episode ${nextNumber}`, season, number: nextNumber, runtime: undefined, airDate: '' }];
-                  });
-                };
-
-                const handleBulkGenerate = (season: number, count: number) => {
-                  setEpisodes(prev => {
-                    const sEps = prev.filter(e => e.season === season);
-                    let nextNumber = sEps.length > 0 ? Math.max(...sEps.map(e => e.number || 1)) + 1 : 1;
-                    const newEps: EpisodeInfo[] = [];
-                    for (let i = 0; i < count; i++) {
-                      newEps.push({ name: `Episode ${nextNumber}`, season, number: nextNumber, runtime: undefined, airDate: '' });
-                      nextNumber++;
-                    }
-                    return [...prev, ...newEps];
-                  });
-                };
-
-                const handleDeleteEpisode = (idx: number) => {
-                  setEpisodes(prev => prev.filter((_, i) => i !== idx));
-                };
-
-                return (
-                  <div className="border border-border/80 rounded-2xl overflow-hidden bg-card shadow-sm flex flex-col flex-1 min-h-[350px]">
-                    <div className="flex items-center gap-2 p-3 bg-muted/30 overflow-x-auto hide-scrollbar border-b border-border/80 shrink-0">
-                      {availableSeasons.map(s => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => setActiveSeasonTab(s)}
-                          className={`px-5 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer ${currentTab === s ? 'bg-primary text-primary-foreground shadow-md' : 'bg-background border border-border text-muted-foreground hover:bg-muted hover:text-foreground'}`}
-                        >
-                          Season {s}
-                        </button>
-                      ))}
-                      <button type="button" onClick={() => { setActiveSeasonTab(Math.max(...availableSeasons) + 1); setSeasonsCount(prev => Number(prev) + 1); }} className="px-4 py-2 text-xs font-bold rounded-xl bg-transparent border-2 border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors whitespace-nowrap ml-2 cursor-pointer">
-                        + Add Season
-                      </button>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto overflow-x-auto p-2">
-                      {seasonEpisodes.length === 0 ? (
-                        <div className="h-full min-h-[250px] flex flex-col items-center justify-center p-6 text-center">
-                          <span className="text-muted-foreground text-sm mb-6 font-medium">No episodes added for Season {currentTab} yet.</span>
-                          <div className="flex flex-col sm:flex-row gap-5 items-center bg-background p-6 rounded-2xl border border-border shadow-sm">
-                            <button type="button" onClick={() => handleAddSingleEpisode(currentTab)} className="bg-primary text-primary-foreground px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity shadow-sm cursor-pointer whitespace-nowrap flex items-center gap-2">
-                              <ListPlus size={16} /> Add 1 Episode
-                            </button>
-                            <span className="text-muted-foreground/40 text-xs font-bold uppercase tracking-widest">OR</span>
-                            <div className="flex bg-card border border-border rounded-xl overflow-hidden focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-all shadow-sm h-12 shrink-0">
-                              <input id={`bulk-${currentTab}`} type="number" min="1" placeholder="Generate multiple..." className="w-32 sm:w-40 px-4 py-2 text-sm bg-transparent outline-none font-medium placeholder:text-muted-foreground/50" />
-                              <button type="button" onClick={() => {
-                                const input = document.getElementById(`bulk-${currentTab}`) as HTMLInputElement;
-                                const count = Number(input.value);
-                                if (count > 0) handleBulkGenerate(currentTab, count);
-                              }} className="bg-muted hover:bg-muted/80 px-5 text-xs font-bold border-l border-border transition-colors text-foreground cursor-pointer">Generate</button>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-2 min-w-[600px] p-2">
-                          <div className="flex px-4 pb-2 pt-1 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                            <div className="w-12 text-center">Ep</div>
-                            <div className="flex-1 ml-3">Title</div>
-                            <div className="w-24 text-center">Runtime (m)</div>
-                            <div className="w-[130px] pl-3">Air Date</div>
-                            <div className="w-10"></div>
-                          </div>
-                          {episodes.map((ep, idx) => {
-                            if (ep.season !== currentTab) return null;
-                            return (
-                              <div key={`${ep.season}-${ep.number || idx}`} className="flex items-center gap-3 bg-background border border-border/60 rounded-xl p-2 hover:border-primary/40 hover:shadow-sm transition-all group">
-                                <div className="w-12 text-xs font-bold text-muted-foreground font-mono flex-shrink-0 text-center bg-muted/40 rounded-lg py-2.5 cursor-default">
-                                  {ep.number || 1}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <input
-                                    type="text"
-                                    value={ep.name}
-                                    onChange={(e) => setEpisodes(prev => prev.map((item, i) => i === idx ? { ...item, name: e.target.value } : item))}
-                                    className="w-full bg-transparent border-none outline-none focus:text-primary transition-colors font-semibold text-sm px-3 py-2 placeholder:text-muted-foreground/40 rounded-md focus:bg-muted/30"
-                                    placeholder="Episode Title"
-                                  />
-                                </div>
-                                <div className="w-24 flex-shrink-0">
-                                  <div className="flex items-center gap-1.5 bg-muted/30 rounded-lg px-3 py-2 focus-within:bg-card focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/40 border border-transparent transition-all">
-                                    <Clock size={12} className="text-muted-foreground shrink-0" />
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      value={ep.runtime || ''}
-                                      onChange={(e) => setEpisodes(prev => prev.map((item, i) => i === idx ? { ...item, runtime: e.target.value ? Number(e.target.value) : undefined } : item))}
-                                      placeholder="Auto"
-                                      className="w-full bg-transparent border-none outline-none text-xs text-center font-medium"
-                                    />
-                                  </div>
-                                </div>
-                                <div className="w-[130px] flex-shrink-0">
-                                  <input
-                                    type="date"
-                                    value={ep.airDate || ''}
-                                    onChange={(e) => setEpisodes(prev => prev.map((item, i) => i === idx ? { ...item, airDate: e.target.value } : item))}
-                                    className="w-full bg-muted/30 hover:bg-muted/60 border-none outline-none text-muted-foreground text-xs rounded-lg px-3 py-2 transition-colors cursor-pointer focus:ring-1 focus:ring-primary/40"
-                                  />
-                                </div>
-                                <div className="w-10 flex-shrink-0 flex justify-end">
-                                  <button type="button" onClick={() => handleDeleteEpisode(idx)} className="text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all cursor-pointer p-2 rounded-lg hover:bg-red-500/10">
-                                    <X size={16} />
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          })}
-                          <button type="button" onClick={() => handleAddSingleEpisode(currentTab)} className="mt-2 w-full py-4 border-2 border-dashed border-border rounded-xl text-muted-foreground font-bold text-sm hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
-                            <ListPlus size={16} /> Add Episode
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
+              {renderEpisodePanel}
             </motion.div>
           )}
         </AnimatePresence>
       </form>
 
-      <div className="px-4 sm:px-8 py-4 sm:py-5 bg-muted/20 border-t border-border flex gap-3 sm:gap-4 shrink-0 mt-auto">
-        <button type="button" onClick={onCancel} className="flex-1 py-3.5 rounded-xl text-sm font-bold bg-background border border-border hover:bg-muted text-foreground transition-all cursor-pointer shadow-sm">Cancel</button>
-        <button type="submit" form="media-form" disabled={!title.trim() || isSaving} className="flex-[2] py-3.5 rounded-xl text-sm font-bold bg-primary text-primary-foreground flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-md hover:shadow-lg hover:opacity-90">
-          {isSaving ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={18} strokeWidth={2.5} />}
+      {/* Footer action bar */}
+      <div className="px-6 sm:px-8 py-5 bg-card/50 dark:bg-black/50 border-t border-border/20 backdrop-blur-3xl flex gap-3 shrink-0 z-20 mt-auto">
+        <button type="button" onClick={onCancel} className="flex-1 py-3.5 rounded-full text-sm font-bold bg-background/60 border border-border/60 hover:bg-muted text-foreground transition-all cursor-pointer shadow-sm">Cancel</button>
+        <button type="submit" form="media-form" disabled={!title.trim() || isSaving} className="flex-[2] py-3.5 rounded-full text-sm font-bold bg-foreground text-background flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-md hover:opacity-90">
+          {isSaving ? <div className="w-5 h-5 border-2 border-background/30 border-t-background rounded-full animate-spin" /> : <Check size={18} strokeWidth={2.5} />}
           {isSaving ? 'Saving Changes...' : 'Save Data'}
         </button>
       </div>

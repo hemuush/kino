@@ -1,11 +1,10 @@
-// File: src/app/collection/page.tsx
 "use client";
 
 import { useState, useEffect, Suspense, useMemo, useRef } from 'react';
 import { useMedia } from '@/context/MediaContext';
 import MediaCard from '@/components/MediaCard';
 import { MediaDetailModal } from '@/components/MediaDetailModal';
-import { Plus, Film, Heart, Shuffle, Search, Settings, Terminal } from 'lucide-react';
+import { Plus, Film, Heart, Shuffle, Search, Settings, Terminal, LayoutGrid, List, SlidersHorizontal, Activity, Play, Star, CheckCircle, Clock } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MediaEntry, isEpisodic } from '@/lib/db';
 import { useAutoRefresh } from '@/hooks/useAutoRefresh';
@@ -27,17 +26,25 @@ function CollectionContent() {
     const [favoritesOnly, setFavoritesOnly] = useState(false);
     const [sortBy, setSortBy] = useState<'Recent' | 'Rating' | 'Title'>('Recent');
     const [viewMode, setViewMode] = useState<'poster' | 'list'>('poster');
+    const [visibleCount, setVisibleCount] = useState(60);
 
     const searchQuery = searchParams.get('q') || '';
-    const showFilters = searchParams.get('filters') !== '0';
 
     // Command Menu state
     const [isCmdOpen, setIsCmdOpen] = useState(false);
     const [cmdSearch, setCmdSearch] = useState('');
     const [selectedCmdIdx, setSelectedCmdIdx] = useState(0);
     const cmdInputRef = useRef<HTMLInputElement>(null);
+    
+    // Dock state
+    const [isFilterDockOpen, setIsFilterDockOpen] = useState(false);
 
-    // Filtered entries
+    // Derived states
+    const recentEntry = useMemo(() => {
+        if (!entries || entries.length === 0) return null;
+        return [...entries].sort((a, b) => b.createdAt - a.createdAt)[0];
+    }, [entries]);
+
     const sortedEntries = useMemo(() => {
         const filtered = entries.filter(e => {
             if (filter === 'Series' && e.type !== 'TV Show') return false;
@@ -71,12 +78,11 @@ function CollectionContent() {
         });
     }, [entries, filter, statusFilter, searchQuery, favoritesOnly, sortBy, genres, franchises]);
 
-    const handleIncrementWatched = (entry: MediaEntry) => {
+    const handleIncrementWatched = (entry: MediaEntry, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
         if (!isEpisodic(entry)) return;
-
         const max = entry.episodesTotal || 9999;
         const current = entry.episodesWatched || 0;
-
         if (current < max) {
             updateEntry({ ...entry, episodesWatched: current + 1 });
         }
@@ -92,13 +98,6 @@ function CollectionContent() {
         setSelectedEntry(random);
     };
 
-    const quickStats = useMemo(() => ([
-        { label: 'Watching', value: entries.filter(e => e.status === 'Watching').length, onClick: () => setStatusFilter('Watching') },
-        { label: 'Plan', value: entries.filter(e => e.status === 'Plan to Watch').length, onClick: () => setStatusFilter('Plan to Watch') },
-        { label: 'Completed', value: entries.filter(e => e.status === 'Completed').length, onClick: () => setStatusFilter('Completed') },
-        { label: 'Favorites', value: entries.filter(e => e.favorite).length, onClick: () => setFavoritesOnly(true) },
-    ]), [entries]);
-
     // Listen for Cmd+K / Ctrl+K
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -110,13 +109,13 @@ function CollectionContent() {
             }
             if (e.key === 'Escape') {
                 setIsCmdOpen(false);
+                setIsFilterDockOpen(false);
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    // Focus input when Command Menu opens
     useEffect(() => {
         if (isCmdOpen) {
             setTimeout(() => {
@@ -125,52 +124,18 @@ function CollectionContent() {
         }
     }, [isCmdOpen]);
 
-    // Command options list
     const cmdOptions = useMemo(() => {
         const base = [
-            {
-                id: 'add',
-                title: 'Add New Media',
-                description: 'Add a new movie, series, or anime to your watchlist',
-                shortcut: 'A',
-                icon: Plus,
-                action: () => { router.push('/add'); setIsCmdOpen(false); }
-            },
-            {
-                id: 'sagas',
-                title: 'Jump to Sagas',
-                description: 'Manage your sagas, custom timelines, and franchises',
-                shortcut: 'S',
-                icon: Film,
-                action: () => { router.push('/sagas'); setIsCmdOpen(false); }
-            },
-            {
-                id: 'settings',
-                title: 'View Settings',
-                description: 'Database sync status, backup controls, and dark theme toggles',
-                shortcut: ',',
-                icon: Settings,
-                action: () => { router.push('/settings'); setIsCmdOpen(false); }
-            },
-            {
-                id: 'random',
-                title: 'Pick Random Watch',
-                description: 'Choose a random title from your Plan to Watch pool',
-                shortcut: 'R',
-                icon: Shuffle,
-                action: () => { handleRandomPick(); setIsCmdOpen(false); }
-            }
+            { id: 'add', title: 'Add New Media', description: 'Add a new movie, series, or anime', shortcut: 'A', icon: Plus, action: () => { router.push('/add'); setIsCmdOpen(false); } },
+            { id: 'sagas', title: 'Jump to Sagas', description: 'Manage custom timelines and franchises', shortcut: 'S', icon: Film, action: () => { router.push('/sagas'); setIsCmdOpen(false); } },
+            { id: 'settings', title: 'View Settings', description: 'App settings and database sync', shortcut: ',', icon: Settings, action: () => { router.push('/settings'); setIsCmdOpen(false); } },
+            { id: 'random', title: 'Pick Random Watch', description: 'Choose a random title from Plan to Watch', shortcut: 'R', icon: Shuffle, action: () => { handleRandomPick(); setIsCmdOpen(false); } }
         ];
 
-        // Filter based on query
         if (!cmdSearch) return base;
-        return base.filter(opt =>
-            opt.title.toLowerCase().includes(cmdSearch.toLowerCase()) ||
-            opt.description.toLowerCase().includes(cmdSearch.toLowerCase())
-        );
+        return base.filter(opt => opt.title.toLowerCase().includes(cmdSearch.toLowerCase()) || opt.description.toLowerCase().includes(cmdSearch.toLowerCase()));
     }, [cmdSearch, entries, router]);
 
-    // Handle Keyboard events inside Command Menu
     const handleCmdKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'ArrowDown') {
             e.preventDefault();
@@ -187,249 +152,274 @@ function CollectionContent() {
     };
 
     return (
-        <div className="absolute inset-0 flex flex-col bg-background pb-4 lg:pb-6 pt-3 sm:pt-4 lg:pt-6 px-3 sm:px-6 lg:px-10 overflow-hidden w-full max-w-[1600px] mx-auto animate-fade-in animate-fade-up">
-            {/* Header Area */}
-            <div className="shrink-0 pb-4 border-b border-cyan-400/15">
-                <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
-                    <div className="hidden md:flex flex-col text-left">
-                        <h1 className="text-3xl font-display font-bold tracking-tight text-foreground flex items-center gap-2">
-                            My Collection
-                        </h1>
-                        <p className="text-xs text-muted-foreground mt-1 font-semibold">{entries.length} Items Total</p>
+        <div className="absolute inset-0 overflow-y-auto bg-background text-foreground scroll-smooth hide-scrollbar">
+            {/* Ambient Backing */}
+            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.06)_1px,transparent_1px)] dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none opacity-100 z-0" />
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
+            </div>
+
+            <div className="relative z-10 mx-auto w-full max-w-[2400px] py-4 sm:py-6 px-4 sm:px-8 lg:px-12 pb-48">
+                
+
+
+                {/* Library Section */}
+                <section>
+                    <div className="flex items-center justify-between mb-8">
+                        <h2 className="text-[11px] font-mono tracking-[0.2em] text-muted-foreground uppercase font-bold">
+                            {searchQuery ? 'Search Results' : 'Full Library'}
+                        </h2>
+                        <span className="text-xs font-semibold text-muted-foreground">{sortedEntries.length} items</span>
                     </div>
 
-                    <div className="flex w-full sm:w-auto items-center gap-2 overflow-x-auto hide-scrollbar pb-1 sm:pb-0">
-                        <div className="hidden md:flex items-center rounded-full border border-border/70 bg-card/60 p-1 mr-1">
-                            <button onClick={() => setViewMode('poster')} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${viewMode === 'poster' ? 'bg-primary text-white' : 'text-muted-foreground hover:text-foreground'}`}>Poster</button>
-                            <button onClick={() => setViewMode('list')} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${viewMode === 'list' ? 'bg-primary text-white' : 'text-muted-foreground hover:text-foreground'}`}>List</button>
+                    {isLoading ? (
+                        <div className="py-20 flex justify-center"><PageLoader text="Loading Library..." /></div>
+                    ) : entries.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-20 text-center">
+                            <div className="w-20 h-20 rounded-full bg-card/65 border border-border/80 flex items-center justify-center mb-6 shadow-sm">
+                                <Film size={32} className="text-muted-foreground/50" />
+                            </div>
+                            <h2 className="text-2xl font-display font-bold mb-2">Empty Collection</h2>
+                            <p className="text-muted-foreground text-sm mb-8 max-w-sm">Your library is currently empty. Start adding media to build your personal collection.</p>
+                            <Link href="/add" className="bg-foreground text-background px-6 py-3 rounded-full font-bold text-sm shadow-md hover:bg-foreground/90 transition-all flex items-center gap-2">
+                                <Plus size={18} strokeWidth={3} /> Add First Entry
+                            </Link>
                         </div>
-                        {/* Cmd+K trigger button */}
-                        <button
-                            onClick={() => setIsCmdOpen(true)}
-                            className="hidden md:flex items-center gap-2 px-3.5 py-2 rounded-full bg-card/70 dark:bg-neutral-950/65 hover:bg-muted dark:hover:bg-neutral-900 text-muted-foreground hover:text-foreground font-medium text-[12.5px] border border-border/80 dark:border-white/5 transition-all cursor-pointer shadow-sm"
-                        >
-                            <Terminal size={13} />
-                            <span>Quick Menu</span>
-                            <kbd className="pointer-events-none inline-flex h-4 select-none items-center gap-0.5 rounded border border-border/60 dark:border-white/10 bg-muted dark:bg-white/5 px-1.5 font-mono text-[9px] font-bold text-muted-foreground leading-none">
-                                ⌘K
-                            </kbd>
-                        </button>
-                        <button
-                            onClick={handleRandomPick}
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-500 hover:bg-amber-500/15 font-semibold text-[12.5px] transition-colors whitespace-nowrap border border-amber-500/15 cursor-pointer"
-                        >
-                            <Shuffle size={13} /> Pick Random
-                        </button>
-                        
-                        <div className="h-6 w-px bg-black/5 dark:bg-white/10 mx-1 hidden sm:block"></div>
-                        <Link
-                            href="/add"
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary hover:bg-primary/95 text-white font-semibold text-[13px] transition-all whitespace-nowrap shadow-sm cursor-pointer"
-                        >
-                            <Plus size={15} strokeWidth={2.5} /> Add Media
-                        </Link>
+                    ) : sortedEntries.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-20 text-center border border-border/40 rounded-[32px] bg-card/20 backdrop-blur-sm">
+                            <Search size={32} className="text-muted-foreground/30 mb-4" />
+                            <h3 className="text-lg font-bold mb-1">No Matches Found</h3>
+                            <p className="text-muted-foreground text-sm">Try adjusting your filters or search query.</p>
+                            <button onClick={() => { setFilter('All'); setStatusFilter('All'); setFavoritesOnly(false); router.push('/collection'); }} className="mt-6 font-bold text-sm text-primary hover:underline">
+                                Clear all filters
+                            </button>
+                        </div>
+                    ) : (
+                        viewMode === 'poster' ? (
+                            <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-x-3 gap-y-6 sm:gap-x-4 sm:gap-y-8">
+                                <AnimatePresence mode="popLayout">
+                                    {sortedEntries.slice(0, visibleCount).map((entry, i) => (
+                                        <motion.div
+                                            key={entry.id}
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.9 }}
+                                            transition={{ duration: 0.2, delay: Math.min(i * 0.02, 0.2) }}
+                                        >
+                                            <MediaCard
+                                                entry={entry}
+                                                onClick={() => setSelectedEntry(entry)}
+                                                onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })}
+                                                onIncrementWatched={() => handleIncrementWatched(entry)}
+                                                onStatusChange={(newStatus) => updateEntry({ ...entry, status: newStatus })}
+                                                index={i}
+                                            />
+                                        </motion.div>
+                                    ))}
+                                </AnimatePresence>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <AnimatePresence mode="popLayout">
+                                    {sortedEntries.slice(0, visibleCount).map((entry, i) => (
+                                        <motion.div
+                                            key={entry.id}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.95 }}
+                                            transition={{ duration: 0.2, delay: Math.min(i * 0.02, 0.2) }}
+                                            className="rounded-[24px] border border-border/80 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-muted/50 transition-colors shadow-sm cursor-pointer group"
+                                            onClick={() => setSelectedEntry(entry)}
+                                        >
+                                            <div className="flex gap-4 flex-1 items-center">
+                                                <div className="w-12 h-16 sm:w-14 sm:h-20 rounded-xl overflow-hidden bg-muted shrink-0 border border-border/50">
+                                                    {entry.coverImage ? <img src={entry.coverImage} alt={entry.title} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /> : null}
+                                                </div>
+                                                <div className="text-left min-w-0 flex-1">
+                                                    <p className="font-display font-bold text-base sm:text-lg truncate">{entry.title}</p>
+                                                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground mt-1">
+                                                        <span>{entry.type}</span>
+                                                        <span className="w-1 h-1 rounded-full bg-border" />
+                                                        <span>{entry.releaseDate?.slice(0, 4) || 'Unknown Year'}</span>
+                                                        <span className="w-1 h-1 rounded-full bg-border" />
+                                                        <span className={entry.status === 'Completed' ? 'text-emerald-500' : entry.status === 'Watching' ? 'text-cyan-500' : 'text-amber-500'}>{entry.status}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-end gap-2 sm:gap-3 w-full sm:w-auto mt-2 sm:mt-0" onClick={(e) => e.stopPropagation()}>
+                                                <button onClick={() => updateEntry({ ...entry, favorite: !entry.favorite })} className={`p-2.5 rounded-full border transition-all ${entry.favorite ? 'border-red-500/30 bg-red-500/10 text-red-500' : 'border-border/80 bg-background hover:bg-muted text-muted-foreground'}`}>
+                                                    <Heart size={16} className={entry.favorite ? "fill-red-500" : ""} />
+                                                </button>
+                                                {isEpisodic(entry) && (
+                                                    <button onClick={(e) => handleIncrementWatched(entry, e)} className="px-4 py-2.5 text-xs font-bold rounded-full border border-border/80 bg-background hover:bg-muted transition-colors flex items-center gap-1">
+                                                        <Plus size={14} /> Ep {entry.episodesWatched || 0}
+                                                    </button>
+                                                )}
+                                                <select
+                                                    value={entry.status || 'Completed'}
+                                                    onChange={(e) => updateEntry({ ...entry, status: e.target.value as MediaEntry['status'] })}
+                                                    className="px-4 py-2.5 text-xs font-bold rounded-full border border-border/80 bg-background outline-none cursor-pointer hover:bg-muted transition-colors appearance-none pr-8 relative"
+                                                    style={{ backgroundImage: 'linear-gradient(45deg, transparent 50%, gray 50%), linear-gradient(135deg, gray 50%, transparent 50%)', backgroundPosition: 'calc(100% - 15px) calc(1em + 2px), calc(100% - 11px) calc(1em + 2px)', backgroundSize: '4px 4px, 4px 4px', backgroundRepeat: 'no-repeat' }}
+                                                >
+                                                    <option value="Completed">Completed</option>
+                                                    <option value="Watching">Watching</option>
+                                                    <option value="Plan to Watch">Plan to Watch</option>
+                                                </select>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </AnimatePresence>
+                            </div>
+                        )
+                    )}
+
+                    {/* Load More Button */}
+                    {!isLoading && sortedEntries.length > visibleCount && (
+                        <div className="flex justify-center mt-12 mb-8 relative z-20">
+                            <button
+                                onClick={() => setVisibleCount(prev => prev + 60)}
+                                className="px-8 py-3.5 rounded-full bg-card/60 dark:bg-[#0c0c0d]/80 border border-border/80 text-foreground font-bold text-sm hover:bg-muted/50 transition-all shadow-sm flex items-center gap-2"
+                            >
+                                <List size={16} /> Load More... ({sortedEntries.length - visibleCount} remaining)
+                            </button>
+                        </div>
+                    )}
+                </section>
+            </div>
+
+            {/* Floating Segmented Dock (Apple/Nothing style) */}
+            <div className="fixed bottom-[88px] lg:bottom-8 left-1/2 -translate-x-1/2 z-40 w-[95%] sm:w-auto flex justify-center pointer-events-none">
+                <div className="pointer-events-auto flex items-center gap-0.5 sm:gap-2 p-1.5 sm:p-2 rounded-full border border-border/80 bg-card/80 dark:bg-[#0c0c0d]/80 backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] relative">
+                    {/* Types */}
+                    <div className="flex items-center overflow-x-auto hide-scrollbar snap-x">
+                        {(['All', 'Movie', 'Series', 'Anime'] as const).map(f => (
+                            <button
+                                key={f}
+                                onClick={() => {
+                                    setFilter(f);
+                                    if (f === 'All') router.push('/collection');
+                                    else router.push(`/collection?type=${f}`);
+                                }}
+                                className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-full text-[10px] sm:text-sm font-bold transition-all duration-300 snap-center whitespace-nowrap ${filter === f ? 'bg-foreground text-background shadow-md' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
+                            >
+                                {f}
+                            </button>
+                        ))}
                     </div>
-                </div>
+                    
+                    <div className="w-px h-6 bg-border/80 mx-1 sm:mx-2 shrink-0" />
+                    
+                    {/* View Modes */}
+                    <div className="flex items-center shrink-0">
+                        <button onClick={() => setViewMode('poster')} className={`p-2 sm:p-2.5 rounded-full transition-all ${viewMode === 'poster' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
+                            <LayoutGrid size={16} />
+                        </button>
+                        <button onClick={() => setViewMode('list')} className={`p-2 sm:p-2.5 rounded-full transition-all ${viewMode === 'list' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
+                            <List size={16} />
+                        </button>
+                    </div>
+                    
+                    <div className="w-px h-6 bg-border/80 mx-1 sm:mx-2 shrink-0" />
+                    
+                    {/* Add Media Button */}
+                    <Link href="/add" className="p-2 sm:p-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all shrink-0">
+                        <Plus size={16} strokeWidth={3} />
+                    </Link>
+                    
+                    {/* Filter Toggle */}
+                    <button onClick={() => setIsFilterDockOpen(!isFilterDockOpen)} className={`p-2 sm:p-2.5 rounded-full transition-all shrink-0 ${isFilterDockOpen ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
+                        <SlidersHorizontal size={16} />
+                    </button>
 
-                <AnimatePresence>
-                    {showFilters && (
-                        <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden"
-                        >
-                            <div className="max-w-[1600px] mx-auto pt-5 flex flex-col gap-4">
-                                <div className="flex flex-col md:flex-row md:items-center gap-4">
-                                    {/* Horizontal scroll container for filters */}
-                                    <div className="w-full min-w-0 overflow-x-auto hide-scrollbar pb-2 md:pb-0">
-                                        <div className="flex w-max min-w-full items-center gap-3 md:w-auto md:min-w-0">
-                                        {/* Neon Cyan Filter Pills: Type */}
-                                        <div className="flex bg-card/70 dark:bg-neutral-950/65 p-1 rounded-full border border-border/80 dark:border-white/5 shadow-sm shrink-0">
-                                            {(['All', 'Movie', 'Series', 'Anime'] as const).map(f => {
-                                                const isActive = filter === f;
-                                                return (
-                                                    <button
-                                                        key={f}
-                                                        onClick={() => {
-                                                            setFilter(f);
-                                                            if (f === 'All') router.push('/collection');
-                                                            else router.push(`/collection?type=${f}`);
-                                                        }}
-                                                        className={`px-4.5 py-1.5 text-[12px] font-bold rounded-full transition-all duration-300 cursor-pointer whitespace-nowrap ${isActive ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.15)] font-bold' : 'text-muted-foreground border border-transparent hover:text-foreground'}`}
-                                                    >
-                                                        {f}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-
-                                        {/* Neon Cyan Filter Pills: Status */}
-                                        <div className="flex bg-card/70 dark:bg-neutral-950/65 p-1 rounded-full border border-border/80 dark:border-white/5 shadow-sm shrink-0">
-                                            {(['All', 'Completed', 'Watching', 'Plan to Watch'] as const).map(s => {
-                                                const isActive = statusFilter === s;
-                                                return (
-                                                    <button
-                                                        key={s}
-                                                        onClick={() => setStatusFilter(s)}
-                                                        className={`px-4.5 py-1.5 text-[12px] font-bold rounded-full transition-all duration-300 cursor-pointer whitespace-nowrap ${isActive ? 'bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.15)] font-bold' : 'text-muted-foreground border border-transparent hover:text-foreground'}`}
-                                                    >
-                                                        {s}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-
+                    {/* Expanded Filters Popover */}
+                    <AnimatePresence>
+                        {isFilterDockOpen && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                                animate={{ opacity: 1, y: -20, scale: 1 }}
+                                exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                                transition={{ type: "spring", bounce: 0.3, duration: 0.5 }}
+                                className="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 w-[calc(100vw-2rem)] sm:w-max max-w-[90vw] p-4 sm:p-5 rounded-3xl border border-border bg-card/95 dark:bg-[#0c0c0d]/95 backdrop-blur-md shadow-2xl flex flex-col gap-4 sm:gap-5 origin-bottom z-50"
+                            >
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                                    <span className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-widest w-16">Status</span>
+                                    <div className="flex flex-wrap gap-1 bg-muted/30 p-1.5 rounded-3xl border border-border/50">
+                                        {(['All', 'Completed', 'Watching', 'Plan to Watch'] as const).map(s => (
+                                            <button
+                                                key={s}
+                                                onClick={() => setStatusFilter(s)}
+                                                className={`px-4 py-2 text-xs font-bold rounded-full transition-all ${statusFilter === s ? 'bg-foreground text-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                                            >
+                                                {s}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                                    <span className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-widest w-16">Sort & Filter</span>
+                                    <div className="flex flex-wrap gap-2">
                                         <select
                                             value={sortBy}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSortBy(e.target.value as 'Recent' | 'Rating' | 'Title')}
-                                            className="bg-card/70 dark:bg-neutral-950/65 border border-border/80 dark:border-white/5 rounded-full px-4 py-2 text-[12.5px] font-semibold outline-none text-muted-foreground hover:text-foreground transition-colors cursor-pointer shadow-sm shrink-0"
+                                            onChange={(e: any) => setSortBy(e.target.value)}
+                                            className="bg-muted/30 text-foreground border border-border/50 rounded-full px-5 py-2 text-xs font-bold outline-none cursor-pointer appearance-none hover:bg-muted/50 transition-colors"
                                         >
                                             <option value="Recent">Newest First</option>
                                             <option value="Rating">Highest Rated</option>
                                             <option value="Title">Alphabetical</option>
                                         </select>
-
+                                        
                                         <button
                                             onClick={() => setFavoritesOnly(!favoritesOnly)}
-                                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-[12.5px] font-semibold transition-all border cursor-pointer shadow-sm shrink-0 ${favoritesOnly ? 'bg-red-500/15 border-red-500/30 text-red-500' : 'bg-card/70 dark:bg-neutral-950/65 text-muted-foreground border-border/80 dark:border-white/5 hover:text-foreground hover:bg-muted dark:hover:bg-neutral-900'}`}
+                                            className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold transition-all border ${favoritesOnly ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
                                         >
                                             <Heart size={14} className={favoritesOnly ? "fill-red-500 text-red-500" : ""} /> Favorites
                                         </button>
-                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
-
-            {/* Main Content */}
-            <div className="flex-1 min-h-0 overflow-y-auto hide-scrollbar pt-4 z-10 relative pb-28 lg:pb-4">
-                {isLoading ? (
-                    <PageLoader text="Loading Library..." />
-                ) : entries.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-32 max-w-sm mx-auto text-center animate-fade-in">
-                        <div className="w-16 h-16 bg-card/70 dark:bg-neutral-950/65 rounded-full flex items-center justify-center mb-6 border border-border/80 dark:border-white/5 shadow-sm">
-                            <Film size={26} className="text-muted-foreground/50" />
-                        </div>
-                        <h2 className="text-[17px] font-bold mb-2 text-foreground">Your collection is empty</h2>
-                        <p className="text-muted-foreground text-[13px] mb-8 leading-relaxed">Start tracking your movies, TV shows, and anime to build your personalized library.</p>
-                        <Link href="/add" className="bg-primary hover:bg-primary/95 text-white px-5 py-2.5 rounded-full font-semibold text-[13px] shadow-sm hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center gap-2">
-                            <Plus size={15} strokeWidth={2.5} /> Add Your First Entry
-                        </Link>
-                    </div>
-                ) : sortedEntries.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
-                        <p className="text-muted-foreground font-medium text-sm">No matches found for your filters.</p>
-                        <button onClick={() => { setFilter('All'); setStatusFilter('All'); setFavoritesOnly(false); router.push('/collection'); }} className="mt-4 text-primary font-semibold text-[13px] hover:underline">
-                            Clear all filters
-                        </button>
-                    </div>
-                ) : (
-                    <section>
-                        {showFilters && (
-                            <div className="mb-4 flex flex-wrap gap-2">
-                                {quickStats.map((s) => (
-                                    <button key={s.label} onClick={s.onClick} className="rounded-full border border-border/70 bg-card/70 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50">
-                                        {s.label}: <span className="text-foreground">{s.value}</span>
-                                    </button>
-                                ))}
-                                <button onClick={() => { setFilter('All'); setStatusFilter('All'); setFavoritesOnly(false); router.push('/collection'); }} className="rounded-full border border-border/70 bg-card/70 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground">
-                                    Reset
-                                </button>
-                            </div>
-                        )}
-                        <div className="flex items-center justify-between mb-5 px-1">
-                            <h2 className="text-[10px] font-bold text-muted-foreground/60 tracking-widest uppercase">
-                                {searchQuery ? 'Search Results' : 'Your Collection'}
-                            </h2>
-                        </div>
-                        {viewMode === 'poster' ? (
-                            <motion.div layout className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-x-3 sm:gap-x-4 gap-y-5 sm:gap-y-6">
-                                <AnimatePresence>
-                                    {sortedEntries.map((entry, i) => (
-                                        <MediaCard
-                                            key={entry.id}
-                                            entry={entry}
-                                            onClick={() => setSelectedEntry(entry)}
-                                            onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })}
-                                            onIncrementWatched={() => handleIncrementWatched(entry)}
-                                            onStatusChange={(newStatus) => updateEntry({ ...entry, status: newStatus })}
-                                            index={i}
-                                        />
-                                    ))}
-                                </AnimatePresence>
-                            </motion.div>
-                        ) : (
-                            <motion.div layout className="space-y-2">
-                                <AnimatePresence>
-                                    {sortedEntries.map((entry) => (
-                                        <motion.div key={entry.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="rounded-2xl border border-border/70 bg-card/70 p-3 flex items-center gap-3">
-                                            <button onClick={() => setSelectedEntry(entry)} className="w-12 h-14 rounded-lg overflow-hidden bg-muted shrink-0">
-                                                {entry.coverImage ? <img src={entry.coverImage} alt={entry.title} className="w-full h-full object-cover" /> : null}
-                                            </button>
-                                            <button onClick={() => setSelectedEntry(entry)} className="text-left min-w-0 flex-1">
-                                                <p className="font-semibold truncate">{entry.title}</p>
-                                                <p className="text-xs text-muted-foreground">{entry.type} - {entry.status || 'Tracked'}</p>
-                                            </button>
-                                            <button onClick={() => updateEntry({ ...entry, favorite: !entry.favorite })} className="px-2 py-1 text-xs rounded-lg border border-border/70">Fav</button>
-                                            {isEpisodic(entry) && <button onClick={() => handleIncrementWatched(entry)} className="px-2 py-1 text-xs rounded-lg border border-border/70">+1 Ep</button>}
-                                            <select value={entry.status || 'Completed'} onChange={(e) => updateEntry({ ...entry, status: e.target.value as MediaEntry['status'] })} className="text-xs rounded-lg border border-border/70 bg-background px-2 py-1">
-                                                <option>Completed</option>
-                                                <option>Watching</option>
-                                                <option>Plan to Watch</option>
-                                            </select>
-                                        </motion.div>
-                                    ))}
-                                </AnimatePresence>
                             </motion.div>
                         )}
-                    </section>
-                )}
+                    </AnimatePresence>
+                </div>
             </div>
 
-            {/* Command Menu Modal Overlay (Cmd+K) */}
+            {/* Command Menu Modal Overlay */}
             <AnimatePresence>
                 {isCmdOpen && (
-                    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
-                        {/* Background Grid Blur */}
+                    <div className="fixed inset-0 z-[200] flex items-start justify-center pt-[15vh] px-4">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsCmdOpen(false)}
-                            className="absolute inset-0 bg-black/60 backdrop-blur-xl"
+                            className="absolute inset-0 bg-background/80 backdrop-blur-xl"
                         />
 
-                        {/* Modal Box */}
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                            initial={{ opacity: 0, scale: 0.95, y: -20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                            transition={{ duration: 0.2 }}
-                            className="relative w-full max-w-xl bg-card/95 dark:bg-neutral-950/95 border border-border/80 dark:border-cyan-400/30 rounded-3xl overflow-hidden shadow-2xl m-4 z-10 flex flex-col"
+                            exit={{ opacity: 0, scale: 0.95, y: -20 }}
+                            transition={{ type: "spring", bounce: 0, duration: 0.2 }}
+                            className="relative w-full max-w-xl bg-card dark:bg-[#0c0c0d] border border-border/80 rounded-[32px] overflow-hidden shadow-2xl z-10 flex flex-col"
                             onKeyDown={handleCmdKeyDown}
                         >
-                            {/* Command Search Input */}
-                            <div className="flex items-center border-b border-border/60 dark:border-white/5 px-4.5 py-3">
-                                <Search size={18} className="text-cyan-400 mr-3" />
+                            <div className="flex items-center border-b border-border/60 px-6 py-4">
+                                <Search size={20} className="text-muted-foreground mr-3" />
                                 <input
                                     ref={cmdInputRef}
                                     type="text"
                                     placeholder="Type a command or search..."
                                     value={cmdSearch}
                                     onChange={(e) => setCmdSearch(e.target.value)}
-                                    className="flex-1 bg-transparent text-foreground placeholder-muted-foreground/60 text-sm outline-none"
+                                    className="flex-1 bg-transparent text-foreground placeholder-muted-foreground font-medium outline-none text-base"
                                 />
-                                <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border border-border/60 dark:border-white/10 bg-muted dark:bg-white/5 px-1.5 font-mono text-[9px] font-bold text-muted-foreground leading-none">
+                                <kbd className="pointer-events-none inline-flex items-center justify-center rounded bg-muted px-2 py-1 font-mono text-[10px] font-bold text-muted-foreground">
                                     ESC
                                 </kbd>
                             </div>
 
-                            {/* Commands List */}
-                            <div className="max-h-[320px] overflow-y-auto p-2">
+                            <div className="max-h-[350px] overflow-y-auto p-3">
                                 {cmdOptions.length > 0 ? (
                                     cmdOptions.map((opt, idx) => {
                                         const isSelected = idx === selectedCmdIdx;
@@ -439,38 +429,28 @@ function CollectionContent() {
                                                 key={opt.id}
                                                 onClick={opt.action}
                                                 onMouseEnter={() => setSelectedCmdIdx(idx)}
-                                                className={`flex items-center justify-between p-3.5 rounded-2xl cursor-pointer transition-all duration-200 select-none ${isSelected ? 'bg-cyan-500/10 border border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.1)]' : 'border border-transparent hover:bg-muted/40 dark:hover:bg-white/5'}`}
+                                                className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all duration-200 select-none ${isSelected ? 'bg-foreground text-background' : 'hover:bg-muted text-foreground'}`}
                                             >
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`p-2 rounded-xl border ${isSelected ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400' : 'bg-muted dark:bg-white/5 border-border/60 dark:border-white/5 text-muted-foreground'}`}>
-                                                        <Icon size={16} />
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`p-2.5 rounded-xl ${isSelected ? 'bg-background/20' : 'bg-muted'}`}>
+                                                        <Icon size={18} />
                                                     </div>
                                                     <div className="text-left">
-                                                        <p className={`text-sm font-bold leading-tight ${isSelected ? 'text-cyan-400' : 'text-foreground'}`}>{opt.title}</p>
-                                                        <p className="text-[11.5px] text-muted-foreground mt-0.5 leading-none">{opt.description}</p>
+                                                        <p className="text-sm font-bold">{opt.title}</p>
+                                                        <p className={`text-xs mt-0.5 ${isSelected ? 'text-background/70' : 'text-muted-foreground'}`}>{opt.description}</p>
                                                     </div>
                                                 </div>
-                                                <kbd className={`pointer-events-none inline-flex h-5 items-center justify-center min-w-[20px] rounded border px-1.5 font-mono text-[10px] font-bold leading-none transition-colors ${isSelected ? 'border-cyan-400/40 bg-cyan-400/10 text-cyan-400' : 'border-border/60 dark:border-white/10 bg-muted dark:bg-white/5 text-muted-foreground/60'}`}>
+                                                <kbd className={`pointer-events-none inline-flex items-center justify-center min-w-[24px] rounded px-2 py-1 font-mono text-[10px] font-bold ${isSelected ? 'bg-background/20 text-background' : 'bg-muted text-muted-foreground'}`}>
                                                     {opt.shortcut}
                                                 </kbd>
                                             </div>
                                         );
                                     })
                                 ) : (
-                                    <div className="py-8 text-center text-muted-foreground/60 text-xs">
+                                    <div className="py-12 text-center text-muted-foreground font-medium text-sm">
                                         No matching commands found.
                                     </div>
                                 )}
-                            </div>
-
-                            {/* Command Footer */}
-                            <div className="border-t border-border/60 dark:border-white/5 px-4.5 py-2.5 bg-muted/80 dark:bg-neutral-950/80 flex items-center justify-between text-[10px] text-muted-foreground/50 font-mono">
-                                <span className="flex items-center gap-1.5">
-                                    <span>↑↓ to navigate</span>
-                                    <span>•</span>
-                                    <span>↵ to select</span>
-                                </span>
-                                <span>Kino Command Menu</span>
                             </div>
                         </motion.div>
                     </div>
@@ -478,20 +458,22 @@ function CollectionContent() {
             </AnimatePresence>
 
             {/* View Detail Modal */}
-            {selectedEntry && (
-                <MediaDetailModal
-                    entry={selectedEntry}
-                    onClose={() => setSelectedEntry(null)}
-                    onSave={async (updatedEntry) => {
-                        updateEntry(updatedEntry);
-                        setSelectedEntry(updatedEntry);
-                    }}
-                    onDelete={async (id) => {
-                        deleteEntry(id);
-                        setSelectedEntry(null);
-                    }}
-                />
-            )}
+            <AnimatePresence>
+                {selectedEntry && (
+                    <MediaDetailModal
+                        entry={selectedEntry}
+                        onClose={() => setSelectedEntry(null)}
+                        onSave={async (updatedEntry) => {
+                            updateEntry(updatedEntry);
+                            setSelectedEntry(updatedEntry);
+                        }}
+                        onDelete={async (id) => {
+                            deleteEntry(id);
+                            setSelectedEntry(null);
+                        }}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }

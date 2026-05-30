@@ -5,7 +5,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { MediaEntry, Tag, DEFAULT_GENRES, normalizeMediaType, normalizeWatchStatus } from '@/lib/db';
 import { useAuth } from '@/context/AuthContext';
-import { TokenExpiredError, downloadBackupFromDrive, uploadBackupToDrive, deleteBackupFromDrive, BackupData } from '@/lib/googleDrive';
+import { TokenExpiredError, downloadBackupFromDrive, uploadBackupToDrive, deleteBackupFromDrive, getBackupMetadataFromDrive, BackupData } from '@/lib/googleDrive';
 import { toast } from 'sonner';
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error';
@@ -63,40 +63,21 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     if (newEntries !== undefined) {
       setEntries(newEntries);
       latestDataRef.current.entries = newEntries;
-      try { localStorage.setItem('kino_entries', JSON.stringify(newEntries)); } catch {}
     }
     if (newGenres !== undefined) {
       setGenres(newGenres);
       latestDataRef.current.genres = newGenres;
-      try { localStorage.setItem('kino_genres', JSON.stringify(newGenres)); } catch {}
     }
     if (newFranchises !== undefined) {
       setFranchises(newFranchises);
       latestDataRef.current.franchises = newFranchises;
-      try { localStorage.setItem('kino_franchises', JSON.stringify(newFranchises)); } catch {}
     }
-    try { localStorage.setItem('kino_timestamp', now.toString()); } catch {}
+
   }, []);
 
-  // Load from localStorage on mount (fast initial load)
+  // Load defaults on mount if needed
   useEffect(() => {
-    try {
-      const storedEntries = localStorage.getItem('kino_entries');
-      const storedGenres = localStorage.getItem('kino_genres');
-      const storedFranchises = localStorage.getItem('kino_franchises');
-      if (storedEntries || storedGenres || storedFranchises) {
-        const parsedEntries = storedEntries ? JSON.parse(storedEntries) : [];
-        const parsedGenres = storedGenres ? JSON.parse(storedGenres) : [];
-        const parsedFranchises = storedFranchises ? JSON.parse(storedFranchises) : [];
-        setEntries(parsedEntries);
-        setGenres(parsedGenres);
-        setFranchises(parsedFranchises);
-        latestDataRef.current = { entries: parsedEntries, genres: parsedGenres, franchises: parsedFranchises };
-      }
-    } catch (error) {
-      console.error("Failed to parse local cache, flagging as corrupted", error);
-      cacheCorruptedRef.current = true;
-    }
+    // Wait for auth to fetch from cloud.
   }, []);
 
   // triggerUpload: debounced Drive upload after every mutation
@@ -115,8 +96,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         });
         setSyncStatus('synced');
         setLastSyncedAt(Date.now());
-        // Update localStorage timestamp after successful drive upload
-        try { localStorage.setItem('kino_timestamp', Date.now().toString()); } catch {}
+        // Drive upload successful
         if (!silent) {
           // Update drive size cache
         }
@@ -165,14 +145,8 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         }
 
         const cloudTimestamp = backup && 'timestamp' in backup && typeof backup.timestamp === 'number' ? backup.timestamp : 0;
-        const localTimestamp = parseInt(localStorage.getItem('kino_timestamp') || '0', 10);
-
-        // FIXED: Always use the more recent data source
-        if (localTimestamp >= cloudTimestamp && !cacheCorruptedRef.current && latestDataRef.current.entries.length > 0) {
-          // Local data is newer or equal — upload local to Drive to sync
-          triggerUpload(true);
-        } else if (backup) {
-          // Drive data is newer — use Drive data
+        if (backup) {
+          // Drive data exists — use Drive data
           if (fetchedGenres.length === 0) {
             fetchedGenres = DEFAULT_GENRES.map(name => ({ id: crypto.randomUUID(), name }));
           }
@@ -198,6 +172,49 @@ export function MediaProvider({ children }: { children: ReactNode }) {
 
     fetchFromDrive();
   }, [accessToken, logout, triggerUpload, updateStateAndRef]);
+
+  // Cross-device Sync: Listen for window focus to check if another device updated the library
+  useEffect(() => {
+    if (!accessToken || !lastSyncedAt) return;
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        try {
+          const metadata = await getBackupMetadataFromDrive(accessToken);
+          if (metadata && metadata.modifiedTime) {
+            const driveModified = new Date(metadata.modifiedTime).getTime();
+            // If the Drive metadata indicates an update newer than our last sync + 30 seconds grace period
+            // to avoid false positives from our own uploads
+            if (driveModified > lastSyncedAt + 30000) {
+              setSyncStatus('syncing');
+              const backup = await downloadBackupFromDrive(accessToken) as BackupData | MediaEntry[] | null;
+              if (backup) {
+                let fetchedEntries = [];
+                let fetchedGenres: Tag[] = [];
+                let fetchedFranchises: Tag[] = [];
+                if (Array.isArray(backup)) {
+                  fetchedEntries = backup.map(e => ({ ...e, type: normalizeMediaType(e.type), status: normalizeWatchStatus(e.status) }));
+                } else {
+                  fetchedEntries = backup.entries?.map(e => ({ ...e, type: normalizeMediaType(e.type), status: normalizeWatchStatus(e.status) })) || [];
+                  fetchedGenres = backup.genres || [];
+                  fetchedFranchises = backup.franchises || [];
+                }
+                updateStateAndRef(fetchedEntries, fetchedGenres, fetchedFranchises);
+                setLastSyncedAt(Date.now());
+                toast.success("Library updated from another device");
+              }
+              setSyncStatus('synced');
+            }
+          }
+        } catch (e) {
+          console.warn("Visibility sync failed", e);
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [accessToken, lastSyncedAt, updateStateAndRef]);
 
   const batchUpdateEntries = async (updatedEntries: MediaEntry[]) => {
     const newEntries = latestDataRef.current.entries.map(e => {
@@ -347,12 +364,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
       setSyncStatus('error');
       console.error(error);
     }
-    try {
-      localStorage.removeItem('kino_entries');
-      localStorage.removeItem('kino_genres');
-      localStorage.removeItem('kino_franchises');
-      localStorage.removeItem('kino_timestamp');
-    } catch {}
+
     const emptyGenres = DEFAULT_GENRES.map(name => ({ id: crypto.randomUUID(), name }));
     setEntries([]);
     setGenres(emptyGenres);

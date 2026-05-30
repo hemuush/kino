@@ -1,6 +1,7 @@
 "use client";
 
 import { Film, Tag, Database, Settings2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface SettingsSidebarProps {
     activeTab: 'sagas' | 'genres' | 'data';
@@ -9,21 +10,24 @@ interface SettingsSidebarProps {
 
 export function SettingsSidebar({ activeTab, setActiveTab }: SettingsSidebarProps) {
     const navItems = [
-        { id: 'sagas', label: 'Sagas', icon: Film },
-        { id: 'genres', label: 'Genres Matrix', icon: Tag },
-        { id: 'data', label: 'Data & Backups', icon: Database },
+        { id: 'data', label: 'Data & Cloud', icon: Database, desc: 'Sync & Backups' },
+        { id: 'sagas', label: 'Sagas', icon: Film, desc: 'Franchise Map' },
+        { id: 'genres', label: 'Genres Matrix', icon: Tag, desc: 'Categories' },
     ] as const;
 
     return (
-        <aside className="w-full md:w-64 shrink-0 flex flex-col gap-2">
-            <div className="hidden md:flex items-center gap-3 px-4 py-2 mb-4">
-                <div className="p-2 bg-primary/10 rounded-xl text-primary">
-                    <Settings2 size={20} />
+        <aside className="w-full lg:w-[280px] shrink-0 flex flex-col gap-6 sticky top-12 z-20">
+            <div className="hidden lg:flex items-center gap-4 px-2">
+                <div className="p-3 bg-card/65 dark:bg-[#0c0c0d]/80 border border-border/80 backdrop-blur-xl rounded-2xl text-primary shadow-sm">
+                    <Settings2 size={24} />
                 </div>
-                <h2 className="text-xl font-bold font-display text-foreground">Settings</h2>
+                <div>
+                    <h2 className="text-2xl font-bold font-display text-foreground tracking-tight">Configure</h2>
+                    <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-[0.2em] mt-1 font-bold">Application</p>
+                </div>
             </div>
 
-            <nav className="flex md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0 hide-scrollbar">
+            <nav className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-visible pb-4 lg:pb-0 hide-scrollbar snap-x w-full">
                 {navItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = activeTab === item.id;
@@ -32,13 +36,31 @@ export function SettingsSidebar({ activeTab, setActiveTab }: SettingsSidebarProp
                         <button
                             key={item.id}
                             onClick={() => setActiveTab(item.id)}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all whitespace-nowrap md:whitespace-normal font-medium text-sm border ${isActive
-                                    ? 'bg-primary/10 text-primary border-primary/20 shadow-sm'
-                                    : 'bg-transparent text-muted-foreground hover:bg-muted/50 border-transparent hover:border-border/50 hover:text-foreground'
-                                }`}
+                            className={`relative flex items-center gap-4 p-3 sm:p-4 rounded-[20px] transition-all whitespace-nowrap lg:whitespace-normal snap-start text-left border overflow-hidden group w-full ${
+                                isActive
+                                    ? 'bg-card/80 dark:bg-[#0c0c0d]/90 border-primary/30 shadow-sm'
+                                    : 'bg-card/40 dark:bg-[#0c0c0d]/40 border-border/50 hover:bg-card/60 hover:border-border/80'
+                            } backdrop-blur-xl`}
                         >
-                            <Icon size={18} className={isActive ? 'text-primary' : 'opacity-70'} />
-                            {item.label}
+                            {isActive && (
+                                <motion.div 
+                                    layoutId="activeTabIndicator"
+                                    className="absolute inset-0 bg-primary/5 z-0"
+                                    initial={false}
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                />
+                            )}
+                            <div className={`relative z-10 p-2 sm:p-3 rounded-xl transition-colors ${isActive ? 'bg-primary/20 text-primary' : 'bg-muted/50 text-muted-foreground group-hover:text-foreground'}`}>
+                                <Icon size={18} />
+                            </div>
+                            <div className="relative z-10">
+                                <div className={`font-bold text-sm ${isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground transition-colors'}`}>
+                                    {item.label}
+                                </div>
+                                <div className="text-[11px] text-muted-foreground mt-0.5">
+                                    {item.desc}
+                                </div>
+                            </div>
                         </button>
                     );
                 })}

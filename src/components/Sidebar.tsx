@@ -53,14 +53,14 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
               key={item.name}
               href={item.href}
               onClick={() => isMobileOpen && onMobileClose?.()}
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 group relative ${
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-none border transition-all duration-200 group relative ${
                 isActive 
-                  ? 'bg-primary text-primary-foreground font-semibold shadow-sm shadow-primary/10' 
-                  : 'text-muted-foreground hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground font-semibold border-primary shadow-sm shadow-primary/10' 
+                  : 'text-muted-foreground border-transparent hover:bg-neutral-200/40 dark:hover:bg-neutral-800/40 hover:border-black/10 dark:hover:border-white/10 hover:text-foreground'
               }`}
             >
               <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} className={`transition-transform duration-200 ${isActive ? '' : 'group-hover:scale-105'}`} />
-              <span className="text-[13.5px]">{item.name}</span>
+              <span className="text-[12px] font-display uppercase tracking-wider mt-0.5">{item.name}</span>
             </Link>
           );
         })}
@@ -70,39 +70,39 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
       <div className="p-4 mt-auto border-t border-black/5 dark:border-white/5 bg-neutral-200/10 dark:bg-neutral-900/10">
         
         {/* User Profile */}
-        <div className="mb-2.5 px-3 py-2 flex items-center gap-3 bg-neutral-200/20 dark:bg-neutral-800/20 rounded-xl border border-black/5 dark:border-white/5 shadow-none">
+        <div className="mb-2.5 px-3 py-2 flex items-center gap-3 bg-neutral-200/20 dark:bg-neutral-800/20 rounded-none border border-black/10 dark:border-white/10 shadow-none">
           {user ? (
             <>
               {user.picture ? (
-                <img src={user.picture} alt={user.name} referrerPolicy="no-referrer" className="w-8 h-8 rounded-full object-cover border border-background shadow-sm" />
+                <img src={user.picture} alt={user.name} referrerPolicy="no-referrer" className="w-8 h-8 rounded-none object-cover border border-background shadow-sm" />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm border border-background shadow-sm">
+                <div className="w-8 h-8 rounded-none bg-primary/10 text-primary flex items-center justify-center font-display font-bold text-sm border border-background shadow-sm">
                   {user.name.charAt(0).toUpperCase()}
                 </div>
               )}
               <div className="flex flex-col min-w-0">
-                <span className="text-[12px] font-semibold text-foreground truncate leading-tight">{user.name}</span>
+                <span className="text-[11px] font-display uppercase tracking-widest font-semibold text-foreground truncate leading-tight">{user.name}</span>
                 <span className="text-[9.5px] text-muted-foreground truncate leading-tight">{user.email}</span>
               </div>
             </>
           ) : (
             <div className="flex-1 text-center py-1">
-              <span className="text-[11px] font-medium text-muted-foreground">Guest Mode</span>
+              <span className="text-[11px] font-display uppercase tracking-wider font-medium text-muted-foreground">Guest Mode</span>
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between px-3 py-2 bg-neutral-200/20 dark:bg-neutral-800/20 rounded-xl border border-black/5 dark:border-white/5 shadow-none mb-2">
-            <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-2">
+        <div className="flex items-center justify-between px-3 py-2 bg-neutral-200/20 dark:bg-neutral-800/20 rounded-none border border-black/10 dark:border-white/10 shadow-none mb-2">
+            <span className="text-[11px] font-display uppercase tracking-wider font-medium text-muted-foreground flex items-center gap-2">
               {theme === 'dark' ? <Moon size={13} /> : <Sun size={13} />}
               {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
             </span>
             <button
               onClick={toggleTheme}
-              className={`w-9 h-5.5 rounded-full p-0.5 transition-colors cursor-pointer ${theme === 'dark' ? 'bg-primary' : 'bg-neutral-300 dark:bg-neutral-700'}`}
+              className={`w-9 h-5.5 rounded-none border border-white/20 p-0.5 transition-colors cursor-pointer ${theme === 'dark' ? 'bg-primary' : 'bg-neutral-300 dark:bg-neutral-700'}`}
             >
               <div 
-                className={`w-4.5 h-4.5 bg-white rounded-full shadow-sm transition-transform duration-300 ${theme === 'dark' ? 'translate-x-3.5' : 'translate-x-0'}`}
+                className={`w-3.5 h-4 bg-white rounded-none shadow-sm transition-transform duration-300 ${theme === 'dark' ? 'translate-x-3.5' : 'translate-x-0'}`}
               />
             </button>
           </div>
@@ -111,14 +111,14 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
           <button
             onClick={() => logout()}
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-[12px] font-medium text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-[11px] font-display uppercase tracking-wider font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 border border-transparent hover:border-primary/30 rounded-none transition-all cursor-pointer"
           >
             <LogOut size={14} /> Log Out
           </button>
         ) : (
           <Link
             href="/login"
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-[12px] font-semibold text-primary-foreground bg-primary hover:bg-primary/95 rounded-xl transition-all shadow-sm hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-[11px] font-display uppercase tracking-wider font-semibold text-primary-foreground bg-primary hover:bg-primary/95 border border-primary rounded-none transition-all shadow-sm hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
           >
             Login with Google
           </Link>
@@ -136,7 +136,7 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }: SidebarProps) {
 
       {/* Mobile Sidebar Overlay */}
       {isMobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-[100] flex">
+        <div className="lg:hidden fixed inset-0 z-[200] flex">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onMobileClose} />
           <div className="relative w-[260px] max-w-[80vw] h-full shadow-xl animate-fade-in-right">
             {sidebarContent}
