@@ -5,16 +5,17 @@ import { useParams, useRouter } from 'next/navigation';
 import { useMedia } from '@/context/MediaContext';
 import { MediaEntry, isEpisodic } from '@/lib/db';
 import { PageLoader } from '@/components/ui/Loader';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Star, Clock, Calendar, Edit3, Plus, Check, Heart, Film, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Star, Clock, Calendar, Edit3, Plus, Check, Heart, Film, CheckCircle2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function MediaDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { entries, isLoading, updateEntry, genres, franchises } = useMedia();
+  const { entries, isLoading, updateEntry, deleteEntry, genres, franchises } = useMedia();
   const [entry, setEntry] = useState<MediaEntry | null>(null);
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (!isLoading && params?.id) {
@@ -86,6 +87,13 @@ export default function MediaDetailPage() {
     setEntry(updated);
   };
 
+  const handleDelete = async () => {
+    if (!entry || !entry.id) return;
+    await deleteEntry(entry.id);
+    toast.success(`Deleted ${entry.title}`);
+    router.push('/');
+  };
+
   return (
     <div className="absolute inset-0 bg-background text-foreground overflow-hidden flex flex-col">
       {/* Immersive Background */}
@@ -119,9 +127,14 @@ export default function MediaDetailPage() {
           <ArrowLeft className="text-white" size={20} />
         </button>
         
-        <button onClick={() => router.push(`/edit/${entry.id}`)} className="px-4 py-2 rounded-full bg-primary/90 hover:bg-primary text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-lg transition-transform hover:scale-105 border border-primary/20 backdrop-blur-md">
-          <Edit3 size={14} /> Edit Entry
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setShowDeleteConfirm(true)} className="w-10 h-10 rounded-full bg-red-500/10 text-red-500 border border-red-500/20 backdrop-blur-md flex items-center justify-center hover:bg-red-500/20 hover:scale-105 transition-all shadow-lg">
+            <Trash2 size={16} />
+          </button>
+          <button onClick={() => router.push(`/edit/${entry.id}`)} className="px-4 py-2 rounded-full bg-primary/90 hover:bg-primary text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 shadow-lg transition-transform hover:scale-105 border border-primary/20 backdrop-blur-md">
+            <Edit3 size={14} /> Edit Entry
+          </button>
+        </div>
       </div>
 
       {/* Main Content Area */}
@@ -307,6 +320,39 @@ export default function MediaDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowDeleteConfirm(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative w-full max-w-sm bg-card border border-border/60 rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center z-10"
+            >
+              <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mb-4 text-red-500">
+                <Trash2 size={24} />
+              </div>
+              <h3 className="text-xl font-bold tracking-tight mb-2">Delete {entry.title}?</h3>
+              <p className="text-sm text-muted-foreground mb-6">This action cannot be undone. Are you absolutely sure?</p>
+              <div className="flex gap-3 w-full">
+                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-3 rounded-xl bg-muted text-foreground font-bold hover:bg-muted/80 transition-colors">
+                  Cancel
+                </button>
+                <button onClick={handleDelete} className="flex-1 py-3 rounded-xl bg-red-500/90 text-white font-bold hover:bg-red-500 transition-colors shadow-lg shadow-red-500/20">
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
