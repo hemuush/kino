@@ -4,7 +4,7 @@
 import React, { useState, useRef } from "react";
 import { isEpisodic, MediaEntry } from "@/lib/db";
 import { ImageOff, Heart, Plus, Star, Sparkles } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 
 interface MediaCardProps {
   entry: MediaEntry;
@@ -28,6 +28,30 @@ function MediaCard({
   const [swipeHint, setSwipeHint] = useState<'fav' | 'status' | null>(null);
   const didDrag = useRef(false);
 
+  // 3D Tilt Logic
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const mouseXSpring = useSpring(x, { stiffness: 400, damping: 30 });
+  const mouseYSpring = useSpring(y, { stiffness: 400, damping: 30 });
+  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["12deg", "-12deg"]);
+  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-12deg", "12deg"]);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    x.set(mouseX / width - 0.5);
+    y.set(mouseY / height - 0.5);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    x.set(0);
+    y.set(0);
+  };
+
   // Determine Kino-Card Rarity
   let rarityLevel = "common";
   if (entry.rating === 10) rarityLevel = "mythic";
@@ -49,11 +73,12 @@ function MediaCard({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      whileTap={{ scale: 0.95, rotateY: 10 }}
+      whileTap={{ scale: 0.95 }}
       transition={{ duration: 0.25, delay: Math.min(index, 16) * 0.02, type: "spring", stiffness: 150, damping: 20 }}
       onClick={() => { if (!didDrag.current) onClick(); }}
       onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
+      onHoverEnd={handleMouseLeave}
+      onMouseMove={handleMouseMove}
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.2}
@@ -74,7 +99,7 @@ function MediaCard({
         }
       }}
       className="group flex flex-col gap-2.5 cursor-pointer relative"
-      style={{ perspective: "1000px" }}
+      style={{ perspective: "1200px", transformStyle: "preserve-3d" }}
     >
       {/* Swipe hint overlays */}
       {swipeHint === 'fav' && (
@@ -88,18 +113,28 @@ function MediaCard({
         </div>
       )}
 
+      {/* Ambient Glow behind the card */}
+      {entry.coverImage && !imgError && (
+        <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-70 transition-opacity duration-700 pointer-events-none mix-blend-screen scale-105">
+           <img
+             src={entry.coverImage}
+             alt=""
+             className="w-full h-full object-cover blur-[35px] saturate-150 transform-gpu"
+           />
+        </div>
+      )}
+
       {/* Trading Card Wrapper */}
       <motion.div 
-        animate={isHovered ? { rotateX: 5, rotateY: -5 } : { rotateX: 0, rotateY: 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        className={`relative w-full aspect-[2/3] bg-card rounded-2xl overflow-hidden border transition-all duration-300 transform-gpu ${cardBorderClass}`}
+        style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+        className={`relative z-10 w-full aspect-[2/3] bg-card rounded-2xl overflow-hidden border transition-shadow duration-300 transform-gpu ${cardBorderClass}`}
       >
         
         {entry.coverImage && !imgError ? (
           <img
             src={entry.coverImage}
             alt={entry.title}
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
             onError={() => setImgError(true)}
             loading="lazy"
             decoding="async"

@@ -184,11 +184,15 @@ export function AppShell({ children }: AppShellProps) {
                 </div>
               )}
               {user?.picture ? (
-                <img src={user.picture} alt={user.name || "User"} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-border object-cover" referrerPolicy="no-referrer" />
+                <Link href="/profile">
+                  <img src={user.picture} alt={user.name || "User"} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-border object-cover cursor-pointer hover:border-primary transition-all hover:scale-110" referrerPolicy="no-referrer" title="View Public Profile" />
+                </Link>
               ) : (
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs border border-primary/20 font-display">
-                  {user?.name?.charAt(0).toUpperCase() || "U"}
-                </div>
+                <Link href="/profile">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs border border-primary/20 font-display cursor-pointer hover:bg-primary/20 transition-all hover:scale-110" title="View Public Profile">
+                    {user?.name?.charAt(0).toUpperCase() || "U"}
+                  </div>
+                </Link>
               )}
               <button onClick={() => router.push("/settings")} className="hidden md:inline-flex p-2 sm:p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/8 text-muted-foreground hover:text-foreground transition" title="Settings">
                 <Settings size={16} />
