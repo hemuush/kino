@@ -175,6 +175,40 @@ function CollectionContent() {
                 
 
 
+                {/* Smart Folders Carousel */}
+                {!searchQuery && (
+                    <section className="mb-12 relative">
+                        <div className="flex items-center gap-2 mb-4">
+                            <h2 className="text-sm font-display font-bold text-foreground tracking-wide">Smart Folders</h2>
+                        </div>
+                        <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 snap-x pr-8">
+                            {[
+                                { id: 'masterpieces', title: 'Masterpieces', desc: '10/10 Ratings', icon: Star, color: 'from-amber-500/20 to-orange-500/5', iconColor: 'text-amber-500', action: () => { setFilter('All'); setStatusFilter('Completed'); setSortBy('Rating'); } },
+                                { id: 'watching', title: 'Currently Bingeing', desc: 'Active Shows', icon: Play, color: 'from-blue-500/20 to-cyan-500/5', iconColor: 'text-blue-500', action: () => { setFilter('All'); setStatusFilter('Watching'); setSortBy('Recent'); } },
+                                { id: 'recent', title: 'Recently Finished', desc: 'Completed', icon: CheckCircle, color: 'from-green-500/20 to-emerald-500/5', iconColor: 'text-green-500', action: () => { setFilter('All'); setStatusFilter('Completed'); setSortBy('Recent'); } },
+                                { id: 'backlog', title: 'The Backlog', desc: 'Plan to Watch', icon: Clock, color: 'from-purple-500/20 to-pink-500/5', iconColor: 'text-purple-500', action: () => { setFilter('All'); setStatusFilter('Plan to Watch'); setSortBy('Recent'); } },
+                            ].map(folder => (
+                                <button 
+                                    key={folder.id} 
+                                    onClick={folder.action}
+                                    className={`relative shrink-0 w-[220px] p-5 rounded-[24px] bg-card/60 backdrop-blur-xl border border-border/60 shadow-sm text-left group overflow-hidden transition-all hover:scale-[1.02] active:scale-95 snap-start`}
+                                >
+                                    <div className={`absolute inset-0 bg-gradient-to-br ${folder.color} opacity-50 group-hover:opacity-100 transition-opacity`} />
+                                    <div className="relative z-10 flex flex-col h-full justify-between gap-4">
+                                        <div className={`p-2.5 rounded-xl bg-background/80 w-fit backdrop-blur-md shadow-sm border border-border/50 ${folder.iconColor} group-hover:scale-110 transition-transform`}>
+                                            <folder.icon size={20} strokeWidth={2.5} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-foreground leading-tight text-lg">{folder.title}</h3>
+                                            <p className="text-xs text-muted-foreground font-medium mt-1">{folder.desc}</p>
+                                        </div>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
                 {/* Library Section */}
                 <section>
                     <div className="flex items-center justify-between mb-8">
