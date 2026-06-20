@@ -38,6 +38,26 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
 
   const [hoveredStar, setHoveredStar] = useState<number | null>(null);
 
+  // Theater Mode (UI vanishes after inactivity)
+  const [isTheaterMode, setIsTheaterMode] = useState(false);
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    const resetTimer = () => {
+      setIsTheaterMode(false);
+      clearTimeout(timeout);
+      // Wait 3.5 seconds before hiding UI
+      timeout = setTimeout(() => setIsTheaterMode(true), 3500);
+    };
+
+    resetTimer();
+    const events = ['mousemove', 'touchstart', 'touchmove', 'keydown', 'click', 'scroll'];
+    events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }));
+
+    return () => {
+      clearTimeout(timeout);
+      events.forEach(e => window.removeEventListener(e, resetTimer));
+    };
+  }, []);
   // Escape key to close
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape' && !showAddEpisode) onClose(); };
@@ -269,20 +289,36 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center text-foreground">
+        
+        {/* Theater Mode Cinematic Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-black/70 backdrop-blur-xl bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_1px,transparent_1px)] [background-size:20px_20px]"
+          className={`absolute inset-0 bg-black transition-all duration-1000 ease-in-out cursor-pointer ${isTheaterMode ? 'opacity-100' : 'opacity-80'}`}
           onClick={onClose}
-        />
+        >
+          {entry.coverImage && (
+            <img 
+              src={entry.coverImage} 
+              alt={entry.title}
+              className={`w-full h-full object-cover transition-all duration-1000 ease-in-out ${isTheaterMode ? 'opacity-70 blur-0 scale-100' : 'opacity-20 blur-2xl scale-110'}`} 
+            />
+          )}
+          {/* Subtle vignette/glow so it looks like Apple TV */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.8)_100%)] pointer-events-none" />
+          <div className={`absolute bottom-10 left-0 right-0 text-center transition-opacity duration-1000 ${isTheaterMode ? 'opacity-100' : 'opacity-0'}`}>
+             <h2 className="text-white text-3xl font-display font-black tracking-tight drop-shadow-xl">{entry.title}</h2>
+             <p className="text-white/60 text-sm font-bold uppercase tracking-widest mt-2 drop-shadow-md">Move mouse to wake</p>
+          </div>
+        </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 80 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 80 }}
           transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-          className={`relative w-full ${currentIsEpisodic ? 'max-w-2xl md:max-w-4xl lg:max-w-5xl' : 'max-w-2xl'} h-full sm:h-auto max-h-full sm:max-h-[88vh] bg-card/80 dark:bg-[#0c0c0d]/90 backdrop-blur-3xl rounded-t-[28px] sm:rounded-[32px] overflow-hidden z-[201] flex flex-col shadow-[0_0_80px_-20px_rgba(0,0,0,0.5)] border border-border/60 border-b-0 sm:border-b`}
+          className={`relative w-full ${currentIsEpisodic ? 'max-w-2xl md:max-w-4xl lg:max-w-5xl' : 'max-w-2xl'} h-full sm:h-auto max-h-full sm:max-h-[88vh] bg-card/80 dark:bg-[#0c0c0d]/90 backdrop-blur-3xl rounded-t-[28px] sm:rounded-[32px] overflow-hidden z-[201] flex flex-col shadow-[0_0_80px_-20px_rgba(0,0,0,0.5)] border border-border/60 border-b-0 sm:border-b transition-all duration-1000 ease-in-out ${isTheaterMode ? 'opacity-0 scale-95 pointer-events-none translate-y-10' : 'opacity-100 scale-100 translate-y-0'}`}
         >
           {/* Background blur from poster */}
           {entry.coverImage && (
