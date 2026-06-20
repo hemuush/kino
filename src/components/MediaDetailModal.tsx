@@ -322,10 +322,10 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
 
         <motion.div
           initial={{ opacity: 0, y: 80 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={{ opacity: isTheaterMode ? 0 : 1, y: isTheaterMode ? 40 : 0, scale: isTheaterMode ? 0.95 : 1 }}
           exit={{ opacity: 0, y: 80 }}
           transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-          className={`relative w-full ${currentIsEpisodic ? 'max-w-2xl md:max-w-4xl lg:max-w-5xl' : 'max-w-2xl'} h-full sm:h-auto max-h-full sm:max-h-[88vh] bg-card/80 dark:bg-[#0c0c0d]/90 backdrop-blur-3xl rounded-t-[28px] sm:rounded-[32px] overflow-hidden z-[201] flex flex-col shadow-[0_0_80px_-20px_rgba(0,0,0,0.5)] border border-border/60 border-b-0 sm:border-b transition-all duration-1000 ease-in-out ${isTheaterMode ? 'opacity-0 scale-95 pointer-events-none translate-y-10' : 'opacity-100 scale-100 translate-y-0'}`}
+          className={`relative w-full ${currentIsEpisodic ? 'max-w-2xl md:max-w-4xl lg:max-w-5xl' : 'max-w-2xl'} h-full sm:h-auto max-h-full sm:max-h-[88vh] bg-card/80 dark:bg-[#0c0c0d]/90 backdrop-blur-3xl rounded-t-[28px] sm:rounded-[32px] overflow-hidden z-[201] flex flex-col shadow-[0_0_80px_-20px_rgba(0,0,0,0.5)] border border-border/60 border-b-0 sm:border-b ${isTheaterMode ? 'pointer-events-none' : ''}`}
         >
           {/* Background blur from poster */}
           {entry.coverImage && (
