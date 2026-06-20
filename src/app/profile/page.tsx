@@ -49,7 +49,7 @@ export default function ProfileBentoPage() {
   const hoursWatched = Math.floor((totalWatchMinutes % (24 * 60)) / 60);
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-20 relative overflow-hidden transition-colors duration-300">
+    <div className="min-h-screen bg-background text-foreground pb-20 relative overflow-x-hidden transition-colors duration-300">
       {/* Ambient BG */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden mix-blend-screen dark:mix-blend-lighten">
         <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-[120px]" />
