@@ -31,7 +31,7 @@ export default function SettingsPage() {
 
       <div className="relative z-10 mx-auto w-full max-w-[1400px] py-4 sm:py-6 px-4 sm:px-8 lg:px-12">
 
-        <div className="flex flex-col lg:flex-row gap-10 items-start">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 items-start w-full">
           {/* Left Sidebar Menu */}
           <SettingsSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
@@ -46,7 +46,7 @@ export default function SettingsPage() {
                 transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 className="w-full"
               >
-                <div className="w-full bg-card/40 dark:bg-[#0c0c0d]/60 backdrop-blur-2xl border border-border/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[32px] p-6 sm:p-8 lg:p-10 min-h-[600px] flex flex-col">
+                <div className="w-full bg-card/40 dark:bg-[#0c0c0d]/60 backdrop-blur-2xl border border-border/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[24px] lg:rounded-[32px] p-5 sm:p-8 lg:p-10 min-h-[500px] flex flex-col">
                   {activeTab === 'sagas' && <SagasManager />}
                   {activeTab === 'genres' && <GenresManager />}
                   {activeTab === 'data' && <DataManager />}

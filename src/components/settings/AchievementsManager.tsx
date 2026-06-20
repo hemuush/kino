@@ -15,42 +15,32 @@ export function AchievementsManager() {
         const showsWatched = entries.filter(e => e.type === 'TV Show' && e.status === 'Completed').length;
         const animesWatched = entries.filter(e => e.type === 'Anime' && e.status === 'Completed').length;
         const perfectScores = entries.filter(e => e.rating === 10).length;
+        const highScores = entries.filter(e => e.rating >= 9).length;
         const hasFranchise = entries.some(e => e.franchiseId);
         const hasFavorites = entries.filter(e => e.favorite).length;
         const totalCompleted = entries.filter(e => e.status === 'Completed').length;
+        
+        const uniqueGenresUsed = new Set<string>();
+        entries.forEach(e => {
+            if (e.genreIds) e.genreIds.forEach(id => uniqueGenresUsed.add(id));
+            else if (e.genre) e.genre.forEach(g => uniqueGenresUsed.add(g));
+        });
+        const hasManyGenres = uniqueGenresUsed.size;
 
-        b.push({
-            id: 'first_blood', name: 'First Blood', desc: 'Added your first media',
-            unlocked: entries.length > 0, icon: '🍿', color: 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-        });
-        b.push({
-            id: 'cinephile', name: 'Cinephile', desc: 'Completed 50 Movies',
-            unlocked: moviesWatched >= 50, icon: '🎟️', color: 'bg-purple-500/10 text-purple-500 border-purple-500/20'
-        });
-        b.push({
-            id: 'binge_watcher', name: 'Binge Watcher', desc: 'Completed 10 TV Shows',
-            unlocked: showsWatched >= 10, icon: '📺', color: 'bg-green-500/10 text-green-500 border-green-500/20'
-        });
-        b.push({
-            id: 'otaku', name: 'Otaku', desc: 'Completed 10 Anime Series',
-            unlocked: animesWatched >= 10, icon: '🌸', color: 'bg-pink-500/10 text-pink-500 border-pink-500/20'
-        });
-        b.push({
-            id: 'perfectionist', name: 'Perfectionist', desc: 'Rated 5 items 10/10',
-            unlocked: perfectScores >= 5, icon: '⭐', color: 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-        });
-        b.push({
-            id: 'saga_master', name: 'Saga Master', desc: 'Tracked a Franchise',
-            unlocked: hasFranchise, icon: '📚', color: 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-        });
-        b.push({
-            id: 'superfan', name: 'Superfan', desc: 'Favorited 5 items',
-            unlocked: hasFavorites >= 5, icon: '❤️', color: 'bg-red-500/10 text-red-500 border-red-500/20'
-        });
-        b.push({
-            id: 'completionist', name: 'Completionist', desc: 'Completed 100 items',
-            unlocked: totalCompleted >= 100, icon: '🏆', color: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-        });
+        b.push({ id: 'first_blood', name: 'First Blood', desc: 'Added your first media', unlocked: entries.length > 0, icon: '🍿', color: 'bg-blue-500/10 text-blue-500 border-blue-500/20' });
+        b.push({ id: 'getting_started', name: 'The Journey', desc: 'Completed 10 items', unlocked: totalCompleted >= 10, icon: '🎬', color: 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20' });
+        b.push({ id: 'cinephile', name: 'Cinephile', desc: 'Completed 50 Movies', unlocked: moviesWatched >= 50, icon: '🎟️', color: 'bg-purple-500/10 text-purple-500 border-purple-500/20' });
+        b.push({ id: 'movie_buff', name: 'Movie Buff', desc: 'Completed 100 Movies', unlocked: moviesWatched >= 100, icon: '🎥', color: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20' });
+        b.push({ id: 'binge_watcher', name: 'Binge Watcher', desc: 'Completed 10 TV Shows', unlocked: showsWatched >= 10, icon: '📺', color: 'bg-green-500/10 text-green-500 border-green-500/20' });
+        b.push({ id: 'otaku', name: 'Otaku', desc: 'Completed 10 Anime Series', unlocked: animesWatched >= 10, icon: '🌸', color: 'bg-pink-500/10 text-pink-500 border-pink-500/20' });
+        b.push({ id: 'weeb_master', name: 'Weeb Master', desc: 'Completed 50 Anime', unlocked: animesWatched >= 50, icon: '🎌', color: 'bg-rose-500/10 text-rose-500 border-rose-500/20' });
+        b.push({ id: 'explorer', name: 'Explorer', desc: 'Tracked 5 different genres', unlocked: hasManyGenres >= 5, icon: '🧭', color: 'bg-teal-500/10 text-teal-500 border-teal-500/20' });
+        b.push({ id: 'elite_taste', name: 'Elite Taste', desc: 'Rated 10 items 9+', unlocked: highScores >= 10, icon: '🍷', color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' });
+        b.push({ id: 'perfectionist', name: 'Perfectionist', desc: 'Rated 5 items 10/10', unlocked: perfectScores >= 5, icon: '⭐', color: 'bg-amber-500/10 text-amber-500 border-amber-500/20' });
+        b.push({ id: 'saga_master', name: 'Saga Master', desc: 'Tracked a Franchise', unlocked: hasFranchise, icon: '📚', color: 'bg-orange-500/10 text-orange-500 border-orange-500/20' });
+        b.push({ id: 'superfan', name: 'Superfan', desc: 'Favorited 5 items', unlocked: hasFavorites >= 5, icon: '❤️', color: 'bg-red-500/10 text-red-500 border-red-500/20' });
+        b.push({ id: 'completionist', name: 'Completionist', desc: 'Completed 100 items', unlocked: totalCompleted >= 100, icon: '🏆', color: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' });
+        b.push({ id: 'grandmaster', name: 'Grandmaster', desc: 'Completed 500 items', unlocked: totalCompleted >= 500, icon: '👑', color: 'bg-yellow-400/10 text-yellow-400 border-yellow-400/20' });
         
         return b;
     }, [entries]);

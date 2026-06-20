@@ -19,14 +19,14 @@ export function SettingsSidebar({ activeTab, setActiveTab }: SettingsSidebarProp
     ] as const;
 
     return (
-        <aside className="w-full lg:w-[280px] shrink-0 flex flex-col gap-6 lg:sticky lg:top-24 z-20">
+        <aside className="w-full lg:w-[280px] shrink-0 flex flex-col gap-4 lg:gap-6 lg:sticky lg:top-24 z-20">
             {/* Header */}
-            <div className="flex items-center gap-4 px-2 mb-2">
+            <div className="flex items-center gap-4 px-2 lg:mb-2">
                 <div className="p-3.5 bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 backdrop-blur-xl rounded-2xl text-primary shadow-[0_0_30px_-5px_rgba(var(--primary),0.3)]">
                     <Settings2 size={26} strokeWidth={2.5} />
                 </div>
                 <div>
-                    <h2 className="text-3xl font-black font-display text-foreground tracking-tight">Settings</h2>
+                    <h2 className="text-2xl sm:text-3xl font-black font-display text-foreground tracking-tight">Settings</h2>
                     <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-[0.2em] mt-0.5 font-bold">Preferences</p>
                 </div>
             </div>
