@@ -6,13 +6,13 @@ import { BottomNav } from "./BottomNav";
 import { usePathname, useRouter } from "next/navigation";
 import { KinoLogo } from "@/components/KinoLogo";
 import { useTheme } from "next-themes";
-import { Moon, LogOut, LayoutDashboard, Library, Film, Settings, Search, Sun, MonitorPlay } from "lucide-react";
+import { Moon, LogOut, LayoutDashboard, Library, Film, Settings, Search, Sun } from "lucide-react";
 import { ReactNode, useEffect, useRef, useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import { PageLoader } from "./ui/Loader";
 import Link from "next/link";
 import { useMedia } from "@/context/MediaContext";
-import { AmbientMode } from "./AmbientMode";
+
 
 interface AppShellProps { children: ReactNode }
 
@@ -25,7 +25,7 @@ export function AppShell({ children }: AppShellProps) {
   const [search, setSearch] = useState("");
   const [isRouteLoading, setIsRouteLoading] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [isAmbientMode, setIsAmbientMode] = useState(false);
+
   const [, startTransition] = useTransition();
   const routeLoadingStartedAt = useRef(0);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -200,9 +200,7 @@ export function AppShell({ children }: AppShellProps) {
               <button onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} className="inline-flex p-2 sm:p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/8 text-muted-foreground hover:text-foreground transition" title="Theme">
                 {resolvedTheme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
               </button>
-              <button onClick={() => setIsAmbientMode(true)} className="hidden md:inline-flex p-2 sm:p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/8 text-muted-foreground hover:text-foreground transition" title="Ambient Screensaver">
-                <MonitorPlay size={16} />
-              </button>
+
               <button onClick={() => logout(false)} className="p-2 sm:p-2.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition" title="Logout">
                 <LogOut size={16} />
               </button>
@@ -247,8 +245,6 @@ export function AppShell({ children }: AppShellProps) {
       <main className={shellMainClass}>{children}</main>
       {showShell && <BottomNav />}
       
-      {/* Ambient Mode Overlay */}
-      {isAmbientMode && <AmbientMode onClose={() => setIsAmbientMode(false)} />}
     </div>
   );
 }
