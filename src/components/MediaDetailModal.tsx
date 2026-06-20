@@ -42,7 +42,20 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
   const [isTheaterMode, setIsTheaterMode] = useState(false);
   useEffect(() => {
     let timeout: NodeJS.Timeout;
-    const resetTimer = () => {
+    let lastX = -1;
+    let lastY = -1;
+
+    const resetTimer = (e?: Event) => {
+      // Ignore synthetic mousemoves (when an element vanishes under the cursor, browser fires mousemove)
+      if (e && e.type === 'mousemove') {
+        const mouseEvent = e as MouseEvent;
+        if (lastX === mouseEvent.clientX && lastY === mouseEvent.clientY) {
+          return;
+        }
+        lastX = mouseEvent.clientX;
+        lastY = mouseEvent.clientY;
+      }
+
       setIsTheaterMode(false);
       clearTimeout(timeout);
       // Wait 5 seconds before hiding UI
