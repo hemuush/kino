@@ -45,8 +45,8 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
     const resetTimer = () => {
       setIsTheaterMode(false);
       clearTimeout(timeout);
-      // Wait 3.5 seconds before hiding UI
-      timeout = setTimeout(() => setIsTheaterMode(true), 3500);
+      // Wait 5 seconds before hiding UI
+      timeout = setTimeout(() => setIsTheaterMode(true), 5000);
     };
 
     resetTimer();
@@ -295,8 +295,15 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className={`absolute inset-0 bg-black transition-all duration-1000 ease-in-out cursor-pointer ${isTheaterMode ? 'opacity-100' : 'opacity-80'}`}
-          onClick={onClose}
+          className={`absolute inset-0 bg-black transition-all duration-1000 ease-in-out ${isTheaterMode ? 'opacity-100 cursor-default' : 'opacity-80 cursor-pointer'}`}
+          onClick={(e) => {
+            if (isTheaterMode) {
+              e.stopPropagation();
+              setIsTheaterMode(false);
+            } else {
+              onClose();
+            }
+          }}
         >
           {entry.coverImage && (
             <img 
