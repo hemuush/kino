@@ -4,7 +4,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Film, Library, Plus } from "lucide-react";
-import { MediaEntry } from '@/lib/db';
 
 export function BottomNav() {
   const pathname = usePathname();

@@ -43,7 +43,6 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   const uploadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const latestDataRef = useRef<{ entries: MediaEntry[]; genres: Tag[]; franchises: Tag[]; }>({ entries: [], genres: [], franchises: [] });
   const hasFetchedFromDriveRef = useRef<boolean>(false);
-  const cacheCorruptedRef = useRef<boolean>(false);
 
   // Warn before unload when upload is pending
   useEffect(() => {
@@ -59,8 +58,8 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   }, [syncStatus]);
 
   // updateStateAndRef: immediately write to React state
-  const updateStateAndRef = useCallback((newEntries?: MediaEntry[], newGenres?: Tag[], newFranchises?: Tag[], skipIdb = false) => {
-    const now = Date.now();
+  const updateStateAndRef = useCallback((newEntries?: MediaEntry[], newGenres?: Tag[], newFranchises?: Tag[], _skipIdb = false) => {
+    const _now = Date.now();
     if (newEntries !== undefined) {
       setEntries(newEntries);
       latestDataRef.current.entries = newEntries;
@@ -215,7 +214,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
       setSyncStatus('synced');
       setLastSyncedAt(Date.now());
       toast.success("Successfully synchronized to Drive.");
-    } catch (error) {
+    } catch (_error) {
       setSyncStatus('error');
       toast.error("Failed to sync to Drive.");
     }

@@ -6,7 +6,7 @@ import { BottomNav } from "./BottomNav";
 import { usePathname, useRouter } from "next/navigation";
 import { KinoLogo } from "@/components/KinoLogo";
 import { useTheme } from "next-themes";
-import { Moon, LogOut, LayoutDashboard, Library, Film, Settings, Search, SlidersHorizontal, Sun, MonitorPlay } from "lucide-react";
+import { Moon, LogOut, LayoutDashboard, Library, Film, Settings, Search, Sun, MonitorPlay } from "lucide-react";
 import { ReactNode, useEffect, useRef, useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import { PageLoader } from "./ui/Loader";
@@ -23,11 +23,10 @@ export function AppShell({ children }: AppShellProps) {
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
   const [search, setSearch] = useState("");
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const [isRouteLoading, setIsRouteLoading] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isAmbientMode, setIsAmbientMode] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const routeLoadingStartedAt = useRef(0);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -35,10 +34,8 @@ export function AppShell({ children }: AppShellProps) {
     if (typeof window === "undefined") return;
     const sp = new URLSearchParams(window.location.search);
     const newQ = sp.get("q") || "";
-    const newFilters = sp.get("filters") === "1";
     Promise.resolve().then(() => {
       setSearch(newQ);
-      setFiltersOpen(newFilters);
     });
   }, [pathname]);
 
@@ -89,17 +86,6 @@ export function AppShell({ children }: AppShellProps) {
     { name: "Sagas", href: "/sagas", icon: Film },
   ];
 
-  const mobileTitle = pathname.startsWith("/collection")
-    ? "Collection"
-    : pathname.startsWith("/dashboard") || pathname === "/"
-      ? "Dashboard"
-      : pathname.startsWith("/sagas")
-        ? "Sagas"
-        : pathname.startsWith("/settings")
-          ? "Settings"
-          : pathname.startsWith("/add")
-            ? "Add Media"
-            : "Kino";
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-300">

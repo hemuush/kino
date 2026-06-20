@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { MediaEntry, getWatchedRuntimeMinutes, Tag } from '@/lib/db';
-import { X, Play, Clock, Sparkles, TrendingUp, Calendar, Download, Share2, Check, Copy } from 'lucide-react';
+import { X, Clock, Sparkles, TrendingUp, Share2, Check } from 'lucide-react';
 
 // 1. Animated Number Counter Component
 function AnimatedNumber({ value }: { value: number }) {

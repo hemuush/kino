@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Palette, Check } from 'lucide-react';
 
 const COLORS = [
@@ -13,14 +13,12 @@ const COLORS = [
 ];
 
 export function AppearanceManager() {
-  const [activeColor, setActiveColor] = useState('red');
-
-  useEffect(() => {
-    const saved = localStorage.getItem('kino_accent_color');
-    if (saved) {
-      setActiveColor(saved);
+  const [activeColor, setActiveColor] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('kino_accent_color') || 'red';
     }
-  }, []);
+    return 'red';
+  });
 
   const handleSelect = (colorId: string) => {
     setActiveColor(colorId);
@@ -35,13 +33,13 @@ export function AppearanceManager() {
 
   return (
     <section className="space-y-10">
-      <div className="flex items-center gap-3">
-        <div className="p-3 bg-card border border-border backdrop-blur-xl rounded-2xl text-primary shadow-sm">
-          <Palette size={24} />
+      <div className="flex items-center gap-4">
+        <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 backdrop-blur-xl rounded-2xl text-primary shadow-[0_0_30px_-5px_rgba(var(--primary),0.3)]">
+          <Palette size={26} strokeWidth={2.5} />
         </div>
         <div>
-          <h2 className="text-2xl sm:text-3xl font-display font-bold text-foreground">Appearance</h2>
-          <p className="text-sm text-muted-foreground mt-1">Customize your Kino experience.</p>
+          <h2 className="text-2xl sm:text-3xl font-display font-black text-foreground tracking-tight">Appearance</h2>
+          <p className="text-sm text-muted-foreground mt-1 font-medium">Customize your Kino experience.</p>
         </div>
       </div>
 

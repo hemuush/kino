@@ -1,6 +1,8 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
+import React from 'react';
+import type { HTMLAttributes } from 'react';
 
 afterEach(() => {
   cleanup();
@@ -21,17 +23,27 @@ vi.mock('next/navigation', () => ({
 vi.mock('framer-motion', async () => {
   const actual = await vi.importActual('framer-motion');
   return {
-    ...actual as any,
-    AnimatePresence: ({ children }: any) => children,
+    ...(actual as object),
+    AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
     motion: {
-      div: require('react').forwardRef(({ children, ...props }: any, ref: any) => {
-        const { initial, animate, exit, transition, ...rest } = props;
-        return require('react').createElement('div', { ref, ...rest }, children);
-      }),
-      button: require('react').forwardRef(({ children, ...props }: any, ref: any) => {
-        const { initial, animate, exit, transition, ...rest } = props;
-        return require('react').createElement('button', { ref, ...rest }, children);
-      }),
+      div: Object.assign(
+        React.forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
+          ({ children, ...props }, ref) => {
+            const { ...rest } = props as Record<string, unknown>;
+            return React.createElement('div', { ref, ...rest }, children);
+          }
+        ),
+        { displayName: 'MotionDiv' }
+      ),
+      button: Object.assign(
+        React.forwardRef<HTMLButtonElement, HTMLAttributes<HTMLButtonElement>>(
+          ({ children, ...props }, ref) => {
+            const { ...rest } = props as Record<string, unknown>;
+            return React.createElement('button', { ref, ...rest }, children);
+          }
+        ),
+        { displayName: 'MotionButton' }
+      ),
     },
   };
 });

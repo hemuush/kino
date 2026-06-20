@@ -175,7 +175,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
       return;
     }
     
-    let newEpisodes = entry.episodes ? [...entry.episodes] : undefined;
+    const newEpisodes = entry.episodes ? [...entry.episodes] : undefined;
     let nextWatched = episodesWatched + 1;
     let newTotal = entry.episodesTotal;
 
@@ -209,7 +209,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
 
   const handleDecrementEpisode = async () => {
     if (!currentIsEpisodic) return;
-    let newEpisodes = entry.episodes ? [...entry.episodes] : undefined;
+    const newEpisodes = entry.episodes ? [...entry.episodes] : undefined;
     let nextWatched = Math.max(0, episodesWatched - 1);
 
     if (newEpisodes && newEpisodes.length > 0) {

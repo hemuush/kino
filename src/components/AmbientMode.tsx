@@ -3,28 +3,35 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMedia } from '@/context/MediaContext';
+import { MediaEntry } from '@/lib/db';
 import { format } from 'date-fns';
 import { MonitorPlay, X } from 'lucide-react';
+
+// Pure helper outside component — Math.random() is allowed outside render
+function shuffleArray(arr: MediaEntry[]): MediaEntry[] {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
 
 export function AmbientMode({ onClose }: { onClose: () => void }) {
   const { entries } = useMedia();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [time, setTime] = useState(new Date());
-  
-  // Filter only entries with a valid cover image
+  const [shuffledEntries, setShuffledEntries] = useState<MediaEntry[]>([]);
+
   const validEntries = useMemo(() => {
     return entries.filter(e => e.coverImage && e.coverImage.trim() !== '');
   }, [entries]);
 
-  // Shuffle entries once on mount so it's random
-  const shuffledEntries = useMemo(() => {
-    const shuffled = [...validEntries];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  }, [validEntries]);
+  // Shuffle once when valid entries are available — microtask avoids set-state-in-effect
+  useEffect(() => {
+    if (validEntries.length === 0) return;
+    Promise.resolve().then(() => setShuffledEntries(shuffleArray(validEntries)));
+  }, [validEntries.length]);
 
   // Timer for clock
   useEffect(() => {
@@ -60,7 +67,7 @@ export function AmbientMode({ onClose }: { onClose: () => void }) {
         <MonitorPlay size={48} className="text-white/20 mb-6" />
         <h2 className="text-2xl font-display font-bold tracking-widest uppercase mb-2">Ambient Mode</h2>
         <p className="text-white/50 text-center max-w-md">
-          You don't have any media with cover images yet. Add some posters to your collection to use Ambient Mode.
+          You don&apos;t have any media with cover images yet. Add some posters to your collection to use Ambient Mode.
         </p>
         <button 
           onClick={onClose}

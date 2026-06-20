@@ -103,11 +103,11 @@ export function getWatchedRuntimeMinutes(entry: Partial<MediaEntry>): number {
     const avgRuntime = knownCount > 0 ? (knownSum / knownCount) : globalRuntime;
     
     // Second pass: sum watched episodes using precise booleans if available
-    let manualWatchedCount = 0;
+    let _manualWatchedCount = 0;
     for (const ep of sortedEps) {
       if (ep.watched || entry.status === 'Completed') {
         totalWatchedMins += (ep.runtime && ep.runtime > 0 ? ep.runtime : avgRuntime);
-        manualWatchedCount++;
+        _manualWatchedCount++;
       }
     }
     

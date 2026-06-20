@@ -1,6 +1,5 @@
 // src/components/settings/JsonImporter.tsx
 "use client";
-/* eslint-disable react/no-unescaped-entities */
 
 import React, { useState, useRef } from 'react';
 import { useMedia } from '@/context/MediaContext';

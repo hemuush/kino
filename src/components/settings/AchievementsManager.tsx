@@ -60,11 +60,13 @@ export function AchievementsManager() {
             {/* Badges Section */}
             <div className="space-y-6">
                 <div className="flex flex-col gap-1">
-                    <h3 className="text-xl sm:text-2xl font-bold font-display tracking-tight text-foreground flex items-center gap-2">
-                        <Trophy className="text-primary" size={24} />
+                    <h3 className="text-2xl sm:text-3xl font-black font-display tracking-tight text-foreground flex items-center gap-3">
+                        <div className="p-2.5 bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 rounded-xl text-primary shadow-[0_0_20px_-5px_rgba(var(--primary),0.3)]">
+                            <Trophy size={24} strokeWidth={2.5} />
+                        </div>
                         Achievements
                     </h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
+                    <p className="text-sm text-muted-foreground font-medium max-w-2xl mt-1">
                         Track your milestones and earn badges based on your watch history and library curation.
                     </p>
                 </div>

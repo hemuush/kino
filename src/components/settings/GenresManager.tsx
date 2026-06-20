@@ -37,10 +37,10 @@ export function GenresManager() {
     };
 
     return (
-        <div className="flex flex-col h-full bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl border border-border/80 rounded-[24px] p-8 shadow-sm">
+        <div className="flex flex-col h-full">
             <header className="mb-8">
-                <h3 className="font-display text-2xl font-bold tracking-tight text-foreground">Genres Matrix</h3>
-                <p className="text-sm text-muted-foreground mt-2">Manage your custom list of categories, themes, and genres.</p>
+                <h3 className="font-display text-2xl sm:text-3xl font-black tracking-tight text-foreground">Genres Matrix</h3>
+                <p className="text-sm text-muted-foreground mt-2 font-medium">Manage your custom list of categories, themes, and genres.</p>
             </header>
 
             <form onSubmit={addNewGenre} className="flex flex-col sm:flex-row gap-3 mb-8">

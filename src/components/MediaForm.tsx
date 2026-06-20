@@ -1,6 +1,6 @@
 // src/components/MediaForm.tsx
 "use client";
-/* eslint-disable react-hooks/set-state-in-effect, react/no-unescaped-entities */
+/* eslint-disable react-hooks/set-state-in-effect */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { MediaType, WatchStatus, AnimeType, EpisodeInfo, MediaEntry, Tag, isEpisodic, getWatchedRuntimeMinutes } from '@/lib/db';
@@ -140,7 +140,7 @@ export function MediaForm({ onCancel, onSave, initialData, hideEpisodesTab }: Me
         return current < episodes.length ? episodes.length : prev;
       });
       
-      setStatus(prevStatus => {
+      setStatus(_prevStatus => {
         const currentTotal = Number(episodesTotal || episodes.length);
         if (watchedCount === 0) return 'Plan to Watch';
         if (watchedCount >= currentTotal && currentTotal > 0) return 'Completed';

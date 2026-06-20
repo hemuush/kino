@@ -12,7 +12,23 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Test setup files
+    "vitest.setup.ts",
+    "vitest.config.ts",
+    "src/lib/db.test.ts",
   ]),
+  {
+    rules: {
+      // Allow underscore-prefixed variables as intentionally unused (industry standard)
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_",
+      }],
+      // Next.js <img> warning is acceptable for external URLs (cover images from APIs)
+      "@next/next/no-img-element": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;

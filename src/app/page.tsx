@@ -3,9 +3,8 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { Clock, Play, ListVideo, ChevronRight, Activity, Shuffle, Film, Star, CheckCircle2, Bookmark, Sparkles } from "lucide-react";
+import { Clock, Play, ListVideo, ChevronRight, Activity, Star, CheckCircle2, Bookmark, Sparkles } from "lucide-react";
 import { useMedia } from "@/context/MediaContext";
-import { useAuth } from "@/context/AuthContext";
 import { MediaEntry, formatRuntime, getWatchedRuntimeMinutes, isEpisodic } from "@/lib/db";
 import { MediaDetailModal } from "@/components/MediaDetailModal";
 import MediaCard from "@/components/MediaCard";
@@ -317,8 +316,10 @@ function DashboardContent() {
   useEffect(() => {
     if (entries.length > 0 && randomDeck.length === 0) {
       const picks = pickRandomItems(entries, Math.min(entries.length, 5));
-      setRandomDeck(picks);
-      setActiveSlide(0);
+      Promise.resolve().then(() => {
+        setRandomDeck(picks);
+        setActiveSlide(0);
+      });
     }
   }, [entries, randomDeck.length]);
 
@@ -346,19 +347,27 @@ function DashboardContent() {
       .slice(0, 15);
   }, [entries]);
 
+  // Reference timestamp computed once per mount — prevents impure Date.now() in render
+  const [nowTimestamp, setNowTimestamp] = useState<number>(0);
+  useEffect(() => {
+    setNowTimestamp(Date.now());
+  }, []);
+
   // timelineItems calculation ends here
 
   // Set default active shelf once based on items availability
   useEffect(() => {
     if (!isLoading && entries.length > 0 && !hasSetDefaultShelf) {
-      if (watching.length > 0) {
-        setActiveShelf("watching");
-      } else if (planned.length > 0) {
-        setActiveShelf("planned");
-      } else if (completed.length > 0) {
-        setActiveShelf("completed");
-      }
-      setHasSetDefaultShelf(true);
+      Promise.resolve().then(() => {
+        if (watching.length > 0) {
+          setActiveShelf("watching");
+        } else if (planned.length > 0) {
+          setActiveShelf("planned");
+        } else if (completed.length > 0) {
+          setActiveShelf("completed");
+        }
+        setHasSetDefaultShelf(true);
+      });
     }
   }, [entries, isLoading, watching.length, planned.length, completed.length, hasSetDefaultShelf]);
 
@@ -370,31 +379,27 @@ function DashboardContent() {
   // Handle automatic weekly and monthly recap popup
   useEffect(() => {
     if (isLoading || entries.length === 0) return;
-    try {
-      const now = new Date();
-      
-      // Monthly Recap Logic: Show in first 5 days of the month
-      const lastMonthly = localStorage.getItem('kino_last_monthly_recap');
-      const currentMonthStr = `${now.getFullYear()}-${now.getMonth()}`;
-      
-      if (isEarlyMonth && lastMonthly !== currentMonthStr) {
-        setRecapType('monthly');
-        setShowRecap(true);
-        return;
+    Promise.resolve().then(() => {
+      try {
+        const now = new Date();
+        const lastMonthly = localStorage.getItem('kino_last_monthly_recap');
+        const currentMonthStr = `${now.getFullYear()}-${now.getMonth()}`;
+        if (isEarlyMonth && lastMonthly !== currentMonthStr) {
+          setRecapType('monthly');
+          setShowRecap(true);
+          return;
+        }
+        const lastWeekly = localStorage.getItem('kino_last_weekly_recap');
+        const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        if (isSunday && (!lastWeekly || parseInt(lastWeekly) < oneWeekAgo)) {
+          setRecapType('weekly');
+          setShowRecap(true);
+        }
+      } catch (e) {
+        console.error(e);
       }
-      
-      // Weekly Recap Logic: Show only on Sundays
-      const lastWeekly = localStorage.getItem('kino_last_weekly_recap');
-      const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      
-      if (isSunday && (!lastWeekly || parseInt(lastWeekly) < oneWeekAgo)) {
-        setRecapType('weekly');
-        setShowRecap(true);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }, [isLoading, entries.length]);
+    });
+  }, [isLoading, entries.length, isEarlyMonth, isSunday]);
 
   const handleCloseRecap = () => {
     setShowRecap(false);
@@ -594,7 +599,7 @@ function DashboardContent() {
                 
                 {timelineItems.map((entry) => {
                   const date = new Date(entry.releaseDate!);
-                  const isFuture = date.getTime() > Date.now();
+                  const isFuture = date.getTime() > nowTimestamp;
                   
                   return (
                     <div key={`timeline-${entry.id}`} className="relative z-10 flex flex-col items-center gap-4 w-[120px] sm:w-[140px] shrink-0 group cursor-pointer" onClick={() => router.push(`/media/${entry.id}`)}>

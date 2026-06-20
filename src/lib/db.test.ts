@@ -20,8 +20,8 @@ describe('Database utilities', () => {
   it('should safely fallback for any random string input', () => {
     fc.assert(
       fc.property(fc.string(), (randomStr) => {
-        const status = normalizeWatchStatus(randomStr as any);
-        const type = normalizeMediaType(randomStr as any);
+        const status = normalizeWatchStatus(randomStr as Parameters<typeof normalizeWatchStatus>[0]);
+        const type = normalizeMediaType(randomStr as Parameters<typeof normalizeMediaType>[0]);
         
         expect(['Plan to Watch', 'Watching', 'Completed']).toContain(status);
         expect(['Movie', 'TV Show', 'Anime']).toContain(type);

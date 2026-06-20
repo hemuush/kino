@@ -33,7 +33,7 @@ export default function TermsOfService() {
             
             <section className="space-y-3">
               <h2 className="text-xl font-display font-bold text-foreground">1. Acceptance of Terms</h2>
-              <p>By accessing and using the Kino application ("Service", "App", "Kino"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by these terms, please do not use this service.</p>
+              <p>By accessing and using the Kino application (&ldquo;Service&rdquo;, &ldquo;App&rdquo;, &ldquo;Kino&rdquo;), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by these terms, please do not use this service.</p>
             </section>
 
             <section className="space-y-3">
@@ -46,7 +46,7 @@ export default function TermsOfService() {
               <p>Kino relies on Google Drive API (specifically the AppData scope) to store your collections. By using the Service, you acknowledge that:</p>
               <ul className="list-disc pl-5 space-y-2 text-muted-foreground">
                 <li>You are solely responsible for maintaining the security of your Google account.</li>
-                <li>Data availability is dependent on Google Drive's uptime and your available storage quota.</li>
+                <li>Data availability is dependent on Google Drive&apos;s uptime and your available storage quota.</li>
                 <li>We are not responsible for any accidental deletion, corruption, or loss of data stored on your Google Drive.</li>
               </ul>
             </section>
@@ -58,7 +58,7 @@ export default function TermsOfService() {
 
             <section className="space-y-3">
               <h2 className="text-xl font-display font-bold text-foreground">5. Limitation of Liability</h2>
-              <p>The Service is provided on an "AS IS" and "AS AVAILABLE" basis. We shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your access to or use of, or inability to access or use, the Service.</p>
+              <p>The Service is provided on an &ldquo;AS IS&rdquo; and &ldquo;AS AVAILABLE&rdquo; basis. We shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your access to or use of, or inability to access or use, the Service.</p>
             </section>
             
             <section className="space-y-3">

@@ -3,27 +3,37 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Clock, TrendingUp, Sparkles, Film, CheckCircle2, Star } from 'lucide-react';
+import { Clock, TrendingUp, Sparkles, CheckCircle2, Star } from 'lucide-react';
 import Link from 'next/link';
 import { KinoLogo } from '@/components/KinoLogo';
 
+interface ShareData {
+  t?: string;
+  h?: number | string;
+  c?: number | string;
+  g?: string;
+  tm?: string;
+}
+
 function ShareContent() {
   const searchParams = useSearchParams();
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ShareData | null>(null);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    try {
-      const d = searchParams.get('d');
-      if (d) {
-        const decoded = JSON.parse(decodeURIComponent(atob(d)));
-        setData(decoded);
-      } else {
+    const d = searchParams.get('d');
+    Promise.resolve().then(() => {
+      try {
+        if (d) {
+          const decoded = JSON.parse(decodeURIComponent(atob(d)));
+          setData(decoded);
+        } else {
+          setError(true);
+        }
+      } catch (_e) {
         setError(true);
       }
-    } catch (e) {
-      setError(true);
-    }
+    });
   }, [searchParams]);
 
   if (error) {

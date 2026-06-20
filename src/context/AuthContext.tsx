@@ -118,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (sessionExpiry > now && storedUserStr) {
         try {
           setUser(JSON.parse(storedUserStr));
-        } catch (e) {}
+        } catch (_e) {}
       }
 
       if (token && sessionExpiry > now) {

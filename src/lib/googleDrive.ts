@@ -48,7 +48,7 @@ async function listAllKinoFiles(accessToken: string): Promise<DriveFile[]> {
   if (!response.ok) throw new Error(`Failed to query Drive files: Status ${response.status}`);
 
   const data = await response.json();
-  return (data.files || []).map((f: any) => ({ ...f, size: Number(f.size || 0) }));
+  return (data.files || []).map((f: { id: string; name: string; size?: string }) => ({ ...f, size: Number(f.size || 0) }));
 }
 
 async function uploadMultipart(accessToken: string, content: string, fileName: string, fileId?: string): Promise<string> {
@@ -56,7 +56,7 @@ async function uploadMultipart(accessToken: string, content: string, fileName: s
   const delimiter = `\r\n--${boundary}\r\n`;
   const closeDelimiter = `\r\n--${boundary}--`;
 
-  const metadata: any = { name: fileName };
+  const metadata: { name: string; parents?: string[] } = { name: fileName };
   if (!fileId) metadata.parents = ['appDataFolder'];
 
   const multipartRequestBody =
@@ -153,7 +153,7 @@ export async function uploadBackupToDrive(accessToken: string, rawData: BackupDa
       if (e.coverImage) {
         chunkMap[String(e.id)] = e.coverImage;
       }
-      const { coverImage, ...rest } = e;
+      const { coverImage: _coverImage, ...rest } = e;
       return rest as MediaEntry;
     });
     
@@ -260,7 +260,7 @@ export async function downloadBackupFromDrive(
       const data = JSON.parse(text);
       if (onChunkLoaded) onChunkLoaded(Array.isArray(data) ? data : (data.entries || []), true);
       return data;
-    } catch (e) {
+    } catch (_e) {
       return null;
     }
   }
@@ -273,7 +273,7 @@ export async function downloadBackupFromDrive(
   try {
     indexData = JSON.parse(indexText);
     chunkHashes[BACKUP_INDEX_NAME] = cyrb53(indexText);
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 
@@ -331,7 +331,7 @@ export async function deleteBackupFromDrive(accessToken: string): Promise<boolea
   for (const file of existingFiles) {
     try {
       await deleteFileFromDrive(accessToken, file.id);
-    } catch (e) {
+    } catch (_e) {
       console.warn('Failed to delete', file.name);
     }
   }

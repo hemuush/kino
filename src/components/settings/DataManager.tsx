@@ -43,7 +43,7 @@ function timeAgo(timestamp: number | null): string {
 }
 
 export function DataManager() {
-  const { wipeAllData, importData, syncStatus, lastSyncedAt, entries, genres, franchises, forceSync } = useMedia();
+  const { wipeAllData, syncStatus, lastSyncedAt, entries, genres, franchises, forceSync } = useMedia();
   const { accessToken, logout } = useAuth();
   const [backupMetadata, setBackupMetadata] = useState<BackupMetadata | null>(null);
   const [isMetadataLoading, setIsMetadataLoading] = useState(false);
@@ -106,8 +106,18 @@ export function DataManager() {
   const isError = syncStatus === 'error';
 
   return (
-    <div className="flex flex-col flex-1 gap-8 pb-16">
+    <div className="flex flex-col flex-1 gap-8 pb-4">
       
+      <div className="flex items-center gap-4">
+        <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 backdrop-blur-xl rounded-2xl text-primary shadow-[0_0_30px_-5px_rgba(var(--primary),0.3)]">
+          <Database size={26} strokeWidth={2.5} />
+        </div>
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-display font-black text-foreground tracking-tight">Data & Cloud</h2>
+          <p className="text-sm text-muted-foreground mt-1 font-medium">Manage your local cache and Google Drive sync.</p>
+        </div>
+      </div>
+
       {/* Premium Dashboard Stats */}
       <motion.div 
         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}

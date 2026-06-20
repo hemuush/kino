@@ -368,7 +368,7 @@ function CollectionContent() {
                                     <div className="flex flex-wrap gap-2">
                                         <select
                                             value={sortBy}
-                                            onChange={(e: any) => setSortBy(e.target.value)}
+                                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSortBy(e.target.value as "Title" | "Recent" | "Rating")}
                                             className="bg-muted/30 text-foreground border border-border/50 rounded-full px-5 py-2 text-xs font-bold outline-none cursor-pointer appearance-none hover:bg-muted/50 transition-colors"
                                         >
                                             <option value="Recent">Newest First</option>

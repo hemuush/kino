@@ -73,25 +73,15 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
   
   useEffect(() => {
     if (seasons.length > 0 && !seasons.includes(selectedSeason)) {
-      setSelectedSeason(seasons[0]);
+      Promise.resolve().then(() => setSelectedSeason(seasons[0]));
     }
   }, [displayEpisodes, selectedSeason, seasons]);
 
-  if (isLoading || !entry) {
-    return <PageLoader text="Loading media..." />;
-  }
-
-  const isEpisodicMedia = isEpisodic(entry);
-  const releaseYear = entry.releaseDate ? entry.releaseDate.split('-')[0] : '';
-  const displayGenres = (entry.genreIds || []).map(gid => genres.find(g => g.id === gid)?.name).filter(Boolean);
-  const sagaName = entry.franchiseId ? franchises.find(f => f.id === entry.franchiseId)?.name : null;
-
-  const filteredEpisodes = displayEpisodes.filter(ep => (ep.season || 1) === selectedSeason);
-  const episodesWatched = entry.episodesWatched || 0;
-
+  // Compute runtime — must be before early return to satisfy rules-of-hooks
+  const isEpisodicEntry = entry ? isEpisodic(entry) : false;
   const { totalRuntime, averageRuntime } = React.useMemo(() => {
     if (!entry) return { totalRuntime: 0, averageRuntime: 0 };
-    if (!isEpisodicMedia) return { totalRuntime: entry.runtime || 0, averageRuntime: entry.runtime || 0 };
+    if (!isEpisodicEntry) return { totalRuntime: entry.runtime || 0, averageRuntime: entry.runtime || 0 };
     
     const epsTotal = Number(entry.episodesTotal || 0);
     const episodes = entry.episodes || [];
@@ -114,7 +104,19 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
       totalRuntime: knownSum + (remainingEps * (avg > 0 ? avg : baseRuntime)),
       averageRuntime: avg > 0 ? avg : baseRuntime
     };
-  }, [entry, isEpisodicMedia]);
+  }, [entry, isEpisodicEntry]);
+
+  if (isLoading || !entry) {
+    return <PageLoader text="Loading media..." />;
+  }
+
+  const isEpisodicMedia = isEpisodicEntry;
+  const releaseYear = entry.releaseDate ? entry.releaseDate.split('-')[0] : '';
+  const displayGenres = (entry.genreIds || []).map(gid => genres.find(g => g.id === gid)?.name).filter(Boolean);
+  const sagaName = entry.franchiseId ? franchises.find(f => f.id === entry.franchiseId)?.name : null;
+
+  const filteredEpisodes = displayEpisodes.filter(ep => (ep.season || 1) === selectedSeason);
+  const episodesWatched = entry.episodesWatched || 0;
 
   const handleIncrementEpisode = async () => {
     if (!isEpisodicMedia) return;
@@ -128,7 +130,7 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
       return (a.number || 1) - (b.number || 1);
     });
     
-    let unwatched = sortedEps.find(e => !e.watched);
+    const unwatched = sortedEps.find(e => !e.watched);
     
     if (unwatched) {
       currentEpisodes = currentEpisodes.map(e => 
@@ -222,7 +224,7 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
       return;
     }
     
-    let newValue: any = tempValue;
+    let newValue: string | number | undefined = tempValue;
     if (editingField === 'runtime' || editingField === 'episodesTotal') {
       newValue = tempValue === '' ? undefined : Math.max(0, Number(tempValue));
     } else if (editingField === 'saga') {
@@ -232,8 +234,8 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
       toast.success('Updated successfully!');
       return;
     } else if (editingField === 'genres') {
-      newValue = JSON.parse(tempValue || '[]');
-      await updateEntry({ ...entry, genreIds: newValue });
+      const parsedGenres = JSON.parse(tempValue || '[]') as string[];
+      await updateEntry({ ...entry, genreIds: parsedGenres });
       setEditingField(null);
       toast.success('Updated successfully!');
       return;
@@ -247,7 +249,7 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
   const handleToggleEpisode = async (seasonNum: number, episodeNum: number) => {
     if (!isEpisodicMedia) return;
     
-    let currentEpisodes = getMaterializedEpisodes();
+    const currentEpisodes = getMaterializedEpisodes();
 
     const epIndex = currentEpisodes.findIndex(e => (e.season || 1) === seasonNum && (e.number || 1) === episodeNum);
     if (epIndex >= 0) {
@@ -601,7 +603,7 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {filteredEpisodes.map((ep: any, idx) => {
+                    {filteredEpisodes.map((ep, idx) => {
                       const isWatched = entry.status === 'Completed' || ep.watched === true;
                       return (
                         <div
@@ -796,7 +798,7 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
                   <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                     {genres.map(g => {
                       let selectedIds: string[] = [];
-                      try { selectedIds = JSON.parse(tempValue || '[]'); } catch (e) {}
+                      try { selectedIds = JSON.parse(tempValue || '[]'); } catch (_e) {}
                       const isSelected = selectedIds.includes(g.id);
                       return (
                         <label key={g.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${isSelected ? 'bg-primary/20 border-primary/30 text-foreground' : 'bg-foreground/5 border-border/60 text-muted-foreground hover:bg-foreground/10'}`}>
