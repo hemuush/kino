@@ -175,17 +175,7 @@ function CollectionContent() {
                 
 
 
-                {/* Minimalist Header */}
-                {!searchQuery && (
-                    <section className="mb-10">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
-                            <div>
-                                <h1 className="text-3xl sm:text-4xl font-black font-display tracking-tight text-foreground">Your Collection</h1>
-                                <p className="text-muted-foreground mt-2 font-medium">Browse, filter, and manage your library.</p>
-                            </div>
-                        </div>
-                    </section>
-                )}
+                {/* Content Only */}
 
                 {/* Library Section */}
                 <section>

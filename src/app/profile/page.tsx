@@ -150,15 +150,17 @@ export default function ProfileBentoPage() {
                     {favorites.map(fav => (
                         <div key={fav.id} className="aspect-[2/3] rounded-2xl overflow-hidden relative group bg-muted border border-border/50 shadow-sm">
                             <img src={fav.coverImage} alt={fav.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
-                                <span className="text-white font-bold text-sm line-clamp-2 drop-shadow-md">{fav.title}</span>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-100 flex items-end p-4 pointer-events-none">
+                                <span className="text-white font-bold text-sm sm:text-base line-clamp-2 drop-shadow-md">{fav.title}</span>
                             </div>
                         </div>
                     ))}
                 </div>
             ) : (
-                <div className="w-full py-10 flex items-center justify-center rounded-2xl border border-dashed border-border/60">
-                    <p className="text-muted-foreground font-semibold">No favorites selected yet.</p>
+                <div className="w-full py-12 flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 bg-muted/20">
+                    <Heart size={32} className="text-muted-foreground/30 mb-3" />
+                    <p className="text-foreground font-bold text-lg mb-1">No Hall of Fame yet</p>
+                    <p className="text-muted-foreground font-medium text-sm text-center px-4">Swipe right on any poster in your collection to add it to your Hall of Fame.</p>
                 </div>
             )}
           </motion.div>

@@ -481,6 +481,37 @@ function DashboardContent() {
           </motion.div>
         )}
 
+        {/* Section 1.5: The Daily Reel (Stories UI) */}
+        {randomDeck.length > 0 && (
+          <motion.section 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3, duration: 0.8 }}
+            className="w-full px-4 sm:px-8 lg:px-12"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <h2 className="text-[10px] font-mono tracking-[0.2em] text-primary uppercase font-bold flex items-center gap-2">
+                <Play size={14} /> The Daily Reel
+              </h2>
+            </div>
+            <div className="flex gap-4 sm:gap-6 overflow-x-auto hide-scrollbar pb-4 pt-1 snap-x">
+              {randomDeck.map((story, i) => (
+                <div key={`story-${story.id}-${i}`} className="flex flex-col items-center gap-2 shrink-0 snap-start group cursor-pointer" onClick={() => setSelectedEntry(story)}>
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-[3px] border-primary p-1 transition-transform group-hover:scale-105 active:scale-95 shadow-lg">
+                    <div className="w-full h-full rounded-full overflow-hidden bg-card relative">
+                       {story.coverImage ? (
+                         <img src={story.coverImage} className="w-full h-full object-cover" alt="" />
+                       ) : (
+                         <div className="w-full h-full bg-muted flex items-center justify-center text-[10px] text-muted-foreground font-bold">{story.title.charAt(0)}</div>
+                       )}
+                       <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
+                    </div>
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-semibold text-foreground text-center w-16 sm:w-20 truncate">{story.title}</span>
+                </div>
+              ))}
+            </div>
+          </motion.section>
+        )}
+
         {/* Section 2: Dedicated Stats Row */}
         <div className="w-full space-y-6">
           <motion.div 
