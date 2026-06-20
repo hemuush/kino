@@ -310,45 +310,39 @@ export function RecapModal({ isOpen, onClose, entries, genres, type }: RecapModa
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-[100] flex flex-col bg-black overflow-hidden">
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-black/80 backdrop-blur-2xl"
-          onClick={onClose}
-        />
-        
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 40 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, y: 60 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 60 }}
           transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className={`relative w-full max-w-md border border-white/10 shadow-[0_30px_100px_-10px_rgba(0,0,0,1)] rounded-[36px] overflow-hidden flex flex-col h-[85vh] sm:h-[680px] bg-gradient-to-b ${backgroundGradients[activeSlide]} transition-colors duration-1000`}
+          className={`relative w-full h-full flex flex-col bg-gradient-to-b ${backgroundGradients[activeSlide]} transition-colors duration-1000`}
         >
           <FloatingOrbs activeSlide={activeSlide} />
           {/* Header */}
-          <div className="absolute top-0 left-0 right-0 p-5 flex items-center justify-between z-10">
-            <div className="flex gap-2 flex-1 mr-4">
-              {slides.map((_, i) => (
-                <div key={i} className="h-1.5 flex-1 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
-                  <motion.div 
-                    className="h-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]"
-                    initial={{ width: "0%" }}
-                    animate={{ width: i < activeSlide ? "100%" : i === activeSlide ? "100%" : "0%" }}
-                    transition={{ duration: i === activeSlide ? 12 : 0.3, ease: "linear" }}
-                    onAnimationComplete={() => {
-                      if (i === activeSlide && i < slides.length - 1) {
-                        nextSlide();
-                      }
-                    }}
-                  />
-                </div>
-              ))}
+          <div className="absolute top-0 left-0 right-0 p-5 z-10">
+            <div className="max-w-md mx-auto w-full flex items-center justify-between">
+              <div className="flex gap-2 flex-1 mr-4">
+                {slides.map((_, i) => (
+                  <div key={i} className="h-1.5 flex-1 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
+                    <motion.div 
+                      className="h-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]"
+                      initial={{ width: "0%" }}
+                      animate={{ width: i < activeSlide ? "100%" : i === activeSlide ? "100%" : "0%" }}
+                      transition={{ duration: i === activeSlide ? 12 : 0.3, ease: "linear" }}
+                      onAnimationComplete={() => {
+                        if (i === activeSlide && i < slides.length - 1) {
+                          nextSlide();
+                        }
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+              <button onClick={onClose} className="p-2 bg-black/40 hover:bg-black/60 border border-white/10 backdrop-blur-md rounded-full text-white transition-all hover:scale-110 active:scale-95">
+                <X size={16} strokeWidth={2.5} />
+              </button>
             </div>
-            <button onClick={onClose} className="p-2 bg-black/40 hover:bg-black/60 border border-white/10 backdrop-blur-md rounded-full text-white transition-all hover:scale-110 active:scale-95">
-              <X size={16} strokeWidth={2.5} />
-            </button>
           </div>
 
           {/* Touch Zones for navigation */}
@@ -357,36 +351,40 @@ export function RecapModal({ isOpen, onClose, entries, genres, type }: RecapModa
 
           {/* Content */}
           <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 relative mt-10">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeSlide}
-                initial={{ opacity: 0, x: 50, filter: 'blur(10px)', scale: 0.9 }}
-                animate={{ opacity: 1, x: 0, filter: 'blur(0px)', scale: 1 }}
-                exit={{ opacity: 0, x: -50, filter: 'blur(10px)', scale: 0.9 }}
-                transition={{ duration: 0.5, type: "spring", damping: 20 }}
-                className="w-full flex justify-center"
-              >
-                {slides[activeSlide].content}
-              </motion.div>
-            </AnimatePresence>
+            <div className="max-w-md mx-auto w-full flex-1 flex flex-col justify-center">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeSlide}
+                  initial={{ opacity: 0, x: 50, filter: 'blur(10px)', scale: 0.9 }}
+                  animate={{ opacity: 1, x: 0, filter: 'blur(0px)', scale: 1 }}
+                  exit={{ opacity: 0, x: -50, filter: 'blur(10px)', scale: 0.9 }}
+                  transition={{ duration: 0.5, type: "spring", damping: 20 }}
+                  className="w-full flex justify-center"
+                >
+                  {slides[activeSlide].content}
+                </motion.div>
+              </AnimatePresence>
+            </div>
           </div>
 
           {/* Footer controls */}
-          <div className="p-5 relative z-10 flex gap-3">
-             {activeSlide === slides.length - 1 ? (
-               <motion.button 
-                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2.5 }}
-                 onClick={handleShare} 
-                 className="w-full py-4 bg-white hover:bg-gray-100 text-black font-black font-display tracking-wide rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_30px_rgba(255,255,255,0.3)] flex items-center justify-center gap-2"
-               >
-                 {copied ? <Check size={20} strokeWidth={3} /> : <Share2 size={20} strokeWidth={3} />}
-                 {copied ? 'LINK COPIED!' : 'SHARE WRAPPED'}
-               </motion.button>
-             ) : (
-               <button onClick={onClose} className="w-full py-3.5 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/5 text-white/70 hover:text-white font-bold rounded-2xl transition-all text-sm">
-                 Skip Recap
-               </button>
-             )}
+          <div className="p-5 pb-8 relative z-10 w-full">
+            <div className="max-w-md mx-auto w-full flex gap-3">
+               {activeSlide === slides.length - 1 ? (
+                 <motion.button 
+                   initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2.5 }}
+                   onClick={handleShare} 
+                   className="w-full py-4 bg-white hover:bg-gray-100 text-black font-black font-display tracking-wide rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_30px_rgba(255,255,255,0.3)] flex items-center justify-center gap-2"
+                 >
+                   {copied ? <Check size={20} strokeWidth={3} /> : <Share2 size={20} strokeWidth={3} />}
+                   {copied ? 'LINK COPIED!' : 'SHARE WRAPPED'}
+                 </motion.button>
+               ) : (
+                 <button onClick={onClose} className="w-full py-3.5 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/5 text-white/70 hover:text-white font-bold rounded-2xl transition-all text-sm">
+                   Skip Recap
+                 </button>
+               )}
+            </div>
           </div>
         </motion.div>
       </div>
