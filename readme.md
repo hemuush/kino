@@ -1,5 +1,7 @@
 # 🎬 Kino — Cinematic Watch Tracker
 
+**Live Demo:** [https://xkinox.vercel.app](https://xkinox.vercel.app)
+
 Kino is a premium, minimalist personal media tracker built to catalog and review your favorite Movies, TV Shows, and Anime. With an elegant dark obsidian and electric blue theme, lightning-fast smart-chunked Google Drive synchronization, and a custom analytics dashboard, Kino delivers a high-end tracking experience while maintaining 100% data privacy.
 
 ---
