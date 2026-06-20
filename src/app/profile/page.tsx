@@ -2,7 +2,7 @@
 
 import { useMedia } from "@/context/MediaContext";
 import { motion } from "framer-motion";
-import { Clock, Heart, PlayCircle, Sparkles, ArrowLeft, LayoutGrid } from "lucide-react";
+import { PlayCircle, Heart, Clock, ArrowLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { isEpisodic } from "@/lib/db";
 import { useRouter } from "next/navigation";
@@ -140,28 +140,7 @@ export default function ProfileBentoPage() {
             <p className="text-xs text-muted-foreground mt-1 font-medium">{completedCount} Entries</p>
           </motion.div>
 
-          {/* The Pixel Mosaic Banner */}
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", delay: 0.35 }}
-            className="md:col-span-3 lg:col-span-4 rounded-[32px] p-1 bg-gradient-to-r from-primary/30 via-purple-500/30 to-rose-500/30 border border-border/60 shadow-xl overflow-hidden group cursor-pointer"
-            onClick={() => router.push('/mosaic')}
-          >
-            <div className="w-full h-full rounded-[28px] bg-card/80 backdrop-blur-xl p-6 sm:p-8 flex items-center justify-between relative overflow-hidden transition-colors group-hover:bg-card/60">
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent pointer-events-none" />
-                <div className="relative z-10">
-                    <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-xs mb-2">
-                        <Sparkles size={14} /> Generative Art
-                    </div>
-                    <h3 className="text-xl sm:text-2xl font-black font-display text-foreground tracking-tight">The Pixel Mosaic</h3>
-                    <p className="text-sm font-medium text-muted-foreground mt-1 max-w-sm">
-                        Turn your entire watch history into a stunning, zoomable generative art piece.
-                    </p>
-                </div>
-                <div className="relative z-10 w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 shadow-[0_0_30px_-5px_rgba(var(--primary),0.3)] group-hover:scale-110 transition-transform duration-500">
-                    <LayoutGrid className="text-primary" size={32} />
-                </div>
-            </div>
-          </motion.div>
+
 
           {/* Hall of Fame - Top Favorites (2x2 or 2x1) */}
           <motion.div 
