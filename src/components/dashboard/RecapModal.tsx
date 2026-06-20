@@ -310,7 +310,7 @@ export function RecapModal({ isOpen, onClose, entries, genres, type }: RecapModa
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex flex-col bg-black overflow-hidden">
+      <div className="fixed inset-0 z-[100] flex flex-col bg-black overflow-hidden h-[100dvh] w-screen touch-none">
         <motion.div
           initial={{ opacity: 0, y: 60 }}
           animate={{ opacity: 1, y: 0 }}
@@ -320,7 +320,7 @@ export function RecapModal({ isOpen, onClose, entries, genres, type }: RecapModa
         >
           <FloatingOrbs activeSlide={activeSlide} />
           {/* Header */}
-          <div className="absolute top-0 left-0 right-0 p-5 z-10">
+          <div className="absolute top-0 left-0 right-0 p-5 z-20">
             <div className="max-w-md mx-auto w-full flex items-center justify-between">
               <div className="flex gap-2 flex-1 mr-4">
                 {slides.map((_, i) => (
@@ -349,9 +349,9 @@ export function RecapModal({ isOpen, onClose, entries, genres, type }: RecapModa
           <div className="absolute inset-y-16 left-0 w-1/3 z-10 cursor-pointer" onClick={prevSlide} />
           <div className="absolute inset-y-16 right-0 w-2/3 z-10 cursor-pointer" onClick={nextSlide} />
 
-          {/* Content */}
-          <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 relative mt-10">
-            <div className="max-w-md mx-auto w-full flex-1 flex flex-col justify-center">
+          {/* Content (Scrollable if necessary) */}
+          <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 relative mt-14 overflow-y-auto hide-scrollbar z-20 pointer-events-none">
+            <div className="max-w-md mx-auto w-full flex-1 flex flex-col justify-center pointer-events-auto">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeSlide}
@@ -359,7 +359,7 @@ export function RecapModal({ isOpen, onClose, entries, genres, type }: RecapModa
                   animate={{ opacity: 1, x: 0, filter: 'blur(0px)', scale: 1 }}
                   exit={{ opacity: 0, x: -50, filter: 'blur(10px)', scale: 0.9 }}
                   transition={{ duration: 0.5, type: "spring", damping: 20 }}
-                  className="w-full flex justify-center"
+                  className="w-full flex justify-center py-4"
                 >
                   {slides[activeSlide].content}
                 </motion.div>
@@ -368,7 +368,7 @@ export function RecapModal({ isOpen, onClose, entries, genres, type }: RecapModa
           </div>
 
           {/* Footer controls */}
-          <div className="p-5 pb-8 relative z-10 w-full">
+          <div className="p-5 pb-8 relative z-20 w-full shrink-0">
             <div className="max-w-md mx-auto w-full flex gap-3">
                {activeSlide === slides.length - 1 ? (
                  <motion.button 
