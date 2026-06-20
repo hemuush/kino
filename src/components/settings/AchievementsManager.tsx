@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from 'react';
 import { useMedia } from '@/context/MediaContext';
-import { Trophy } from 'lucide-react';
+import { Trophy, CalendarDays, Calendar } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export function AchievementsManager() {
     const { entries, genres } = useMedia();
-    const [recapType, setRecapType] = useState<'weekly' | 'monthly' | null>(null);
+    const router = useRouter();
 
     const badges = useMemo(() => {
         const b = [];
@@ -101,6 +102,56 @@ export function AchievementsManager() {
                 </div>
             </div>
 
+            {/* Recaps Section */}
+            <div className="space-y-8 pt-8 border-t border-border/30">
+                <div className="flex flex-col gap-1">
+                    <h3 className="text-2xl sm:text-3xl font-black font-display tracking-tight text-foreground flex items-center gap-3">
+                        <div className="p-2.5 bg-gradient-to-br from-purple-500/20 to-purple-500/5 border border-purple-500/20 rounded-xl text-purple-500 shadow-[0_0_20px_-5px_rgba(168,85,247,0.3)]">
+                            <Calendar className="text-purple-500" size={24} strokeWidth={2.5} />
+                        </div>
+                        Your Wrapped
+                    </h3>
+                    <p className="text-sm text-muted-foreground font-medium max-w-2xl mt-1">
+                        Relive your cinematic journey. Generate your interactive Kino Wrapped for the past week or month.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <button 
+                        onClick={() => router.push('/wraps?type=weekly')}
+                        className="relative group overflow-hidden rounded-[24px] border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 sm:p-8 text-left transition-all hover:border-primary/50 hover:shadow-[0_0_40px_rgba(var(--primary),0.15)] hover:-translate-y-1"
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500 ease-out" />
+                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity duration-500 group-hover:scale-110 transform origin-top-right">
+                            <CalendarDays size={80} className="text-primary" />
+                        </div>
+                        <div className="relative z-10 flex flex-col gap-3">
+                            <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center mb-2 shadow-[0_0_20px_rgba(var(--primary),0.2)]">
+                                <CalendarDays className="text-primary" size={28} strokeWidth={2.5} />
+                            </div>
+                            <h4 className="text-2xl font-black font-display tracking-tight text-foreground">Weekly Recap</h4>
+                            <p className="text-sm font-medium text-muted-foreground">View your stats for the last 7 days.</p>
+                        </div>
+                    </button>
+
+                    <button 
+                        onClick={() => router.push('/wraps?type=monthly')}
+                        className="relative group overflow-hidden rounded-[24px] border border-purple-500/20 bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent p-6 sm:p-8 text-left transition-all hover:border-purple-500/50 hover:shadow-[0_0_40px_rgba(168,85,247,0.15)] hover:-translate-y-1"
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-t from-purple-500/10 to-transparent translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500 ease-out" />
+                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity duration-500 group-hover:scale-110 transform origin-top-right">
+                            <Calendar size={80} className="text-purple-500" />
+                        </div>
+                        <div className="relative z-10 flex flex-col gap-3">
+                            <div className="w-14 h-14 rounded-2xl bg-purple-500/20 flex items-center justify-center mb-2 shadow-[0_0_20px_rgba(168,85,247,0.2)]">
+                                <Calendar className="text-purple-500" size={28} strokeWidth={2.5} />
+                            </div>
+                            <h4 className="text-2xl font-black font-display tracking-tight text-foreground">Monthly Recap</h4>
+                            <p className="text-sm font-medium text-muted-foreground">Discover your trends for the last 30 days.</p>
+                        </div>
+                    </button>
+                </div>
+            </div>
         </section>
     );
 }

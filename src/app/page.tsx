@@ -9,7 +9,6 @@ import { MediaEntry, formatRuntime, getWatchedRuntimeMinutes, isEpisodic } from 
 import { MediaDetailModal } from "@/components/MediaDetailModal";
 import MediaCard from "@/components/MediaCard";
 import { PageLoader } from "@/components/ui/Loader";
-import { RecapModal } from "@/components/dashboard/RecapModal";
 import { useRouter } from "next/navigation";
 
 // Pick random items
@@ -301,8 +300,6 @@ function DashboardContent() {
   const router = useRouter();
   const { entries, isLoading, updateEntry, deleteEntry, genres } = useMedia();
   const [selectedEntry, setSelectedEntry] = useState<MediaEntry | null>(null);
-  const [showRecap, setShowRecap] = useState(false);
-  const [recapType, setRecapType] = useState<'weekly' | 'monthly'>('weekly');
 
   // Deck slideshow state
   const [randomDeck, setRandomDeck] = useState<MediaEntry[]>([]);
@@ -385,31 +382,21 @@ function DashboardContent() {
         const lastMonthly = localStorage.getItem('kino_last_monthly_recap');
         const currentMonthStr = `${now.getFullYear()}-${now.getMonth()}`;
         if (isEarlyMonth && lastMonthly !== currentMonthStr) {
-          setRecapType('monthly');
-          setShowRecap(true);
+          localStorage.setItem('kino_last_monthly_recap', currentMonthStr);
+          router.push('/wraps?type=monthly');
           return;
         }
         const lastWeekly = localStorage.getItem('kino_last_weekly_recap');
         const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
         if (isSunday && (!lastWeekly || parseInt(lastWeekly) < oneWeekAgo)) {
-          setRecapType('weekly');
-          setShowRecap(true);
+          localStorage.setItem('kino_last_weekly_recap', Date.now().toString());
+          router.push('/wraps?type=weekly');
         }
       } catch (e) {
         console.error(e);
       }
     });
-  }, [isLoading, entries.length, isEarlyMonth, isSunday]);
-
-  const handleCloseRecap = () => {
-    setShowRecap(false);
-    if (recapType === 'monthly') {
-      const now = new Date();
-      localStorage.setItem('kino_last_monthly_recap', `${now.getFullYear()}-${now.getMonth()}`);
-    } else {
-      localStorage.setItem('kino_last_weekly_recap', Date.now().toString());
-    }
-  };
+  }, [isLoading, entries.length, isEarlyMonth, isSunday, router]);
 
   // Watch statistics
   const stats = useMemo(() => {
@@ -529,7 +516,7 @@ function DashboardContent() {
               <div className="flex gap-2 shrink-0">
                 {isSunday && (
                   <button 
-                    onClick={() => { setRecapType('weekly'); setShowRecap(true); }}
+                    onClick={() => router.push('/wraps?type=weekly')}
                     className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
                   >
                     <Sparkles size={14} /> Weekly
@@ -537,7 +524,7 @@ function DashboardContent() {
                 )}
                 {isEarlyMonth && (
                   <button 
-                    onClick={() => { setRecapType('monthly'); setShowRecap(true); }}
+                    onClick={() => router.push('/wraps?type=monthly')}
                     className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 border border-purple-500/20 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
                   >
                     <Sparkles size={14} /> Monthly
@@ -830,13 +817,7 @@ function DashboardContent() {
         />
       )}
 
-      <RecapModal 
-        isOpen={showRecap} 
-        onClose={handleCloseRecap} 
-        entries={entries} 
-        genres={genres} 
-        type={recapType}
-      />
+
     </div>
   );
 }

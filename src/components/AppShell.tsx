@@ -6,7 +6,7 @@ import { BottomNav } from "./BottomNav";
 import { usePathname, useRouter } from "next/navigation";
 import { KinoLogo } from "@/components/KinoLogo";
 import { useTheme } from "next-themes";
-import { Moon, LogOut, LayoutDashboard, Library, Film, Settings, Search, Sun, MonitorPlay, CalendarDays } from "lucide-react";
+import { Moon, LogOut, LayoutDashboard, Library, Film, Settings, Search, Sun, MonitorPlay } from "lucide-react";
 import { ReactNode, useEffect, useRef, useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import { PageLoader } from "./ui/Loader";
@@ -84,7 +84,6 @@ export function AppShell({ children }: AppShellProps) {
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Collection", href: "/collection", icon: Library },
     { name: "Sagas", href: "/sagas", icon: Film },
-    { name: "Wraps", href: "/wraps", icon: CalendarDays },
   ];
 
 
