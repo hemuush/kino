@@ -49,16 +49,16 @@ export default function ProfileBentoPage() {
   const hoursWatched = Math.floor((totalWatchMinutes % (24 * 60)) / 60);
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-20 relative overflow-x-hidden transition-colors duration-300">
+    <div className="h-[100dvh] bg-background text-foreground relative overflow-hidden transition-colors duration-300 flex flex-col">
       {/* Ambient BG */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden mix-blend-screen dark:mix-blend-lighten">
         <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-primary/10 rounded-full blur-[120px]" />
         <div className="absolute top-[40%] -right-[10%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[120px]" />
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-12 sm:pt-20 relative z-10">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16 pb-24 w-full h-full flex flex-col relative z-10">
         
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-10 gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4 shrink-0">
           <div>
             <h1 className="text-4xl sm:text-5xl font-black font-display tracking-tight text-foreground flex items-center gap-3">
               Your Profile <Sparkles className="text-primary" size={28} />
@@ -70,8 +70,9 @@ export default function ProfileBentoPage() {
           </Link>
         </div>
 
-        {/* BENTO GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 auto-rows-[160px] gap-4 sm:gap-6">
+        {/* BENTO GRID (Scrollable if necessary) */}
+        <div className="flex-1 overflow-y-auto hide-scrollbar pb-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 auto-rows-[160px] gap-4 sm:gap-6">
           
           {/* Watch Time Widget (2x2 on Desktop) */}
           <motion.div 
@@ -165,6 +166,7 @@ export default function ProfileBentoPage() {
             )}
           </motion.div>
 
+        </div>
         </div>
       </div>
     </div>

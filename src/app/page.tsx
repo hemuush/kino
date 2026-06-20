@@ -350,7 +350,7 @@ function DashboardContent() {
   // Reference timestamp computed once per mount — prevents impure Date.now() in render
   const [nowTimestamp, setNowTimestamp] = useState<number>(0);
   useEffect(() => {
-    setNowTimestamp(Date.now());
+    Promise.resolve().then(() => setNowTimestamp(Date.now()));
   }, []);
 
   // timelineItems calculation ends here
