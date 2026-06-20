@@ -56,75 +56,108 @@ export function AchievementsManager() {
     }, [entries]);
 
     return (
-        <section className="space-y-10">
+        <section className="space-y-12">
             {/* Badges Section */}
-            <div className="space-y-6">
-                <div className="flex flex-col gap-1">
-                    <h3 className="text-2xl sm:text-3xl font-black font-display tracking-tight text-foreground flex items-center gap-3">
-                        <div className="p-2.5 bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 rounded-xl text-primary shadow-[0_0_20px_-5px_rgba(var(--primary),0.3)]">
-                            <Trophy size={24} strokeWidth={2.5} />
+            <div className="space-y-8">
+                <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-1">
+                        <h3 className="text-2xl sm:text-3xl font-black font-display tracking-tight text-foreground flex items-center gap-3">
+                            <div className="p-2.5 bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 rounded-xl text-primary shadow-[0_0_20px_-5px_rgba(var(--primary),0.3)]">
+                                <Trophy size={24} strokeWidth={2.5} />
+                            </div>
+                            Achievements
+                        </h3>
+                        <p className="text-sm text-muted-foreground font-medium max-w-2xl mt-1">
+                            Track your milestones and earn badges based on your watch history and library curation.
+                        </p>
+                    </div>
+
+                    {/* Overall Progress */}
+                    <div className="w-full bg-black/20 dark:bg-black/40 border border-white/5 rounded-2xl p-5 flex flex-col gap-3">
+                        <div className="flex justify-between items-end">
+                            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Unlock Progress</span>
+                            <span className="text-2xl font-black font-display text-primary">{badges.filter(b => b.unlocked).length} <span className="text-sm text-muted-foreground font-medium">/ {badges.length}</span></span>
                         </div>
-                        Achievements
-                    </h3>
-                    <p className="text-sm text-muted-foreground font-medium max-w-2xl mt-1">
-                        Track your milestones and earn badges based on your watch history and library curation.
-                    </p>
+                        <div className="h-3 w-full bg-background/50 rounded-full overflow-hidden shadow-inner border border-white/5">
+                            <div 
+                                className="h-full bg-gradient-to-r from-primary to-primary/60 rounded-full transition-all duration-1000 ease-out relative"
+                                style={{ width: `${(badges.filter(b => b.unlocked).length / badges.length) * 100}%` }}
+                            >
+                                <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite] -skew-x-12" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
                     {badges.map((badge) => (
                         <div 
                             key={badge.id}
-                            className={`rounded-2xl border-2 p-4 flex flex-col items-center text-center transition-all ${badge.unlocked ? `bg-card/65 ${badge.color} border-border/40 shadow-sm backdrop-blur-md hover:scale-105 cursor-default` : 'bg-muted/30 border-dashed border-border/30 opacity-60 grayscale'}`}
+                            className={`group relative overflow-hidden rounded-[24px] border-2 p-5 sm:p-6 flex flex-col items-center text-center transition-all duration-500 ${
+                                badge.unlocked 
+                                    ? `bg-gradient-to-b from-card/80 to-card/40 ${badge.color} border-current/20 shadow-[0_8px_30px_rgb(0,0,0,0.08)] backdrop-blur-xl hover:-translate-y-2 hover:shadow-[0_15px_40px_rgb(0,0,0,0.12)] hover:border-current/40 cursor-pointer` 
+                                    : 'bg-muted/10 border-dashed border-border/20 opacity-50 grayscale hover:grayscale-0 hover:opacity-80 transition-all duration-500'
+                            }`}
                         >
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl mb-3 shadow-inner ${badge.unlocked ? badge.color : 'bg-muted'}`}>
+                            {badge.unlocked && (
+                                <div className="absolute -inset-24 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 group-hover:animate-[spin_4s_linear_infinite] transition-opacity duration-500 z-0" />
+                            )}
+                            <div className={`relative z-10 w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-3xl sm:text-4xl mb-4 shadow-inner transition-transform duration-500 group-hover:scale-110 ${badge.unlocked ? badge.color.replace('text-', 'shadow-').replace('/10', '/30') + ' bg-background/50' : 'bg-muted/30'}`}>
                                 {badge.icon}
                             </div>
-                            <span className="text-[11px] font-bold uppercase tracking-widest text-foreground">{badge.name}</span>
-                            <span className="text-[9px] mt-1 text-muted-foreground font-medium leading-tight">{badge.desc}</span>
+                            <span className="relative z-10 text-[13px] sm:text-[14px] font-black uppercase tracking-widest text-foreground leading-tight mb-1">{badge.name}</span>
+                            <span className="relative z-10 text-[10px] sm:text-[11px] text-muted-foreground font-semibold leading-snug">{badge.desc}</span>
                         </div>
                     ))}
                 </div>
             </div>
 
             {/* Recaps Section */}
-            <div className="space-y-6 pt-4 border-t border-border/50">
+            <div className="space-y-8 pt-8 border-t border-border/30">
                 <div className="flex flex-col gap-1">
-                    <h3 className="text-xl sm:text-2xl font-bold font-display tracking-tight text-foreground flex items-center gap-2">
-                        <Calendar className="text-primary" size={24} />
-                        Your History & Recaps
+                    <h3 className="text-2xl sm:text-3xl font-black font-display tracking-tight text-foreground flex items-center gap-3">
+                        <div className="p-2.5 bg-gradient-to-br from-purple-500/20 to-purple-500/5 border border-purple-500/20 rounded-xl text-purple-500 shadow-[0_0_20px_-5px_rgba(168,85,247,0.3)]">
+                            <Calendar className="text-purple-500" size={24} strokeWidth={2.5} />
+                        </div>
+                        Your Wrapped
                     </h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
+                    <p className="text-sm text-muted-foreground font-medium max-w-2xl mt-1">
                         Relive your cinematic journey. Generate your interactive Kino Wrapped for the past week or month.
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <button 
                         onClick={() => setRecapType('weekly')}
-                        className="relative group overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-transparent p-6 text-left transition-all hover:border-primary/50 hover:shadow-[0_0_30px_rgba(var(--primary),0.15)]"
+                        className="relative group overflow-hidden rounded-[24px] border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 sm:p-8 text-left transition-all hover:border-primary/50 hover:shadow-[0_0_40px_rgba(var(--primary),0.15)] hover:-translate-y-1"
                     >
-                        <div className="absolute inset-0 bg-primary/5 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                        <div className="relative z-10 flex flex-col gap-2">
-                            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-2">
-                                <CalendarDays className="text-primary" size={24} />
+                        <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500 ease-out" />
+                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity duration-500 group-hover:scale-110 transform origin-top-right">
+                            <CalendarDays size={80} className="text-primary" />
+                        </div>
+                        <div className="relative z-10 flex flex-col gap-3">
+                            <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center mb-2 shadow-[0_0_20px_rgba(var(--primary),0.2)]">
+                                <CalendarDays className="text-primary" size={28} strokeWidth={2.5} />
                             </div>
-                            <h4 className="text-xl font-bold font-display">Weekly Wrapped</h4>
-                            <p className="text-sm text-muted-foreground">View your stats for the last 7 days.</p>
+                            <h4 className="text-2xl font-black font-display tracking-tight text-foreground">Weekly Recap</h4>
+                            <p className="text-sm font-medium text-muted-foreground">View your stats for the last 7 days.</p>
                         </div>
                     </button>
 
                     <button 
                         onClick={() => setRecapType('monthly')}
-                        className="relative group overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 to-transparent p-6 text-left transition-all hover:border-purple-500/50 hover:shadow-[0_0_30px_rgba(168,85,247,0.15)]"
+                        className="relative group overflow-hidden rounded-[24px] border border-purple-500/20 bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent p-6 sm:p-8 text-left transition-all hover:border-purple-500/50 hover:shadow-[0_0_40px_rgba(168,85,247,0.15)] hover:-translate-y-1"
                     >
-                        <div className="absolute inset-0 bg-purple-500/5 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                        <div className="relative z-10 flex flex-col gap-2">
-                            <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mb-2">
-                                <Calendar className="text-purple-500" size={24} />
+                        <div className="absolute inset-0 bg-gradient-to-t from-purple-500/10 to-transparent translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500 ease-out" />
+                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity duration-500 group-hover:scale-110 transform origin-top-right">
+                            <Calendar size={80} className="text-purple-500" />
+                        </div>
+                        <div className="relative z-10 flex flex-col gap-3">
+                            <div className="w-14 h-14 rounded-2xl bg-purple-500/20 flex items-center justify-center mb-2 shadow-[0_0_20px_rgba(168,85,247,0.2)]">
+                                <Calendar className="text-purple-500" size={28} strokeWidth={2.5} />
                             </div>
-                            <h4 className="text-xl font-bold font-display text-purple-400">Monthly Wrapped</h4>
-                            <p className="text-sm text-muted-foreground">Discover your trends for the last 30 days.</p>
+                            <h4 className="text-2xl font-black font-display tracking-tight text-foreground">Monthly Recap</h4>
+                            <p className="text-sm font-medium text-muted-foreground">Discover your trends for the last 30 days.</p>
                         </div>
                     </button>
                 </div>

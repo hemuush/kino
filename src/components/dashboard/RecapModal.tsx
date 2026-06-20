@@ -30,25 +30,49 @@ function StaggeredText({ text, className }: { text: string, className?: string }
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.15
-      }
+      transition: { staggerChildren: 0.12 }
     }
   };
 
   const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { type: "spring" as const, damping: 12, stiffness: 100 } }
+    hidden: { opacity: 0, y: 30, filter: 'blur(8px)' },
+    show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { type: "spring" as const, damping: 15, stiffness: 120 } }
   };
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className={`flex flex-wrap justify-center gap-x-2 ${className}`}>
+    <motion.div variants={container} initial="hidden" animate="show" className={`flex flex-wrap justify-center gap-x-3 gap-y-1 ${className}`}>
       {words.map((word, index) => (
-        <motion.span key={index} variants={item} className="inline-block">
+        <motion.span key={index} variants={item} className="inline-block drop-shadow-sm">
           {word}
         </motion.span>
       ))}
     </motion.div>
+  );
+}
+
+// 5. Floating Background Orbs
+function FloatingOrbs({ activeSlide }: { activeSlide: number }) {
+  const colors = [
+    ["bg-primary/40", "bg-purple-600/30"],
+    ["bg-blue-600/40", "bg-cyan-500/30"],
+    ["bg-purple-600/40", "bg-pink-500/30"],
+    ["bg-amber-600/40", "bg-orange-500/30"],
+  ];
+  const [c1, c2] = colors[activeSlide] || colors[0];
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none mix-blend-screen opacity-50 z-0">
+      <motion.div
+        animate={{ x: [0, 60, -30, 0], y: [0, -60, 40, 0], scale: [1, 1.3, 0.9, 1] }}
+        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+        className={`absolute -top-[20%] -left-[20%] w-[80%] h-[80%] rounded-full blur-[100px] ${c1} transition-colors duration-1000`}
+      />
+      <motion.div
+        animate={{ x: [0, -50, 30, 0], y: [0, 60, -30, 0], scale: [1, 0.8, 1.2, 1] }}
+        transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+        className={`absolute -bottom-[20%] -right-[20%] w-[90%] h-[90%] rounded-full blur-[100px] ${c2} transition-colors duration-1000`}
+      />
+    </div>
   );
 }
 
@@ -300,8 +324,9 @@ export function RecapModal({ isOpen, onClose, entries, genres, type }: RecapModa
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className={`relative w-full max-w-md border border-white/10 shadow-2xl rounded-[32px] overflow-hidden flex flex-col h-[85vh] sm:h-[650px] bg-gradient-to-b ${backgroundGradients[activeSlide]} transition-colors duration-1000`}
+          className={`relative w-full max-w-md border border-white/10 shadow-[0_30px_100px_-10px_rgba(0,0,0,1)] rounded-[36px] overflow-hidden flex flex-col h-[85vh] sm:h-[680px] bg-gradient-to-b ${backgroundGradients[activeSlide]} transition-colors duration-1000`}
         >
+          <FloatingOrbs activeSlide={activeSlide} />
           {/* Header */}
           <div className="absolute top-0 left-0 right-0 p-5 flex items-center justify-between z-10">
             <div className="flex gap-2 flex-1 mr-4">
