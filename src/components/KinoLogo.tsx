@@ -10,46 +10,23 @@ interface KinoLogoProps {
 export function KinoLogo({ size = 32, className = "", showText = true }: KinoLogoProps) {
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
-      {/* Sharp industrial logo icon */}
+      {/* App logo */}
       <div 
-        className="relative rounded-none overflow-hidden flex-shrink-0 flex items-center justify-center border-2 border-primary bg-black"
+        className="relative flex-shrink-0 flex items-center justify-center"
         style={{ width: size, height: size }}
       >
-        <svg
-          width={size * 0.65}
-          height={size * 0.65}
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="relative z-10 text-white"
-        >
-          {/* Outer focus circle */}
-          <circle
-            cx="12"
-            cy="12"
-            r="9.5"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeDasharray="16 4 4 4"
-          />
-          {/* Shutter lines */}
-          <circle
-            cx="12"
-            cy="12"
-            r="5"
-            stroke="currentColor"
-            strokeWidth="1.2"
-            strokeOpacity="0.8"
-          />
-          {/* Center Play Triangle */}
-          <path
-            d="M10.75 9.25C10.75 8.78 11.28 8.5 11.66 8.76L14.9 11.01C15.22 11.23 15.22 11.72 14.9 11.94L11.66 14.19C11.28 14.45 10.75 14.17 10.75 13.7V9.25Z"
-            fill="currentColor"
-            stroke="currentColor"
-            strokeWidth="0.8"
-            strokeLinejoin="round"
-          />
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+          {/* Black background with red border */}
+          <rect x="2" y="2" width="116" height="116" fill="#080808" stroke="#E50000" strokeWidth="3"/>
+
+          {/* Inner continuous grey ring */}
+          <circle cx="60" cy="60" r="17" fill="none" stroke="#999999" strokeWidth="3.5"/>
+
+          {/* Outer broken white ring */}
+          <circle cx="60" cy="60" r="32" fill="none" stroke="#FFFFFF" strokeWidth="4.5" strokeLinecap="round" strokeDasharray="35 15.2" transform="rotate(45 60 60)" />
+
+          {/* Center Play Button (White Triangle with slightly rounded corners) */}
+          <polygon points="53,48 53,72 73,60" fill="#FFFFFF" stroke="#FFFFFF" strokeWidth="3" strokeLinejoin="round"/>
         </svg>
       </div>
       {showText && (

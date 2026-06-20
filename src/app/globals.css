@@ -60,10 +60,10 @@
     --muted: #1a1a1a;
     --muted-fg: #888888;
     --border: #333333;
-    --shadow-subtle: 0 4px 24px rgba(215, 25, 33, 0.05);
-    --shadow-md: 0 12px 40px rgba(215, 25, 33, 0.1);
-    --shadow-lg: 0 24px 54px rgba(215, 25, 33, 0.15);
-    --shadow-card-hover: 0 24px 48px rgba(215, 25, 33, 0.2), 0 12px 18px rgba(0, 0, 0, 0.3);
+    --shadow-subtle: 0 4px 24px color-mix(in srgb, var(--primary) 5%, transparent);
+    --shadow-md: 0 12px 40px color-mix(in srgb, var(--primary) 10%, transparent);
+    --shadow-lg: 0 24px 54px color-mix(in srgb, var(--primary) 15%, transparent);
+    --shadow-card-hover: 0 24px 48px color-mix(in srgb, var(--primary) 20%, transparent), 0 12px 18px rgba(0, 0, 0, 0.3);
     color-scheme: dark;
   }
 }

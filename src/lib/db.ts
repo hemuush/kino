@@ -127,6 +127,41 @@ export function getWatchedRuntimeMinutes(entry: Partial<MediaEntry>): number {
   }
 }
 
+export function getTotalRuntimeMinutes(entry: Partial<MediaEntry>): number {
+  if (!isEpisodic(entry)) {
+    return Number(entry.runtime || 0);
+  }
+
+  if (entry.episodes && entry.episodes.length > 0) {
+    let knownSum = 0;
+    let knownCount = 0;
+    for (const ep of entry.episodes) {
+      if (ep.runtime && ep.runtime > 0) {
+        knownSum += ep.runtime;
+        knownCount++;
+      }
+    }
+    
+    const globalRuntime = Number(entry.runtime || 0);
+    const avgRuntime = knownCount > 0 ? (knownSum / knownCount) : globalRuntime;
+    
+    let total = 0;
+    for (const ep of entry.episodes) {
+      total += (ep.runtime && ep.runtime > 0 ? ep.runtime : avgRuntime);
+    }
+    
+    if (entry.episodesTotal && entry.episodesTotal > entry.episodes.length) {
+      total += (entry.episodesTotal - entry.episodes.length) * avgRuntime;
+    }
+    
+    return Math.round(total);
+  } else {
+    const runtime = Number(entry.runtime || 0);
+    const count = Number(entry.episodesTotal || entry.episodesWatched || 1);
+    return runtime * count;
+  }
+}
+
 export function formatRuntime(minutes: number | undefined): string {
   if (!minutes || minutes <= 0) return '';
   const h = Math.floor(minutes / 60);

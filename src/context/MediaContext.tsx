@@ -2,11 +2,10 @@
 "use client";
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode, useMemo } from 'react';
 import { MediaEntry, Tag, DEFAULT_GENRES, normalizeMediaType, normalizeWatchStatus } from '@/lib/db';
 import { useAuth } from '@/context/AuthContext';
 import { TokenExpiredError, downloadBackupFromDrive, uploadBackupToDrive, deleteBackupFromDrive, getBackupMetadataFromDrive, BackupData } from '@/lib/googleDrive';
-import { getLocalCache, setLocalCache, clearLocalCache } from '@/lib/idb';
 import { toast } from 'sonner';
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error';
@@ -26,6 +25,7 @@ interface MediaContextType {
   batchUpdateEntries: (entries: MediaEntry[]) => Promise<void>;
   wipeAllData: () => Promise<void>;
   importData: (data: { entries?: MediaEntry[], genres?: Tag[], franchises?: Tag[] }) => Promise<void>;
+  forceSync: () => Promise<void>;
 }
 
 const MediaContext = createContext<MediaContextType | undefined>(undefined);
@@ -58,7 +58,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [syncStatus]);
 
-  // updateStateAndRef: immediately write to IDB and React state
+  // updateStateAndRef: immediately write to React state
   const updateStateAndRef = useCallback((newEntries?: MediaEntry[], newGenres?: Tag[], newFranchises?: Tag[], skipIdb = false) => {
     const now = Date.now();
     if (newEntries !== undefined) {
@@ -72,15 +72,6 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     if (newFranchises !== undefined) {
       setFranchises(newFranchises);
       latestDataRef.current.franchises = newFranchises;
-    }
-    
-    if (!skipIdb) {
-      setLocalCache({
-        entries: latestDataRef.current.entries,
-        genres: latestDataRef.current.genres,
-        franchises: latestDataRef.current.franchises,
-        timestamp: now
-      }).catch(console.error);
     }
   }, []);
 
@@ -134,25 +125,37 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     if (hasFetchedFromDriveRef.current) return;
 
     const fetchFromDrive = async () => {
-      // First, try loading from local cache for instant UI
-      try {
-        const cache = await getLocalCache();
-        if (cache && cache.entries) {
-          updateStateAndRef(cache.entries, cache.genres, cache.franchises, true);
-          setIsLoading(false); // Render immediately!
-        }
-      } catch (e) {
-        console.warn("Error reading from local cache", e);
-      }
-
       if (latestDataRef.current.entries.length === 0) {
-        setIsLoading(true); // If cache was empty, we must block until Drive fetches
+        setIsLoading(true); // Must block until Drive fetches
       }
 
       try {
         hasFetchedFromDriveRef.current = true;
         setSyncStatus('syncing');
-        const backup = await downloadBackupFromDrive(accessToken) as BackupData | MediaEntry[] | null;
+        const backup = await downloadBackupFromDrive(
+          accessToken,
+          (chunkEntries, isFirst) => {
+            if (isFirst) {
+              updateStateAndRef(chunkEntries, undefined, undefined);
+              setIsLoading(false);
+            } else {
+              // Append to existing
+              const newEntries = [...latestDataRef.current.entries, ...chunkEntries];
+              updateStateAndRef(newEntries, undefined, undefined);
+            }
+          },
+          (images) => {
+            // Hydrate images into current state without waiting for everything
+            const updated = latestDataRef.current.entries.map(e => {
+              if (images[String(e.id)]) {
+                return { ...e, coverImage: images[String(e.id)] };
+              }
+              return e;
+            });
+            updateStateAndRef(updated, undefined, undefined);
+          }
+        ) as BackupData | MediaEntry[] | null;
+        
         let fetchedEntries: MediaEntry[] = [];
         let fetchedGenres: Tag[] = [];
         let fetchedFranchises: Tag[] = [];
@@ -174,7 +177,8 @@ export function MediaProvider({ children }: { children: ReactNode }) {
           if (fetchedGenres.length === 0) {
             fetchedGenres = DEFAULT_GENRES.map(name => ({ id: crypto.randomUUID(), name }));
           }
-          // Compare with cache: If drive data differs or is newer, update local state
+          // Use Drive data entirely
+          // Note: fetchedEntries is already hydrated, we overwrite to ensure consistency with genres/franchises
           updateStateAndRef(fetchedEntries, fetchedGenres, fetchedFranchises);
           if (cloudTimestamp > 0) setLastSyncedAt(cloudTimestamp);
         } else {
@@ -196,7 +200,26 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     };
 
     fetchFromDrive();
-  }, [accessToken, logout, triggerUpload, updateStateAndRef]);
+  }, [accessToken, logout, updateStateAndRef]);
+
+  const forceSync = useCallback(async () => {
+    if (!accessToken) return;
+    setSyncStatus('syncing');
+    try {
+      await uploadBackupToDrive(accessToken, {
+        entries: latestDataRef.current.entries,
+        genres: latestDataRef.current.genres,
+        franchises: latestDataRef.current.franchises,
+        timestamp: Date.now()
+      });
+      setSyncStatus('synced');
+      setLastSyncedAt(Date.now());
+      toast.success("Successfully synchronized to Drive.");
+    } catch (error) {
+      setSyncStatus('error');
+      toast.error("Failed to sync to Drive.");
+    }
+  }, [accessToken]);
 
   // Cross-device Sync: Listen for window focus to check if another device updated the library
   useEffect(() => {
@@ -208,8 +231,6 @@ export function MediaProvider({ children }: { children: ReactNode }) {
           const metadata = await getBackupMetadataFromDrive(accessToken);
           if (metadata && metadata.modifiedTime) {
             const driveModified = new Date(metadata.modifiedTime).getTime();
-            // If the Drive metadata indicates an update newer than our last sync + 30 seconds grace period
-            // to avoid false positives from our own uploads
             if (driveModified > lastSyncedAt + 30000) {
               setSyncStatus('syncing');
               const backup = await downloadBackupFromDrive(accessToken) as BackupData | MediaEntry[] | null;
@@ -397,17 +418,18 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     latestDataRef.current = { entries: [], genres: emptyGenres, franchises: [] };
     setLastSyncedAt(null);
     setSyncStatus('idle');
-    clearLocalCache().catch(console.error);
   };
 
+  const contextValue = useMemo(() => ({
+    entries, isLoading, addEntry, updateEntry, deleteEntry,
+    genres, setGenres: saveGenres,
+    franchises, setFranchises: saveFranchises,
+    syncStatus, lastSyncedAt,
+    batchUpdateEntries, wipeAllData, importData, forceSync
+  }), [entries, isLoading, addEntry, updateEntry, deleteEntry, genres, franchises, syncStatus, lastSyncedAt, batchUpdateEntries, wipeAllData, importData, forceSync]);
+
   return (
-    <MediaContext.Provider value={{
-      entries, isLoading, addEntry, updateEntry, deleteEntry,
-      genres, setGenres: saveGenres,
-      franchises, setFranchises: saveFranchises,
-      syncStatus, lastSyncedAt,
-      batchUpdateEntries, wipeAllData, importData
-    }}>
+    <MediaContext.Provider value={contextValue}>
       {children}
     </MediaContext.Provider>
   );

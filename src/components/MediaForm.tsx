@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { MediaType, WatchStatus, AnimeType, EpisodeInfo, MediaEntry, Tag, isEpisodic, getWatchedRuntimeMinutes } from '@/lib/db';
-import { X, Check, Image as ImageIcon, Star, Heart, Upload, Clock, Film, ListPlus, Search } from 'lucide-react';
+import { X, Check, Image as ImageIcon, Star, Heart, Upload, Clock, Film, ListPlus, Search, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMedia } from '@/context/MediaContext';
 import { toast } from 'sonner';
@@ -130,6 +130,25 @@ export function MediaForm({ onCancel, onSave, initialData, hideEpisodesTab }: Me
     };
   }, [type, animeType, status, runtime, currentIsEpisodic, episodesWatched, episodesTotal, episodes]);
 
+  // Auto-sync watched count and status based on episodes array
+  useEffect(() => {
+    if (currentIsEpisodic && episodes.length > 0) {
+      const watchedCount = episodes.filter(e => e.watched).length;
+      setEpisodesWatched(watchedCount);
+      setEpisodesTotal(prev => {
+        const current = Number(prev || 0);
+        return current < episodes.length ? episodes.length : prev;
+      });
+      
+      setStatus(prevStatus => {
+        const currentTotal = Number(episodesTotal || episodes.length);
+        if (watchedCount === 0) return 'Plan to Watch';
+        if (watchedCount >= currentTotal && currentTotal > 0) return 'Completed';
+        return 'Watching';
+      });
+    }
+  }, [episodes, currentIsEpisodic]); // Intentionally omitting episodesTotal to avoid cycles
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -194,7 +213,7 @@ export function MediaForm({ onCancel, onSave, initialData, hideEpisodesTab }: Me
       }
     }
 
-    const finalEpisodesTotal = currentIsEpisodic && episodesTotal !== '' ? Number(episodesTotal) : undefined;
+    const finalEpisodesTotal = currentIsEpisodic && episodesTotal !== '' ? Number(episodesTotal) : (currentIsEpisodic && episodes.length > 0 ? episodes.length : undefined);
     let finalEpisodesWatched = currentIsEpisodic ? (status === 'Completed' && finalEpisodesTotal ? finalEpisodesTotal : Number(episodesWatched || 0)) : undefined;
     
     if (finalEpisodesWatched !== undefined && finalEpisodesTotal !== undefined) {
@@ -219,7 +238,7 @@ export function MediaForm({ onCancel, onSave, initialData, hideEpisodesTab }: Me
       episodesWatched: finalEpisodesWatched,
       episodesTotal: finalEpisodesTotal,
       seasonsCount: currentIsEpisodic && seasonsCount !== '' ? Number(seasonsCount) : undefined,
-      episodes: currentIsEpisodic ? episodes : undefined,
+      episodes: currentIsEpisodic ? episodes.map(ep => ({ ...ep, watched: status === 'Completed' ? true : status === 'Plan to Watch' ? false : ep.watched })) : undefined,
     };
 
     try {
@@ -245,7 +264,7 @@ export function MediaForm({ onCancel, onSave, initialData, hideEpisodesTab }: Me
     setEpisodes(prev => {
       const sEps = prev.filter(e => e.season === season);
       const nextNumber = sEps.length > 0 ? Math.max(...sEps.map(e => e.number || 1)) + 1 : 1;
-      return [...prev, { name: `Episode ${nextNumber}`, season, number: nextNumber, runtime: undefined, airDate: '' }];
+      return [...prev, { name: `Episode ${nextNumber}`, season, number: nextNumber, runtime: undefined, airDate: '', watched: status === 'Completed' }];
     });
   };
 
@@ -255,7 +274,7 @@ export function MediaForm({ onCancel, onSave, initialData, hideEpisodesTab }: Me
       let nextNumber = sEps.length > 0 ? Math.max(...sEps.map(e => e.number || 1)) + 1 : 1;
       const newEps: EpisodeInfo[] = [];
       for (let i = 0; i < count; i++) {
-        newEps.push({ name: `Episode ${nextNumber}`, season, number: nextNumber, runtime: undefined, airDate: '' });
+        newEps.push({ name: `Episode ${nextNumber}`, season, number: nextNumber, runtime: undefined, airDate: '', watched: status === 'Completed' });
         nextNumber++;
       }
       return [...prev, ...newEps];
@@ -306,7 +325,8 @@ export function MediaForm({ onCancel, onSave, initialData, hideEpisodesTab }: Me
         ) : (
           <div className="flex flex-col gap-2 min-w-[600px] p-2">
             <div className="flex px-4 pb-2 pt-1 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-              <div className="w-12 text-center">Ep</div>
+              <div className="w-10"></div>
+              <div className="w-10 text-center">Ep</div>
               <div className="flex-1 ml-3">Title</div>
               <div className="w-24 text-center">Runtime (m)</div>
               <div className="w-[130px] pl-3">Air Date</div>
@@ -316,7 +336,12 @@ export function MediaForm({ onCancel, onSave, initialData, hideEpisodesTab }: Me
               if (ep.season !== currentTab) return null;
               return (
                 <div key={`${ep.season}-${ep.number || idx}`} className="flex items-center gap-3 bg-background border border-border/60 rounded-xl p-2 hover:border-primary/40 hover:shadow-sm transition-all group">
-                  <div className="w-12 text-xs font-bold text-muted-foreground font-mono flex-shrink-0 text-center bg-muted/40 rounded-lg py-2.5 cursor-default">
+                  <div className="w-10 text-center flex-shrink-0">
+                    <button type="button" onClick={() => setEpisodes(prev => prev.map((item, i) => i === idx ? { ...item, watched: !item.watched } : item))} className="p-1 rounded-md hover:bg-muted transition-colors cursor-pointer focus:outline-none">
+                      <CheckCircle2 size={18} className={ep.watched ? 'text-green-500' : 'text-muted-foreground/30'} />
+                    </button>
+                  </div>
+                  <div className="w-10 text-xs font-bold text-muted-foreground font-mono flex-shrink-0 text-center bg-muted/40 rounded-lg py-2.5 cursor-default">
                     {ep.number || 1}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -581,10 +606,10 @@ export function MediaForm({ onCancel, onSave, initialData, hideEpisodesTab }: Me
 
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 shrink-0">
                 <FieldWrapper label="Total Eps">
-                  <input type="number" min="1" value={episodesTotal} onChange={(e) => setEpisodesTotal(e.target.value ? Number(e.target.value) : '')} className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3 text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
+                  <input type="number" min="1" readOnly={episodes.length > 0} value={episodesTotal} onChange={(e) => setEpisodesTotal(e.target.value ? Number(e.target.value) : '')} className={`w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3 text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50 ${episodes.length > 0 ? 'opacity-60 cursor-not-allowed' : ''}`} />
                 </FieldWrapper>
                 <FieldWrapper label="Watched Eps">
-                  <input type="number" min="0" max={episodesTotal || undefined} value={episodesWatched} onChange={(e) => setEpisodesWatched(e.target.value ? Number(e.target.value) : '')} className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3 text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />
+                  <input type="number" min="0" max={episodesTotal || undefined} readOnly={episodes.length > 0} value={episodesWatched} onChange={(e) => setEpisodesWatched(e.target.value ? Number(e.target.value) : '')} className={`w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3 text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50 ${episodes.length > 0 ? 'opacity-60 cursor-not-allowed' : ''}`} />
                 </FieldWrapper>
                 <FieldWrapper label="Seasons">
                   <input type="number" min="1" value={seasonsCount} onChange={(e) => setSeasonsCount(e.target.value ? Number(e.target.value) : '')} className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-4 py-3 text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50" />

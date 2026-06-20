@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Star, Film, Clock, Search, Video, Play, Calendar } from 'lucide-react';
 import { useMedia } from '@/context/MediaContext';
-import { MediaEntry, formatRuntime, isEpisodic, EpisodeInfo } from '@/lib/db';
+import { MediaEntry, formatRuntime, isEpisodic, EpisodeInfo, getTotalRuntimeMinutes } from '@/lib/db';
 import { PageLoader } from '@/components/ui/Loader';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import Link from 'next/link';
@@ -133,7 +133,7 @@ export default function SagasPage() {
 
 
   const currentSagaItems = selectedSaga ? groupedSagas[selectedSaga] || [] : [];
-  const sagaRawRuntime = currentSagaItems.reduce((total, item) => total + (item.runtime || 0), 0);
+  const sagaRawRuntime = currentSagaItems.reduce((total, item) => total + getTotalRuntimeMinutes(item), 0);
 
   if (isLoading) return <PageLoader text="Loading Universes..." />;
 
@@ -185,7 +185,7 @@ export default function SagasPage() {
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
                   {filteredSagaNames.map((saga, i) => {
                     const items = groupedSagas[saga];
-                    const totalTime = items.reduce((t, m) => t + (m.runtime || 0), 0);
+                    const totalTime = items.reduce((t, m) => t + getTotalRuntimeMinutes(m), 0);
                     const startYear = getYear(items[0]?.releaseDate) || '';
                     const latestYear = Math.max(0, ...items.map(m => Number(getYear(m.releaseDate) || 0)));
                     const displayYears = startYear ? (startYear === latestYear.toString() ? startYear : `${startYear} - ${latestYear}`) : 'Timeline';
@@ -339,7 +339,7 @@ export default function SagasPage() {
 
                         {/* Card Side */}
                         <div className="w-full md:w-1/2 pl-[70px] md:pl-0 px-4 md:px-12">
-                          <Link href={`/edit/${node.media.id}`} className="block">
+                          <Link href={`/media/${node.media.id}`} className="block">
                             <div className="flex flex-col sm:flex-row gap-3 p-2 sm:p-3 rounded-[16px] border border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 hover:border-primary/40 transition-all duration-300 hover:shadow-[0_10px_20px_-10px_rgba(var(--primary),0.2)] hover:-translate-y-1 group/card">
                               
                               {/* Cover */}

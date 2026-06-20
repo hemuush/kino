@@ -6,12 +6,13 @@ import { BottomNav } from "./BottomNav";
 import { usePathname, useRouter } from "next/navigation";
 import { KinoLogo } from "@/components/KinoLogo";
 import { useTheme } from "next-themes";
-import { Moon, LogOut, LayoutDashboard, Library, Film, Settings, Search, SlidersHorizontal, Sun } from "lucide-react";
+import { Moon, LogOut, LayoutDashboard, Library, Film, Settings, Search, SlidersHorizontal, Sun, MonitorPlay } from "lucide-react";
 import { ReactNode, useEffect, useRef, useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import { PageLoader } from "./ui/Loader";
 import Link from "next/link";
 import { useMedia } from "@/context/MediaContext";
+import { AmbientMode } from "./AmbientMode";
 
 interface AppShellProps { children: ReactNode }
 
@@ -25,6 +26,7 @@ export function AppShell({ children }: AppShellProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [isRouteLoading, setIsRouteLoading] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isAmbientMode, setIsAmbientMode] = useState(false);
   const [isPending, startTransition] = useTransition();
   const routeLoadingStartedAt = useRef(0);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -184,13 +186,15 @@ export function AppShell({ children }: AppShellProps) {
             <div className="flex items-center justify-end gap-1 sm:gap-2">
               {/* Sync status indicator */}
               {syncStatus === 'syncing' && (
-                <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground" title="Syncing to Google Drive...">
-                  <div className="w-3.5 h-3.5 border-2 border-muted-foreground/30 border-t-primary rounded-full animate-spin" />
+                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20" title="Syncing to Google Drive...">
+                  <div className="w-3 h-3 border-[1.5px] border-primary/30 border-t-primary rounded-full animate-spin" />
+                  <span className="hidden sm:inline">Saving...</span>
                 </div>
               )}
               {syncStatus === 'error' && (
-                <div className="hidden md:flex items-center gap-1.5 text-xs text-red-500 font-medium" title="Sync failed — data saved locally">
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-red-500 bg-red-500/10 px-3 py-1.5 rounded-full border border-red-500/20" title="Sync failed — data saved locally">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                  <span className="hidden sm:inline">Error</span>
                 </div>
               )}
               {user?.picture ? (
@@ -205,6 +209,9 @@ export function AppShell({ children }: AppShellProps) {
               </button>
               <button onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} className="inline-flex p-2 sm:p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/8 text-muted-foreground hover:text-foreground transition" title="Theme">
                 {resolvedTheme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+              </button>
+              <button onClick={() => setIsAmbientMode(true)} className="hidden md:inline-flex p-2 sm:p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/8 text-muted-foreground hover:text-foreground transition" title="Ambient Screensaver">
+                <MonitorPlay size={16} />
               </button>
               <button onClick={() => logout(false)} className="p-2 sm:p-2.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition" title="Logout">
                 <LogOut size={16} />
@@ -249,6 +256,9 @@ export function AppShell({ children }: AppShellProps) {
       {showShell && isRouteLoading && <PageLoader fullScreen text="Loading page..." />}
       <main className={shellMainClass}>{children}</main>
       {showShell && <BottomNav />}
+      
+      {/* Ambient Mode Overlay */}
+      {isAmbientMode && <AmbientMode onClose={() => setIsAmbientMode(false)} />}
     </div>
   );
 }

@@ -436,6 +436,17 @@ function DashboardContent() {
     };
   }, [entries, planned.length]);
 
+  // On This Day logic
+  const onThisDay = useMemo(() => {
+    if (entries.length === 0) return null;
+    const today = new Date();
+    const matches = entries.filter(e => {
+      const d = new Date(e.createdAt);
+      return d.getMonth() === today.getMonth() && d.getDate() === today.getDate() && d.getFullYear() < today.getFullYear();
+    });
+    return matches.sort((a,b) => (b.rating || 0) - (a.rating || 0))[0] || null;
+  }, [entries]);
+
   if (isLoading) return <PageLoader text="Loading your Cinema Dashboard..." />;
 
   return (
@@ -474,7 +485,7 @@ function DashboardContent() {
             transition={{ duration: 0.6 }}
             className="text-left space-y-2 max-w-2xl px-4 sm:px-8 lg:px-12"
           >
-            <span className="text-[10px] font-mono tracking-[0.2em] text-primary uppercase font-bold">OVERVIEW & STATS</span>
+            <span className="text-[10px] font-mono tracking-[0.2em] text-primary uppercase font-bold">OVERVIEW &amp; STATS</span>
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
               <h3 className="text-xl sm:text-3xl lg:text-5xl font-display font-bold tracking-tight text-foreground leading-none max-w-2xl">
                 Your cinema journey, in numbers.
@@ -499,6 +510,38 @@ function DashboardContent() {
               </div>
             </div>
           </motion.div>
+
+          {/* Section: On This Day */}
+          {onThisDay && (
+            <section className="relative z-10 px-4 sm:px-8 lg:px-12">
+              <h2 className="text-[13px] sm:text-sm font-display font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+                <Star size={16} className="text-primary" />
+                On This Day
+              </h2>
+              <div className="bg-card/65 backdrop-blur-xl border border-border/50 rounded-3xl p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-6 shadow-sm hover:border-primary/30 transition-colors">
+                <div className="w-32 h-48 sm:w-24 sm:h-36 shrink-0 relative rounded-xl overflow-hidden shadow-md bg-card border border-border/40">
+                  {onThisDay.coverImage ? (
+                    <img src={onThisDay.coverImage} alt={onThisDay.title} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted/30 text-muted-foreground text-xs font-bold text-center p-2">{onThisDay.title}</div>
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-bold">{onThisDay.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    You added this {new Date().getFullYear() - new Date(onThisDay.createdAt).getFullYear()} year{new Date().getFullYear() - new Date(onThisDay.createdAt).getFullYear() > 1 ? 's' : ''} ago today. 
+                    {onThisDay.rating ? ` You rated it ${onThisDay.rating}/10.` : ''}
+                  </p>
+                  <button 
+                    onClick={() => setSelectedEntry(onThisDay)}
+                    className="mt-4 px-4 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors rounded-lg font-bold text-xs uppercase tracking-wide cursor-pointer"
+                  >
+                    View Details
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
 
           <motion.div 
             initial={{ opacity: 0, y: 40 }}

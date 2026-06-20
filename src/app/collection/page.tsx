@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useMemo, useRef } from 'react';
+import { useState, useEffect, Suspense, useMemo, useRef, useCallback } from 'react';
 import { useMedia } from '@/context/MediaContext';
 import MediaCard from '@/components/MediaCard';
 import { MediaDetailModal } from '@/components/MediaDetailModal';
@@ -75,6 +75,19 @@ function CollectionContent() {
             return b.createdAt - a.createdAt;
         });
     }, [entries, filter, statusFilter, searchQuery, favoritesOnly, sortBy, genres, franchises]);
+
+    // Infinite Scroll Observer
+    const observerRef = useRef<IntersectionObserver | null>(null);
+    const loadMoreRef = useCallback((node: HTMLDivElement) => {
+        if (isLoading) return;
+        if (observerRef.current) observerRef.current.disconnect();
+        observerRef.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && sortedEntries.length > visibleCount) {
+                setVisibleCount(prev => prev + 60);
+            }
+        }, { rootMargin: '400px' });
+        if (node) observerRef.current.observe(node);
+    }, [isLoading, sortedEntries.length, visibleCount]);
 
     const handleIncrementWatched = (entry: MediaEntry, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
@@ -272,15 +285,10 @@ function CollectionContent() {
                         )
                     )}
 
-                    {/* Load More Button */}
+                    {/* Infinite Scroll Trigger */}
                     {!isLoading && sortedEntries.length > visibleCount && (
-                        <div className="flex justify-center mt-12 mb-8 relative z-20">
-                            <button
-                                onClick={() => setVisibleCount(prev => prev + 60)}
-                                className="px-8 py-3.5 rounded-full bg-card/60 dark:bg-[#0c0c0d]/80 border border-border/80 text-foreground font-bold text-sm hover:bg-muted/50 transition-all shadow-sm flex items-center gap-2"
-                            >
-                                <List size={16} /> Load More... ({sortedEntries.length - visibleCount} remaining)
-                            </button>
+                        <div ref={loadMoreRef} className="flex justify-center mt-12 mb-8 relative z-20 h-10">
+                            <PageLoader text="Loading more..." />
                         </div>
                     )}
                 </section>

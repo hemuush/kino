@@ -22,7 +22,7 @@ interface MediaDetailModalProps {
 
 export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDetailModalProps) {
   const router = useRouter();
-  const { genres, franchises } = useMedia();
+  const { genres, franchises, syncStatus } = useMedia();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
   const [viewTab, setViewTab] = useState<'Details' | 'Episodes'>('Details');
@@ -131,15 +131,38 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
     setShowAddEpisode(false);
   };
 
+  const handleToggleEpisodeWatched = async (globalIdx: number) => {
+    if (!entry.episodes || globalIdx < 0) return;
+    const updatedEpisodes = [...entry.episodes];
+    updatedEpisodes[globalIdx] = { ...updatedEpisodes[globalIdx], watched: !updatedEpisodes[globalIdx].watched };
+
+    const newWatchedCount = updatedEpisodes.filter(e => e.watched).length;
+    const newTotal = entry.episodesTotal || updatedEpisodes.length;
+
+    let newStatus = entry.status;
+    if (newWatchedCount === 0) newStatus = 'Plan to Watch';
+    else if (newWatchedCount >= newTotal && newTotal > 0) newStatus = 'Completed';
+    else newStatus = 'Watching';
+
+    await handleSave({
+      ...entry,
+      episodes: updatedEpisodes,
+      episodesWatched: newWatchedCount,
+      status: newStatus,
+      updatedAt: getTimestamp()
+    });
+  };
+
   const handleRemoveEpisode = async (episodeIndex: number) => {
     if (!entry.episodes?.length) return;
     const epToRemove = entry.episodes[episodeIndex];
     const updatedEpisodes = entry.episodes.filter((_, i) => i !== episodeIndex);
+    const newWatched = updatedEpisodes.filter(e => e.watched).length;
     await handleSave({
       ...entry,
       episodes: updatedEpisodes,
       episodesTotal: updatedEpisodes.length,
-      episodesWatched: Math.min(episodesWatched, updatedEpisodes.length),
+      episodesWatched: newWatched,
       updatedAt: getTimestamp()
     });
     toast.success(`Episode "${epToRemove?.name || '#' + (episodeIndex + 1)}" removed.`);
@@ -147,28 +170,68 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
 
   const handleIncrementEpisode = async () => {
     if (!currentIsEpisodic) return;
-    if (entry.episodesTotal && episodesWatched >= entry.episodesTotal) {
+    if (entry.episodesTotal && episodesWatched >= entry.episodesTotal && (!entry.episodes || entry.episodes.length === 0)) {
       handleOpenAddEpisode();
       return;
     }
-    const nextWatched = episodesWatched + 1;
-    const isNowComplete = entry.episodesTotal && nextWatched >= entry.episodesTotal;
+    
+    let newEpisodes = entry.episodes ? [...entry.episodes] : undefined;
+    let nextWatched = episodesWatched + 1;
+    let newTotal = entry.episodesTotal;
+
+    if (newEpisodes && newEpisodes.length > 0) {
+      const sortedEps = [...newEpisodes].sort((a, b) => {
+        if ((a.season || 1) !== (b.season || 1)) return (a.season || 1) - (b.season || 1);
+        return (a.number || 0) - (b.number || 0);
+      });
+      const nextUnwatched = sortedEps.find(e => !e.watched);
+      if (nextUnwatched) {
+        const globalIdx = newEpisodes.findIndex(e => e === nextUnwatched);
+        newEpisodes[globalIdx] = { ...newEpisodes[globalIdx], watched: true };
+        nextWatched = newEpisodes.filter(e => e.watched).length;
+      }
+      newTotal = newTotal || newEpisodes.length;
+    }
+
+    const isNowComplete = newTotal ? nextWatched >= newTotal : false;
     await handleSave({
       ...entry,
+      episodes: newEpisodes,
       episodesWatched: nextWatched,
       status: isNowComplete ? 'Completed' : (entry.status === 'Plan to Watch' ? 'Watching' : entry.status),
       rating: isNowComplete && entry.status !== 'Completed' ? entry.rating : entry.rating,
       updatedAt: getTimestamp()
     });
     if (isNowComplete) {
-      toast.success('🎉 Series completed!', { description: `You finished all ${entry.episodesTotal} episodes.` });
+      toast.success('🎉 Series completed!', { description: `You finished all ${newTotal} episodes.` });
     }
   };
 
   const handleDecrementEpisode = async () => {
     if (!currentIsEpisodic) return;
-    const nextWatched = Math.max(0, episodesWatched - 1);
-    await handleSave({ ...entry, episodesWatched: nextWatched, updatedAt: getTimestamp() });
+    let newEpisodes = entry.episodes ? [...entry.episodes] : undefined;
+    let nextWatched = Math.max(0, episodesWatched - 1);
+
+    if (newEpisodes && newEpisodes.length > 0) {
+      const sortedEps = [...newEpisodes].sort((a, b) => {
+        if ((a.season || 1) !== (b.season || 1)) return (b.season || 1) - (a.season || 1);
+        return (b.number || 0) - (a.number || 0);
+      });
+      const lastWatched = sortedEps.find(e => e.watched);
+      if (lastWatched) {
+        const globalIdx = newEpisodes.findIndex(e => e === lastWatched);
+        newEpisodes[globalIdx] = { ...newEpisodes[globalIdx], watched: false };
+        nextWatched = newEpisodes.filter(e => e.watched).length;
+      }
+    }
+
+    await handleSave({ 
+      ...entry, 
+      episodes: newEpisodes,
+      episodesWatched: nextWatched, 
+      status: nextWatched === 0 ? 'Plan to Watch' : 'Watching',
+      updatedAt: getTimestamp() 
+    });
   };
 
   const handleToggleFavorite = async () => {
@@ -245,6 +308,16 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
               )}
               {entry.favorite && (
                 <Badge variant="primary" className="hidden sm:inline-flex">❤️ Fav</Badge>
+              )}
+              {syncStatus === 'syncing' && (
+                <span className="hidden sm:flex items-center gap-1.5 ml-2 text-[10px] uppercase font-bold text-primary tracking-widest bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
+                  <span className="w-2 h-2 border-[1.5px] border-primary/30 border-t-primary rounded-full animate-spin" /> Saving
+                </span>
+              )}
+              {syncStatus === 'error' && (
+                <span className="hidden sm:flex items-center gap-1.5 ml-2 text-[10px] uppercase font-bold text-red-500 tracking-widest bg-red-500/10 px-2 py-0.5 rounded-md border border-red-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> Error
+                </span>
               )}
             </div>
             <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
@@ -567,14 +640,16 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                       ) : (
                         filteredEpisodes.map((ep, idx) => {
                           const globalIdx = (entry.episodes || []).findIndex(e => e.season === ep.season && e.number === ep.number && e.name === ep.name);
-                          const isWatched = episodesWatched >= (ep.number || idx + 1);
+                          const isWatched = entry.episodes && globalIdx >= 0 ? entry.episodes[globalIdx].watched : (episodesWatched >= (ep.number || idx + 1));
                           return (
                             <div
                               key={`${ep.season}-${ep.number}-${idx}`}
-                              className={`rounded-xl border px-4 py-3 flex items-center gap-3 group transition-all ${isWatched ? 'border-green-500/20 bg-green-500/5' : 'border-border/50 bg-muted/10 hover:border-border'}`}
+                              onClick={() => { if (entry.episodes && globalIdx >= 0) handleToggleEpisodeWatched(globalIdx); }}
+                              className={`rounded-xl border px-4 py-3 flex items-center gap-3 group transition-all ${entry.episodes && globalIdx >= 0 ? 'cursor-pointer' : ''} ${isWatched ? 'border-green-500/20 bg-green-500/5' : 'border-border/50 bg-muted/10 hover:border-border'}`}
                             >
-                              <div className="w-8 h-8 flex items-center justify-center rounded-lg shrink-0 font-mono text-xs font-bold"
-                                style={{ background: isWatched ? 'rgba(34,197,94,0.15)' : 'rgba(128,128,128,0.1)', color: isWatched ? '#22c55e' : 'var(--muted-fg)' }}>
+                              <div className={`w-8 h-8 flex items-center justify-center rounded-lg shrink-0 font-mono text-xs font-bold ${isWatched ? '' : 'text-muted-foreground'}`}
+                                style={{ background: isWatched ? 'rgba(34,197,94,0.15)' : 'rgba(128,128,128,0.1)', color: isWatched ? '#22c55e' : 'currentColor' }}
+                              >
                                 {ep.number || idx + 1}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -589,7 +664,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                               {/* Remove button (only shown for manually added episodes) */}
                               {entry.episodes && globalIdx >= 0 && (
                                 <button
-                                  onClick={() => handleRemoveEpisode(globalIdx)}
+                                  onClick={(e) => { e.stopPropagation(); handleRemoveEpisode(globalIdx); }}
                                   className="opacity-100 lg:opacity-0 lg:group-hover:opacity-100 p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all cursor-pointer"
                                 >
                                   <X size={13} />

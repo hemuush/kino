@@ -67,7 +67,9 @@ export function RecapModal({ isOpen, onClose, entries, genres, type }: RecapModa
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    if (isOpen) setNow(Date.now());
+    if (isOpen) {
+      Promise.resolve().then(() => setNow(Date.now()));
+    }
   }, [isOpen]);
 
   // Calculate stats for the time period
@@ -124,7 +126,7 @@ export function RecapModal({ isOpen, onClose, entries, genres, type }: RecapModa
       topGenreName,
       topEntry: recentEntries.sort((a, b) => b.rating - a.rating)[0] || null
     };
-  }, [entries, genres, type]);
+  }, [entries, genres, type, now]);
 
   useEffect(() => {
     if (!isOpen) {

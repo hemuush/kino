@@ -4,7 +4,7 @@ import { MediaEntry } from './db';
 const BACKUP_INDEX_NAME = 'kino-index.json';
 const LEGACY_BACKUP_NAME = 'kino-backup.json';
 const CHUNK_PREFIX = 'kino-chunk-';
-const CHUNK_SIZE = 500; // items per chunk
+const CHUNK_SIZE = 50; // items per chunk (reduced to 50 to avoid 5MB Drive limits on images)
 
 export class TokenExpiredError extends Error {
   constructor() {
@@ -118,6 +118,7 @@ export interface BackupMetadata {
   name: string;
   size: number;
   modifiedTime?: string;
+  files: { name: string; size: number }[];
 }
 
 export async function getBackupMetadataFromDrive(accessToken: string): Promise<BackupMetadata | null> {
@@ -132,6 +133,7 @@ export async function getBackupMetadataFromDrive(accessToken: string): Promise<B
     name: 'Kino Library (Chunked)',
     size: totalSize,
     modifiedTime: indexFile.modifiedTime,
+    files: existingFiles.map(f => ({ name: f.name, size: f.size || 0 })).sort((a, b) => a.name.localeCompare(b.name))
   };
 }
 
@@ -139,10 +141,24 @@ export async function uploadBackupToDrive(accessToken: string, rawData: BackupDa
   const data = Array.isArray(rawData) ? { entries: rawData, genres: [], franchises: [] } : rawData;
   const entries = data.entries || [];
   
-  // 1. Partition entries
+  // 1. Partition entries and separate heavy images
   const chunks: MediaEntry[][] = [];
+  const imageChunks: Record<string, string>[] = [];
+  
   for (let i = 0; i < entries.length; i += CHUNK_SIZE) {
-    chunks.push(entries.slice(i, i + CHUNK_SIZE));
+    const chunkEntries = entries.slice(i, i + CHUNK_SIZE);
+    const chunkMap: Record<string, string> = {};
+    
+    const textEntries = chunkEntries.map(e => {
+      if (e.coverImage) {
+        chunkMap[String(e.id)] = e.coverImage;
+      }
+      const { coverImage, ...rest } = e;
+      return rest as MediaEntry;
+    });
+    
+    chunks.push(textEntries);
+    imageChunks.push(chunkMap);
   }
 
   const existingFiles = await listAllKinoFiles(accessToken);
@@ -154,16 +170,32 @@ export async function uploadBackupToDrive(accessToken: string, rawData: BackupDa
     const hash = cyrb53(content);
     
     // Skip if unchanged in this session
-    if (chunkHashes[chunkName] === hash) continue;
-
-    const existing = existingFiles.find(f => f.name === chunkName);
-    if (existing) {
-      await uploadMultipart(accessToken, content, chunkName, existing.id);
-    } else {
-      const newId = await uploadMultipart(accessToken, content, chunkName);
-      existingFiles.push({ id: newId, name: chunkName, size: 0 }); // optimistic update
+    if (chunkHashes[chunkName] !== hash) {
+      const existing = existingFiles.find(f => f.name === chunkName);
+      if (existing) {
+        await uploadMultipart(accessToken, content, chunkName, existing.id);
+      } else {
+        const newId = await uploadMultipart(accessToken, content, chunkName);
+        existingFiles.push({ id: newId, name: chunkName, size: 0 }); // optimistic update
+      }
+      chunkHashes[chunkName] = hash;
     }
-    chunkHashes[chunkName] = hash;
+
+    // Upload corresponding Image chunk
+    const imgChunkName = `kino-images-${i}.json`;
+    const imgContent = JSON.stringify(imageChunks[i]);
+    const imgHash = cyrb53(imgContent);
+    
+    if (chunkHashes[imgChunkName] !== imgHash) {
+      const existingImg = existingFiles.find(f => f.name === imgChunkName);
+      if (existingImg) {
+        await uploadMultipart(accessToken, imgContent, imgChunkName, existingImg.id);
+      } else {
+        const newId = await uploadMultipart(accessToken, imgContent, imgChunkName);
+        existingFiles.push({ id: newId, name: imgChunkName, size: 0 });
+      }
+      chunkHashes[imgChunkName] = imgHash;
+    }
   }
 
   // 3. Upload Index
@@ -187,10 +219,17 @@ export async function uploadBackupToDrive(accessToken: string, rawData: BackupDa
     chunkHashes[BACKUP_INDEX_NAME] = indexHash;
   }
 
-  // 4. Cleanup unused chunks and legacy files
+  // 4. Cleanup unused chunks, image chunks, and legacy files
   for (const file of existingFiles) {
     if (file.name.startsWith(CHUNK_PREFIX)) {
       const idx = parseInt(file.name.replace(CHUNK_PREFIX, '').replace('.json', ''), 10);
+      if (idx >= chunks.length) {
+        await deleteFileFromDrive(accessToken, file.id);
+        delete chunkHashes[file.name];
+      }
+    }
+    if (file.name.startsWith('kino-images-')) {
+      const idx = parseInt(file.name.replace('kino-images-', '').replace('.json', ''), 10);
       if (idx >= chunks.length) {
         await deleteFileFromDrive(accessToken, file.id);
         delete chunkHashes[file.name];
@@ -204,7 +243,11 @@ export async function uploadBackupToDrive(accessToken: string, rawData: BackupDa
   return true;
 }
 
-export async function downloadBackupFromDrive(accessToken: string): Promise<BackupData | MediaEntry[] | null> {
+export async function downloadBackupFromDrive(
+  accessToken: string,
+  onChunkLoaded?: (entries: MediaEntry[], isFirst: boolean) => void,
+  onImagesLoaded?: (images: Record<string, string>) => void
+): Promise<BackupData | MediaEntry[] | null> {
   const existingFiles = await listAllKinoFiles(accessToken);
   
   const indexFile = existingFiles.find(f => f.name === BACKUP_INDEX_NAME);
@@ -214,7 +257,9 @@ export async function downloadBackupFromDrive(accessToken: string): Promise<Back
   if (!indexFile && legacyFile) {
     const text = await downloadFileContent(accessToken, legacyFile.id);
     try {
-      return JSON.parse(text);
+      const data = JSON.parse(text);
+      if (onChunkLoaded) onChunkLoaded(Array.isArray(data) ? data : (data.entries || []), true);
+      return data;
     } catch (e) {
       return null;
     }
@@ -232,23 +277,45 @@ export async function downloadBackupFromDrive(accessToken: string): Promise<Back
     return null;
   }
 
-  // Read chunks concurrently
-  const chunkPromises = [];
+  // Read chunks sequentially for text (for instant UI render), images concurrently
+  let allEntries: MediaEntry[] = [];
+  const imagePromises: Promise<void>[] = [];
+
   for (let i = 0; i < (indexData.chunkCount || 0); i++) {
     const chunkName = `${CHUNK_PREFIX}${i}.json`;
+    const imgChunkName = `kino-images-${i}.json`;
+    
     const chunkFile = existingFiles.find(f => f.name === chunkName);
+    const imgFile = existingFiles.find(f => f.name === imgChunkName);
+    
+    let textEntries: MediaEntry[] = [];
     if (chunkFile) {
-      chunkPromises.push(
-        downloadFileContent(accessToken, chunkFile.id).then(text => {
-          chunkHashes[chunkName] = cyrb53(text);
-          return JSON.parse(text);
-        })
-      );
+      const text = await downloadFileContent(accessToken, chunkFile.id);
+      chunkHashes[chunkName] = cyrb53(text);
+      textEntries = JSON.parse(text);
+      
+      allEntries = allEntries.concat(textEntries);
+      if (onChunkLoaded) onChunkLoaded(textEntries, i === 0);
+    }
+
+    if (imgFile) {
+      const p = downloadFileContent(accessToken, imgFile.id).then(text => {
+        chunkHashes[imgChunkName] = cyrb53(text);
+        const images = JSON.parse(text);
+        if (onImagesLoaded) onImagesLoaded(images);
+        // Hydrate allEntries so the final return value has images
+        for (const e of allEntries) {
+          if (images[String(e.id)]) {
+            e.coverImage = images[String(e.id)];
+          }
+        }
+      }).catch(console.warn);
+      imagePromises.push(p);
     }
   }
 
-  const chunkResults = await Promise.all(chunkPromises);
-  const allEntries = chunkResults.flat();
+  // Await images to ensure background hydration finishes before returning full array
+  await Promise.all(imagePromises);
 
   return {
     entries: allEntries,

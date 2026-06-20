@@ -1,7 +1,7 @@
 // src/components/MediaCard.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { isEpisodic, MediaEntry } from "@/lib/db";
 import { ImageOff, Heart, Plus, Star, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
@@ -15,15 +15,18 @@ interface MediaCardProps {
   index: number;
 }
 
-export default function MediaCard({
+function MediaCard({
   entry,
   onClick,
   onFavoriteToggle,
   onIncrementWatched,
+  onStatusChange,
   index,
 }: MediaCardProps) {
   const [imgError, setImgError] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [swipeHint, setSwipeHint] = useState<'fav' | 'status' | null>(null);
+  const didDrag = useRef(false);
 
   // Determine Kino-Card Rarity
   let rarityLevel = "common";
@@ -48,12 +51,43 @@ export default function MediaCard({
       exit={{ opacity: 0, scale: 0.95 }}
       whileTap={{ scale: 0.95, rotateY: 10 }}
       transition={{ duration: 0.25, delay: Math.min(index, 16) * 0.02, type: "spring", stiffness: 150, damping: 20 }}
-      onClick={onClick}
+      onClick={() => { if (!didDrag.current) onClick(); }}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
+      drag="x"
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.2}
+      onDrag={(e, info) => {
+        didDrag.current = Math.abs(info.offset.x) > 5;
+        if (info.offset.x > 40) setSwipeHint('fav');
+        else if (info.offset.x < -40) setSwipeHint('status');
+        else setSwipeHint(null);
+      }}
+      onDragEnd={(e, info) => {
+        setTimeout(() => { didDrag.current = false; }, 100);
+        setSwipeHint(null);
+        if (info.offset.x > 80) {
+          onFavoriteToggle();
+        } else if (info.offset.x < -80) {
+          const nextStatus = entry.status === "Watching" ? "Completed" : entry.status === "Completed" ? "Plan to Watch" : "Watching";
+          if (onStatusChange) onStatusChange(nextStatus);
+        }
+      }}
       className="group flex flex-col gap-2.5 cursor-pointer relative"
       style={{ perspective: "1000px" }}
     >
+      {/* Swipe hint overlays */}
+      {swipeHint === 'fav' && (
+        <div className="absolute inset-0 z-50 rounded-2xl bg-rose-500/20 border-2 border-rose-500/60 flex items-center justify-center pointer-events-none">
+          <Heart size={32} className="fill-rose-500 text-rose-500 drop-shadow-lg" />
+        </div>
+      )}
+      {swipeHint === 'status' && (
+        <div className="absolute inset-0 z-50 rounded-2xl bg-blue-500/20 border-2 border-blue-500/60 flex items-center justify-center pointer-events-none">
+          <span className="text-blue-400 font-bold text-xs uppercase tracking-widest">Status →</span>
+        </div>
+      )}
+
       {/* Trading Card Wrapper */}
       <motion.div 
         animate={isHovered ? { rotateX: 5, rotateY: -5 } : { rotateX: 0, rotateY: 0 }}
@@ -133,7 +167,7 @@ export default function MediaCard({
             title="Increment episode"
           >
             <Plus size={11} strokeWidth={3} />
-            <span>{entry.episodesWatched || 0}/{entry.episodesTotal || "?"} ep</span>
+            <span>{entry.episodesWatched || 0}/{entry.episodesTotal || (entry.episodes?.length || "?")} ep</span>
           </button>
         )}
         
@@ -174,7 +208,7 @@ export default function MediaCard({
         </div>
       </div>
       
-      {/* Global CSS for the shine animation */}
+        {/* Global CSS for the shine animation */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes shine {
           to {
@@ -185,3 +219,7 @@ export default function MediaCard({
     </motion.div>
   );
 }
+
+export default React.memo(MediaCard, (prevProps, nextProps) => {
+  return prevProps.entry === nextProps.entry && prevProps.index === nextProps.index;
+});

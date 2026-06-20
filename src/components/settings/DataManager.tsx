@@ -43,7 +43,7 @@ function timeAgo(timestamp: number | null): string {
 }
 
 export function DataManager() {
-  const { wipeAllData, importData, syncStatus, lastSyncedAt, entries, genres, franchises } = useMedia();
+  const { wipeAllData, importData, syncStatus, lastSyncedAt, entries, genres, franchises, forceSync } = useMedia();
   const { accessToken, logout } = useAuth();
   const [backupMetadata, setBackupMetadata] = useState<BackupMetadata | null>(null);
   const [isMetadataLoading, setIsMetadataLoading] = useState(false);
@@ -187,18 +187,20 @@ export function DataManager() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div className="rounded-[20px] border border-border/40 bg-background/40 p-6 flex flex-col justify-between h-[140px]">
             <div>
-              <p className="text-[10px] font-mono tracking-[0.2em] text-muted-foreground uppercase font-bold">Drive Size</p>
-              <div className="mt-2 text-4xl font-black text-foreground font-display">
+              <p className="text-[10px] font-mono tracking-[0.2em] text-muted-foreground uppercase font-bold">Drive Size & Chunks</p>
+              <div className="mt-2 text-4xl font-black text-foreground font-display flex items-baseline gap-2">
                 {isMetadataLoading ? (
                   <span className="animate-pulse text-muted-foreground">--</span>
                 ) : backupMetadata ? (
-                  formatBytes(Number(backupMetadata.size) || 0)
+                  <>
+                    {formatBytes(Number(backupMetadata.size) || 0)}
+                  </>
                 ) : (
                   <span className="text-lg text-muted-foreground font-normal">No backup found</span>
                 )}
               </div>
             </div>
-            <p className="mt-auto text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Chunked Architecture</p>
+            <p className="mt-auto text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Configured at 50 items / chunk</p>
           </div>
           <div className="rounded-[20px] border border-border/40 bg-background/40 p-6 flex flex-col justify-between h-[140px]">
             <div>
@@ -210,6 +212,37 @@ export function DataManager() {
             <p className="mt-auto text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Synced from current device</p>
           </div>
         </div>
+
+        {/* File Breakdown List */}
+        {backupMetadata && backupMetadata.files && backupMetadata.files.length > 0 && (
+          <div className="mt-8 pt-8 border-t border-border/40">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+              <h4 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+                <Database size={16} className="text-blue-500" />
+                Raw Drive Files
+              </h4>
+              <button 
+                onClick={forceSync}
+                className="bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2 rounded-xl text-xs font-bold transition-colors border border-primary/20 flex items-center gap-2"
+              >
+                <RefreshCw size={14} className={isSyncing ? "animate-spin" : ""} />
+                Force Restructure Data
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {backupMetadata.files.map((file, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 rounded-[14px] bg-background/50 border border-border/40">
+                  <span className="text-xs font-mono font-medium text-foreground/80 truncate mr-3" title={file.name}>
+                    {file.name}
+                  </span>
+                  <span className="text-xs font-bold text-primary shrink-0 bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20">
+                    {formatBytes(file.size)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </motion.section>
 
       {/* Import Section */}

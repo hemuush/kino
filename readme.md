@@ -1,43 +1,36 @@
 # 🎬 Kino — Cinematic Watch Tracker
 
-Kino is a premium, minimalist personal media tracker built to catalog and review your favorite Movies, TV Shows, and Anime. With an elegant dark obsidian and electric blue theme, full Google Drive synchronization, and a custom analytics dashboard, Kino delivers a high-end tracking experience while maintaining 100% data privacy.
+Kino is a premium, minimalist personal media tracker built to catalog and review your favorite Movies, TV Shows, and Anime. With an elegant dark obsidian and electric blue theme, lightning-fast smart-chunked Google Drive synchronization, and a custom analytics dashboard, Kino delivers a high-end tracking experience while maintaining 100% data privacy.
 
 ---
 
 ## ✨ Features
 
 - **📺 Comprehensive Media Cataloging**: Track Movies, TV Shows, and Anime in one unified system.
-- **🏷️ Watch Statuses**: Categorize entries as *Watching*, *Plan to Watch*, or *Completed*.
+- **☁️ 100% Cloud-First Architecture**: Zero local caching constraints. The app dynamically pulls and pushes directly to Google Drive AppData with zero footprint left on your local device.
+- **⚡ Smart Delta Sync Engine**: Under the hood, Kino slices your database into 50-item blocks. When you increment an episode, it uses a high-speed `cyrb53` mathematical hash to isolate the exact chunk that changed, uploading *only* that file in milliseconds instead of rewriting your entire database.
+- **📱 Progressive Web App (PWA) Native Experience**: Fully installable on iOS and Android devices. Kino launches in full-screen standalone mode with mobile-optimized touch docks, black-translucent status bars, and Service Worker offline-fallback shell caching.
+- **🔄 Infinite Scrolling Grid**: No clunky "Load More" buttons. Kino leverages a hardware-accelerated `IntersectionObserver` to fluidly render new media entries as you scroll, maintaining butter-smooth 60 FPS even with tens of thousands of items in your library.
 - **⚡ Advanced Watch Progress Tracker**:
   - Detailed episode progress (e.g. `12 / 12` episodes watched) for TV Shows and Anime.
   - Interactive increment (`+`) and decrement (`-`) buttons and a visual progress bar inside the detail view modal.
   - Built-in **Episode Log**: A tabbed viewer in the detail modal to browse individual episodes, titles, and air dates.
-  - **Quick-Add Episode Popup**: Click the `+` button when caught up to instantly log a new episode directly from the viewer modal!
-  - Automatic completion status transition and edit mode redirection when watch progress reaches 100% of episodes.
-- **🚀 Dashboard Quick Actions**:
-  - One-click `+1` episode increment hover overlay badge on Media Cards for active watch entries.
-  - Direct favorite toggle button overlays on Media Cards.
 - **📊 Interactive Analytics Dashboard**:
   - **Summary Stats**: Tracks overall watched titles, currently active watchlist items, total episodes watched, and average rating across all media.
   - **Ratings Distribution Chart**: A custom CSS-only vertical bar chart displaying the frequency of scores from 1 to 10 with hover tooltips and entrance stagger animations.
-  - **Type Breakdown**: Ratio meters displaying the proportion of Movies, TV Shows, and Anime in your library.
-  - **Watchlist Statuses**: Detailed status distribution breakdowns.
-  - **Genre Cloud**: Custom tag cloud indicating your most watched genres.
 - **🌌 Sagas & Franchises Timeline**: Curate interconnected franchises into chronological viewing orders with a dedicated grid view.
-- **📱 Fully Fluid Responsive Design**: Completely scalable CSS `auto-fill` grid architecture ensuring flawless layout on everything from mobile phones to 4k ultrawides without wasted empty space.
-- **💖 Favorites Showcase**: Pin entries to a dedicated showcase shelf with full click callback bindings.
-- **🌐 Metadata Suggestion Engine**: Auto-populates cover images, episode counts, and genre tags using the Gemini LLM with Google Search grounding, complete with a multi-model fallback and image validator.
-- **☁️ Private Cloud Sync**: Seamlessly syncs your watchlist to your Google Drive (`drive.appdata` folder) using secure OAuth consent. No central database, no tracking, complete privacy.
+- **🌐 Metadata Suggestion Engine**: Auto-populates cover images, episode counts, and genre tags using the Gemini LLM with Google Search grounding.
+- **🔒 Private Cloud Sync**: Seamlessly syncs your watchlist to your Google Drive (`drive.appdata` folder) using secure OAuth consent. No central database, no tracking, complete privacy.
 
 ---
 
 ## 🛠️ Technical Stack
 
-- **Core Framework**: [Next.js 15](https://nextjs.org/) (App Router) & [React 19](https://react.dev/)
+- **Core Framework**: [Next.js 16.2](https://nextjs.org/) (App Router, Turbopack) & [React 19](https://react.dev/)
 - **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) with a custom cinematic obsidian & cyber-blue theme
 - **Animations**: [Framer Motion](https://www.framer.com/motion/) for fluid transitions and micro-interactions
-- **Icons**: [Lucide React](https://lucide.dev/)
-- **Authentication & Cloud Sync**: Google Sign-In with private application metadata storage permissions
+- **Cloud Architecture**: Next-gen Client-Side Hash Chunking (cyrb53) bridging directly to Google Drive `appDataFolder`.
+- **PWA Integration**: Custom Web App Manifest & Network-first Service Worker Strategy.
 
 ---
 
@@ -86,8 +79,9 @@ Kino is a premium, minimalist personal media tracker built to catalog and review
 ## 🔒 Privacy & Data Design
 
 Your data belongs solely to you. Kino connects directly to the Google Drive API on the client side:
-- Auth credentials and session tokens are stored securely in memory and local storage.
-- All syncing happens directly between your browser and your private Google Drive AppData folder (`drive.appdata`).
+- Auth credentials and session tokens are stored securely in memory.
+- **Zero Local Footprint**: Data is destroyed locally on tab closure.
+- All syncing happens via highly optimized Delta Chunk Updates directly between your browser and your private Google Drive AppData folder (`drive.appdata`).
 - Third-party applications (and the Kino frontend developers) cannot read or write to your broader Google Drive files, only to files created by the application itself.
 
 ---
