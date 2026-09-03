@@ -110,6 +110,35 @@ export default function ProfilePage() {
 
     const daysWatched = Math.floor(totalWatchMinutes / (24 * 60));
     const hoursWatched = Math.floor((totalWatchMinutes % (24 * 60)) / 60);
+    const total = entries.length;
+
+    // Personality — a permanent, always-current identity read on *how* you watch,
+    // not just how much. Computed entirely from data already tracked above.
+    const favoritesCount = entries.filter((e) => e.favorite).length;
+    const reviewedCount = entries.filter((e) => e.review && e.review.trim()).length;
+    const movieShare = total > 0 ? movieCount / total : 0;
+    const episodicShare = total > 0 ? (showCount + animeCount) / total : 0;
+    const completionRate = total > 0 ? completedCount / total : 0;
+    const favoriteRate = total > 0 ? favoritesCount / total : 0;
+    const reviewRate = completedCount > 0 ? reviewedCount / completedCount : 0;
+    const backlogRate = total > 0 ? planToWatchCount / total : 0;
+
+    let personality = { name: "The Voyager", tagline: "A balanced taste across every kind of screen.", icon: "🧭" };
+    if (total < 3) {
+      personality = { name: "The Newcomer", tagline: "Your watching story starts here.", icon: "🌱" };
+    } else if (reviewRate >= 0.5 && completedCount >= 5) {
+      personality = { name: "The Critic", tagline: "You don't just watch — you write about it.", icon: "✍️" };
+    } else if (completionRate >= 0.75 && total >= 8) {
+      personality = { name: "The Finisher", tagline: "Once you start something, you see it through.", icon: "🏁" };
+    } else if (episodicShare >= 0.6 && total >= 5) {
+      personality = { name: "The Marathoner", tagline: "Seasons don't scare you — you binge to the finale.", icon: "📺" };
+    } else if (movieShare >= 0.6 && total >= 5) {
+      personality = { name: "The Cinephile", tagline: "Two hours, a story, and the credits roll — that's home.", icon: "🎞️" };
+    } else if (favoriteRate >= 0.3 && total >= 5) {
+      personality = { name: "The Curator", tagline: "You watch selectively, and you remember what you love.", icon: "💎" };
+    } else if (backlogRate >= 0.5 && total >= 5) {
+      personality = { name: "The Collector", tagline: "Your watchlist is a growing archive of good taste.", icon: "🗂️" };
+    }
 
     return {
       daysWatched,
@@ -117,13 +146,14 @@ export default function ProfilePage() {
       favorites,
       currentlyWatching,
       badge,
+      personality,
       completedCount,
       planToWatchCount,
       watchingCount,
       movieCount,
       showCount,
       animeCount,
-      total: entries.length,
+      total,
     };
   }, [entries]);
 
@@ -147,6 +177,7 @@ export default function ProfilePage() {
     favorites,
     currentlyWatching,
     badge,
+    personality,
     completedCount,
     planToWatchCount,
     watchingCount,
@@ -240,6 +271,10 @@ export default function ProfilePage() {
                       {badge.name}
                     </span>
                   </motion.div>
+                  <motion.p variants={fadeUp} custom={1.5} className="font-display text-base sm:text-lg font-bold text-foreground tracking-tight mb-1">
+                    <span aria-hidden="true">{personality.icon}</span> {personality.name}
+                    <span className="block sm:inline sm:ml-2 text-muted-foreground font-sans font-medium text-xs sm:text-sm">{personality.tagline}</span>
+                  </motion.p>
                   <motion.p variants={fadeUp} custom={2} className="text-muted-foreground text-sm truncate">
                     {user?.email || ""}
                   </motion.p>
