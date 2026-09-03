@@ -10,6 +10,7 @@ import { MediaEntry, isEpisodic } from '@/lib/db';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PageLoader } from '@/components/ui/Loader';
+import { MediaCardSkeleton } from '@/components/ui/Skeleton';
 import { AmbientGlow } from '@/components/ui/AmbientGlow';
 import { toast } from 'sonner';
 
@@ -185,7 +186,9 @@ function CollectionContent() {
                     </div>
 
                     {isLoading ? (
-                        <div className="py-20 flex justify-center"><PageLoader text="Loading Library..." /></div>
+                        <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-x-3 gap-y-6 sm:gap-x-4 sm:gap-y-8">
+                            {Array.from({ length: 18 }).map((_, i) => <MediaCardSkeleton key={i} />)}
+                        </div>
                     ) : entries.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 text-center">
                             <div className="w-20 h-20 rounded-full bg-card/65 border border-border/80 flex items-center justify-center mb-6 shadow-sm">

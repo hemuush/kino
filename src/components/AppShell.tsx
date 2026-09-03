@@ -10,6 +10,7 @@ import { Moon, LogOut, LayoutDashboard, Library, Film, Settings, Search, Sun } f
 import { ReactNode, useEffect, useRef, useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import { PageLoader } from "./ui/Loader";
+import { BrandedSplash } from "./BrandedSplash";
 import Link from "next/link";
 import { useMedia } from "@/context/MediaContext";
 
@@ -96,7 +97,7 @@ export function AppShell({ children }: AppShellProps) {
       : "relative h-[calc(100dvh-4rem-80px-env(safe-area-inset-bottom,0px))] md:h-[calc(100dvh-4rem)] overflow-hidden page-enter"
     : "relative min-h-screen page-enter";
 
-  if (isLoading) return <PageLoader fullScreen text="Authenticating..." />;
+  if (isLoading) return <BrandedSplash text="Authenticating…" />;
 
   const navItems = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },

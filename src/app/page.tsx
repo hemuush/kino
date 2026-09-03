@@ -9,6 +9,7 @@ import { MediaEntry, formatRuntime, isEpisodic } from "@/lib/db";
 import { MediaDetailModal } from "@/components/MediaDetailModal";
 import MediaCard from "@/components/MediaCard";
 import { PageLoader } from "@/components/ui/Loader";
+import { Skeleton, MediaCardSkeleton } from "@/components/ui/Skeleton";
 import { KinoLogo } from "@/components/KinoLogo";
 import { AmbientGlow } from "@/components/ui/AmbientGlow";
 import { hueFromTitle } from "@/lib/colors";
@@ -50,6 +51,38 @@ function SectionHeading({ eyebrow, title, action }: SectionHeadingProps) {
         <h4 className="text-lg sm:text-2xl lg:text-4xl font-bold tracking-tight text-foreground leading-none">{title}</h4>
       </div>
       {action}
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="absolute inset-0 overflow-hidden bg-background text-foreground pb-28 md:pb-20">
+      <div className="mx-auto w-full max-w-[2400px] py-5 sm:py-10 space-y-12 sm:space-y-16">
+        <div className="w-full px-3 sm:px-8 lg:px-12">
+          <Skeleton className="w-full h-[280px] sm:h-[360px] lg:h-[420px] rounded-3xl" />
+        </div>
+        <div className="w-full px-3 sm:px-8 lg:px-12 space-y-6">
+          <Skeleton className="h-4 w-40" />
+          <div className="flex gap-3 sm:gap-5 overflow-hidden">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="w-[110px] xs:w-[125px] sm:w-[145px] lg:w-[165px] shrink-0">
+                <MediaCardSkeleton />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="w-full px-3 sm:px-8 lg:px-12 space-y-6">
+          <Skeleton className="h-4 w-32" />
+          <div className="flex gap-3 sm:gap-5 overflow-hidden">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="w-[110px] xs:w-[125px] sm:w-[145px] lg:w-[165px] shrink-0">
+                <MediaCardSkeleton />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -406,7 +439,7 @@ function DashboardContent() {
 
 
 
-  if (isLoading) return <PageLoader text="Loading your Cinema Dashboard..." />;
+  if (isLoading) return <DashboardSkeleton />;
 
   if (entries.length === 0) {
     return (
