@@ -412,6 +412,32 @@ a:active {
   animation: kino-shimmer-sweep 1.6s ease-in-out infinite;
 }
 
+/* ─── Sagas timeline: film-strip spine (sprocket-perforated rails either side of the line) ─── */
+.film-spine::before,
+.film-spine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  opacity: 0.55;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--color-border) 0px,
+    var(--color-border) 4px,
+    transparent 4px,
+    transparent 12px
+  );
+}
+
+.film-spine::before {
+  left: -9px;
+}
+
+.film-spine::after {
+  right: -9px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .skeleton-shimmer::after {
     animation: none;

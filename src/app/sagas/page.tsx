@@ -306,9 +306,9 @@ export default function SagasPage() {
 
               {/* The Timeline */}
               <div className="relative">
-                {/* Central Line for Desktop, Left Line for Mobile */}
-                <div className="absolute left-[28px] md:left-1/2 top-0 bottom-0 w-[2px] bg-gradient-to-b from-primary/50 via-border/30 to-transparent -translate-x-1/2" />
-                
+                {/* Central Line for Desktop, Left Line for Mobile — styled as a film-strip spine */}
+                <div className="film-spine absolute left-[28px] md:left-1/2 top-0 bottom-0 w-[3px] bg-gradient-to-b from-primary/60 via-border/30 to-transparent -translate-x-1/2" />
+
                 <div className="space-y-8 md:space-y-16 py-8">
                   {timelineNodes.map((node, index) => {
                     const isEven = index % 2 === 0;
@@ -322,9 +322,15 @@ export default function SagasPage() {
                         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                         className={`relative flex flex-col md:flex-row items-center gap-6 md:gap-12 group ${isEven ? 'md:flex-row' : 'md:flex-row-reverse'}`}
                       >
-                        {/* Timeline Node Point */}
+                        {/* Timeline Node Point — pops into place a beat before the frame reveals */}
                         <div className="absolute left-[28px] md:left-1/2 top-8 md:top-1/2 z-10 flex items-center justify-center -translate-x-1/2 md:-translate-y-1/2">
-                          <div className="w-5 h-5 rounded-full bg-background border-[4px] border-primary shadow-[0_0_20px_rgba(var(--primary),0.5)] group-hover:scale-150 group-hover:border-white transition-all duration-500" />
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            whileInView={{ scale: 1 }}
+                            viewport={{ once: true, margin: "-100px" }}
+                            transition={{ type: "spring", stiffness: 320, damping: 18 }}
+                            className="w-5 h-5 rounded-full bg-background border-[4px] border-primary shadow-[0_0_20px_rgba(var(--primary),0.5)] group-hover:scale-150 group-hover:border-white transition-all duration-500"
+                          />
                           <div className="absolute w-12 h-12 rounded-full bg-primary/20 animate-ping opacity-0 group-hover:opacity-100" />
                         </div>
 
@@ -345,6 +351,10 @@ export default function SagasPage() {
                               
                               {/* Cover */}
                               <div className="relative w-16 sm:w-[80px] shrink-0 aspect-[2/3] rounded-lg overflow-hidden bg-muted/20 border border-border/20 shadow-sm">
+                                {/* Frame edge-code stamp, like a film print's frame number */}
+                                <div className="absolute top-1.5 left-1.5 z-10 -rotate-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-sm border border-white/10 font-mono text-[8px] tracking-wider text-white/85 pointer-events-none">
+                                  FR·{(index + 1).toString().padStart(3, '0')}
+                                </div>
                                 {node.media.coverImage ? (
                                   <img src={node.media.coverImage} alt="" className="h-full w-full object-cover transition-transform duration-700 group-hover/card:scale-110" />
                                 ) : (
