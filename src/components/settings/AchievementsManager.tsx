@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useMedia } from '@/context/MediaContext';
 import { Trophy, CalendarDays, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export function AchievementsManager() {
-    const { entries, genres } = useMedia();
+    const { entries } = useMedia();
     const router = useRouter();
 
     const badges = useMemo(() => {

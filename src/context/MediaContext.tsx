@@ -261,16 +261,16 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [accessToken, lastSyncedAt, updateStateAndRef]);
 
-  const batchUpdateEntries = async (updatedEntries: MediaEntry[]) => {
+  const batchUpdateEntries = useCallback(async (updatedEntries: MediaEntry[]) => {
     const newEntries = latestDataRef.current.entries.map(e => {
       const updated = updatedEntries.find(ue => String(ue.id) === String(e.id));
       return updated || e;
     });
     updateStateAndRef(newEntries, undefined, undefined);
     triggerUpload(true);
-  };
+  }, [updateStateAndRef, triggerUpload]);
 
-  const importData = async (data: { entries?: MediaEntry[], genres?: Tag[], franchises?: Tag[] }) => {
+  const importData = useCallback(async (data: { entries?: MediaEntry[], genres?: Tag[], franchises?: Tag[] }) => {
     const mergedEntries = [...latestDataRef.current.entries];
     const mergedGenres = [...latestDataRef.current.genres];
     const mergedFranchises = [...latestDataRef.current.franchises];
@@ -367,40 +367,40 @@ export function MediaProvider({ children }: { children: ReactNode }) {
       triggerUpload();
       toast.success(`Import complete! ${data.entries?.length || 0} entries processed.`);
     }
-  };
+  }, [updateStateAndRef, triggerUpload]);
 
-  const addEntry = async (entry: MediaEntry) => {
+  const addEntry = useCallback(async (entry: MediaEntry) => {
     const newEntry = { ...entry, id: entry.id || Date.now(), createdAt: Date.now() };
     const updatedEntries = [newEntry, ...latestDataRef.current.entries];
     updateStateAndRef(updatedEntries, undefined, undefined);
     triggerUpload();
-  };
+  }, [updateStateAndRef, triggerUpload]);
 
-  const updateEntry = async (updatedEntry: MediaEntry) => {
+  const updateEntry = useCallback(async (updatedEntry: MediaEntry) => {
     const updatedEntries = latestDataRef.current.entries.map(e =>
       String(e.id) === String(updatedEntry.id) ? { ...updatedEntry, updatedAt: Date.now() } : e
     );
     updateStateAndRef(updatedEntries, undefined, undefined);
     triggerUpload();
-  };
+  }, [updateStateAndRef, triggerUpload]);
 
-  const deleteEntry = async (id: number | string) => {
+  const deleteEntry = useCallback(async (id: number | string) => {
     const updatedEntries = latestDataRef.current.entries.filter(e => String(e.id) !== String(id));
     updateStateAndRef(updatedEntries, undefined, undefined);
     triggerUpload();
-  };
+  }, [updateStateAndRef, triggerUpload]);
 
-  const saveGenres = (newGenres: Tag[]) => {
+  const saveGenres = useCallback((newGenres: Tag[]) => {
     updateStateAndRef(undefined, newGenres, undefined);
     triggerUpload(true);
-  };
+  }, [updateStateAndRef, triggerUpload]);
 
-  const saveFranchises = (newFranchises: Tag[]) => {
+  const saveFranchises = useCallback((newFranchises: Tag[]) => {
     updateStateAndRef(undefined, undefined, newFranchises);
     triggerUpload(true);
-  };
+  }, [updateStateAndRef, triggerUpload]);
 
-  const wipeAllData = async () => {
+  const wipeAllData = useCallback(async () => {
     if (!accessToken) return;
     try {
       setSyncStatus('syncing');
@@ -417,7 +417,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     latestDataRef.current = { entries: [], genres: emptyGenres, franchises: [] };
     setLastSyncedAt(null);
     setSyncStatus('idle');
-  };
+  }, [accessToken]);
 
   const contextValue = useMemo(() => ({
     entries, isLoading, addEntry, updateEntry, deleteEntry,
@@ -425,7 +425,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     franchises, setFranchises: saveFranchises,
     syncStatus, lastSyncedAt,
     batchUpdateEntries, wipeAllData, importData, forceSync
-  }), [entries, isLoading, addEntry, updateEntry, deleteEntry, genres, franchises, syncStatus, lastSyncedAt, batchUpdateEntries, wipeAllData, importData, forceSync]);
+  }), [entries, isLoading, addEntry, updateEntry, deleteEntry, genres, saveGenres, franchises, saveFranchises, syncStatus, lastSyncedAt, batchUpdateEntries, wipeAllData, importData, forceSync]);
 
   return (
     <MediaContext.Provider value={contextValue}>

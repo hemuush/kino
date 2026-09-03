@@ -3,12 +3,12 @@
 import React, { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMedia } from '@/context/MediaContext';
-import { MediaEntry, isEpisodic, EpisodeInfo } from '@/lib/db';
+import { MediaEntry, isEpisodic, EpisodeInfo, getTotalRuntimeMinutes, sortEpisodes, getSeasonNumbers, materializeEpisodes } from '@/lib/db';
+import { fireConfetti, fireEpicConfetti } from '@/lib/confetti';
 import { PageLoader } from '@/components/ui/Loader';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Star, Clock, Calendar, Edit3, Plus, Check, Heart, Film, CheckCircle2, Trash2, Info, Upload } from 'lucide-react';
 import { toast } from 'sonner';
-import { MediaForm } from '@/components/MediaForm';
 
 export default function MediaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -39,37 +39,14 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
 
   const displayEpisodes = React.useMemo(() => {
     if (!entry) return [];
-    if (entry.episodes && entry.episodes.length > 0) {
-      return [...entry.episodes].sort((a, b) => {
-        if ((a.season || 1) !== (b.season || 1)) return (a.season || 1) - (b.season || 1);
-        return (a.number || 1) - (b.number || 1);
-      });
-    }
-    const watchedCount = entry.episodesWatched || 0;
-    return entry.episodesTotal ? Array.from({ length: Math.max(0, Number(entry.episodesTotal)) }, (_, i) => ({ 
-      name: `Episode ${i + 1}`, 
-      season: 1, 
-      number: i + 1, 
-      watched: i < watchedCount
-    } as EpisodeInfo)) : [];
-  }, [entry?.episodes, entry?.episodesTotal, entry?.episodesWatched]);
-    
+    return sortEpisodes(materializeEpisodes(entry));
+  }, [entry]);
+
   const seasons = React.useMemo(() => {
-    return Array.from(new Set(displayEpisodes.map(ep => ep.season || 1))).sort((a, b) => a - b);
+    return getSeasonNumbers(displayEpisodes);
   }, [displayEpisodes]);
 
-  const getMaterializedEpisodes = () => {
-    let currentEpisodes = [...(entry?.episodes || [])];
-    if (currentEpisodes.length === 0 && entry?.episodesTotal) {
-      currentEpisodes = Array.from({ length: Math.max(0, Number(entry.episodesTotal)) }, (_, i) => ({ 
-        name: `Episode ${i + 1}`, 
-        season: 1, 
-        number: i + 1,
-        watched: i < (entry.episodesWatched || 0)
-      }));
-    }
-    return currentEpisodes;
-  };
+  const getMaterializedEpisodes = (): EpisodeInfo[] => materializeEpisodes(entry || {});
   
   useEffect(() => {
     if (seasons.length > 0 && !seasons.includes(selectedSeason)) {
@@ -81,12 +58,11 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
   const isEpisodicEntry = entry ? isEpisodic(entry) : false;
   const { totalRuntime, averageRuntime } = React.useMemo(() => {
     if (!entry) return { totalRuntime: 0, averageRuntime: 0 };
-    if (!isEpisodicEntry) return { totalRuntime: entry.runtime || 0, averageRuntime: entry.runtime || 0 };
+    const totalRuntime = getTotalRuntimeMinutes(entry);
     
-    const epsTotal = Number(entry.episodesTotal || 0);
+    if (!isEpisodicEntry) return { totalRuntime, averageRuntime: entry.runtime || 0 };
+    
     const episodes = entry.episodes || [];
-    const maxEps = Math.max(epsTotal, episodes.length);
-    
     let knownSum = 0;
     let knownCount = 0;
     for (const ep of episodes) {
@@ -97,13 +73,9 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
     }
     
     const baseRuntime = Number(entry.runtime || 0);
-    const avg = knownCount > 0 ? Math.round(knownSum / knownCount) : baseRuntime;
-    const remainingEps = Math.max(0, maxEps - knownCount);
+    const averageRuntime = knownCount > 0 ? Math.round(knownSum / knownCount) : baseRuntime;
     
-    return {
-      totalRuntime: knownSum + (remainingEps * (avg > 0 ? avg : baseRuntime)),
-      averageRuntime: avg > 0 ? avg : baseRuntime
-    };
+    return { totalRuntime, averageRuntime };
   }, [entry, isEpisodicEntry]);
 
   if (isLoading || !entry) {
@@ -116,7 +88,6 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
   const sagaName = entry.franchiseId ? franchises.find(f => f.id === entry.franchiseId)?.name : null;
 
   const filteredEpisodes = displayEpisodes.filter(ep => (ep.season || 1) === selectedSeason);
-  const episodesWatched = entry.episodesWatched || 0;
 
   const handleIncrementEpisode = async () => {
     if (!isEpisodicMedia) return;
@@ -125,11 +96,8 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
     
     let currentEpisodes = getMaterializedEpisodes();
     
-    const sortedEps = [...currentEpisodes].sort((a, b) => {
-      if ((a.season || 1) !== (b.season || 1)) return (a.season || 1) - (b.season || 1);
-      return (a.number || 1) - (b.number || 1);
-    });
-    
+    const sortedEps = sortEpisodes(currentEpisodes);
+
     const unwatched = sortedEps.find(e => !e.watched);
     
     if (unwatched) {
@@ -157,8 +125,10 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
     });
     
     if (newStatus === 'Completed') {
+      fireEpicConfetti();
       toast.success(`Completed ${entry.title}! 🎉`);
     } else {
+      fireConfetti();
       toast.success(`Episode ${newCount} logged!`);
     }
   };
@@ -170,6 +140,7 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
       updated.episodes = currentEpisodes.map(ep => ({ ...ep, watched: true }));
       updated.episodesWatched = updated.episodes.length;
     }
+    fireEpicConfetti();
     toast.success(`Marked as Completed! 🎉`);
     await updateEntry(updated);
   };
@@ -183,6 +154,7 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
     }
     await updateEntry(updated);
     setEditingStatus(false);
+    if (newStatus === 'Completed') fireEpicConfetti();
     toast.success(`Status updated to ${newStatus}`);
   };
 
@@ -374,16 +346,27 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
       
       {/* Top Navbar */}
       <div className="fixed top-0 left-0 right-0 z-50 p-4 md:p-6 flex items-center justify-between pointer-events-none">
-        <button 
-          onClick={() => router.back()} 
+        <button
+          onClick={() => router.back()}
+          aria-label="Go back"
           className="pointer-events-auto w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-border/60 flex items-center justify-center hover:bg-black/60 transition-colors shadow-lg"
         >
           <ArrowLeft className="text-foreground" size={20} />
         </button>
-        
+
         <div className="pointer-events-auto flex items-center gap-3">
-          <button 
-            onClick={() => setShowDeleteConfirm(true)} 
+          <button
+            onClick={() => router.push(`/media/${entry.id}/edit`)}
+            aria-label="Edit entry"
+            title="Edit"
+            className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-border/60 flex items-center justify-center hover:bg-black/60 hover:text-primary hover:scale-105 transition-all shadow-lg"
+          >
+            <Edit3 size={16} className="text-foreground" />
+          </button>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            aria-label="Delete entry"
+            title="Delete"
             className="w-10 h-10 rounded-full bg-red-500/80 text-foreground backdrop-blur-md flex items-center justify-center hover:bg-red-600 hover:scale-105 transition-all shadow-lg"
           >
             <Trash2 size={16} />

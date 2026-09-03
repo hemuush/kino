@@ -5,7 +5,7 @@ import JsonImporter from '@/components/settings/JsonImporter';
 import { useMedia } from '@/context/MediaContext';
 import { useAuth } from '@/context/AuthContext';
 import { getBackupMetadataFromDrive, BackupMetadata, TokenExpiredError } from '@/lib/googleDrive';
-import { Trash2, AlertTriangle, Database, RefreshCw, CheckCircle, Clock, AlertCircle, Cloud, Server, Box } from 'lucide-react';
+import { Trash2, AlertTriangle, Database, RefreshCw, CheckCircle, Clock, AlertCircle, Cloud, Server, Box, Download, ArrowRightLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
@@ -81,6 +81,24 @@ export function DataManager() {
       });
     }
   }, [syncStatus, loadBackupMetadata]);
+
+  const handleExport = () => {
+    try {
+      const payload = { entries, genres, franchises, exportedAt: Date.now() };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `kino-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Library exported! Keep this file somewhere safe.');
+    } catch {
+      toast.error('Failed to export data.');
+    }
+  };
 
   const handleWipeData = async () => {
     const isConfirmed = window.confirm(
@@ -255,14 +273,53 @@ export function DataManager() {
         )}
       </motion.section>
 
+      {/* Account Migration */}
+      <motion.section
+        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+        className="rounded-[24px] border border-border/80 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl shadow-sm p-8"
+      >
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-6">
+          <div>
+            <h3 className="font-display text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
+              <ArrowRightLeft size={22} className="text-primary" />
+              Move to Another Account
+            </h3>
+            <p className="text-sm text-muted-foreground mt-2 max-w-xl">
+              Your library lives only inside the Google account you&apos;re signed in with — there&apos;s no shared server. To switch accounts, download a backup here, sign in with the other account, then import it.
+            </p>
+          </div>
+          <button
+            onClick={handleExport}
+            disabled={entryCount === 0}
+            className="rounded-full bg-foreground text-background hover:bg-foreground/90 transition px-6 py-3.5 text-sm font-bold flex items-center justify-center gap-2 shrink-0 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download size={18} />
+            Download Backup (.json)
+          </button>
+        </header>
+
+        <ol className="space-y-3">
+          {[
+            'Download the backup file on this device using the button above.',
+            'Log out, then sign in with the Google account you want to move your data to.',
+            'Return to this page and use "Import Manual Backup" below to upload the file.',
+          ].map((step, i) => (
+            <li key={i} className="flex items-start gap-3 text-sm text-muted-foreground">
+              <span className="shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center text-[11px] font-bold">{i + 1}</span>
+              <span className="pt-0.5">{step}</span>
+            </li>
+          ))}
+        </ol>
+      </motion.section>
+
       {/* Import Section */}
-      <motion.section 
+      <motion.section
         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
         className="rounded-[24px] border border-border/80 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl shadow-sm p-8"
       >
         <header className="mb-6">
           <h3 className="font-display text-2xl font-bold tracking-tight text-foreground">Import Manual Backup</h3>
-          <p className="text-sm text-muted-foreground mt-2">Restore your library from a raw JSON export file.</p>
+          <p className="text-sm text-muted-foreground mt-2">Restore your library from a raw JSON export file, or a backup downloaded above.</p>
         </header>
         <JsonImporter />
       </motion.section>

@@ -3,7 +3,8 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import { useState, useEffect, useMemo } from 'react';
-import { MediaEntry, EpisodeInfo, safeDateFormat, isEpisodic, formatRuntime, getWatchedRuntimeMinutes } from '@/lib/db';
+import { MediaEntry, EpisodeInfo, safeDateFormat, isEpisodic, formatRuntime, getWatchedRuntimeMinutes, getTotalRuntimeMinutes, getSeasonNumbers, materializeEpisodes } from '@/lib/db';
+import { fireConfetti, fireEpicConfetti } from '@/lib/confetti';
 import { X, Edit2, Trash2, Calendar, Star, Heart, Plus, Minus, Clock, Film, CheckCircle2, PlayCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/Badge';
@@ -93,15 +94,9 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
   const entryFranchise = entry.franchiseId ? franchises.find(f => f.id === entry.franchiseId) : null;
   const entryGenres = (entry.genreIds || []).map(id => genres.find(g => g.id === id)?.name).filter(Boolean);
 
-  const displayEpisodes = useMemo<EpisodeInfo[]>(() => {
-    return (entry.episodes && entry.episodes.length > 0)
-      ? entry.episodes
-      : (entry.episodesTotal ? Array.from({ length: Number(entry.episodesTotal) }, (_, i) => ({ name: `Episode ${i + 1}`, season: 1, number: i + 1 })) : []);
-  }, [entry.episodes, entry.episodesTotal]);
+  const displayEpisodes = useMemo<EpisodeInfo[]>(() => materializeEpisodes(entry), [entry]);
 
-  const seasons = useMemo(() => {
-    return Array.from(new Set(displayEpisodes.map(ep => ep.season || 1))).sort((a, b) => a - b);
-  }, [displayEpisodes]);
+  const seasons = useMemo(() => getSeasonNumbers(displayEpisodes), [displayEpisodes]);
 
   useEffect(() => {
     if (seasons.length > 0 && !seasons.includes(selectedSeason)) {
@@ -112,7 +107,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
   const filteredEpisodes = displayEpisodes.filter(ep => (ep.season || 1) === selectedSeason);
   const episodesWatched = entry.episodesWatched || 0;
   const watchedRuntimeMinutes = getWatchedRuntimeMinutes(entry);
-  const totalRawRuntime = entry.episodesTotal && entry.runtime ? entry.episodesTotal * entry.runtime : (entry.runtime || 0);
+  const totalRawRuntime = getTotalRuntimeMinutes(entry);
 
   const handleSave = async (updatedEntry: MediaEntry) => {
     if (isSaving) return;
@@ -177,6 +172,12 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
     else if (newWatchedCount >= newTotal && newTotal > 0) newStatus = 'Completed';
     else newStatus = 'Watching';
 
+    if (newStatus === 'Completed' && entry.status !== 'Completed') {
+      fireEpicConfetti();
+    } else if (updatedEpisodes[globalIdx].watched) {
+      fireConfetti();
+    }
+
     await handleSave({
       ...entry,
       episodes: updatedEpisodes,
@@ -235,8 +236,11 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
       rating: isNowComplete && entry.status !== 'Completed' ? entry.rating : entry.rating,
       updatedAt: getTimestamp()
     });
-    if (isNowComplete) {
+    if (isNowComplete && entry.status !== 'Completed') {
+      fireEpicConfetti();
       toast.success('🎉 Series completed!', { description: `You finished all ${newTotal} episodes.` });
+    } else {
+      fireConfetti();
     }
   };
 
@@ -279,7 +283,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
   };
 
   const handleEdit = () => {
-    router.push(`/edit/${entry.id}`);
+    router.push(`/media/${entry.id}/edit`);
     onClose();
   };
 
@@ -381,6 +385,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                 onClick={handleToggleFavorite}
                 className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all border shadow-sm backdrop-blur-sm cursor-pointer ${entry.favorite ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-card/50 border-border/60 hover:text-foreground hover:bg-card/80'}`}
                 title={entry.favorite ? 'Remove from favorites' : 'Add to favorites'}
+                aria-label={entry.favorite ? 'Remove from favorites' : 'Add to favorites'}
               >
                 <Heart size={14} className={entry.favorite ? 'fill-red-500' : ''} />
               </button>
@@ -388,6 +393,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                 onClick={handleEdit}
                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-card/50 border border-border/60 shadow-sm backdrop-blur-sm flex items-center justify-center hover:bg-card/80 transition-colors cursor-pointer hover:text-primary"
                 title="Edit"
+                aria-label="Edit entry"
               >
                 <Edit2 size={14} strokeWidth={2} />
               </button>
@@ -395,6 +401,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                 onClick={handleDeleteClick}
                 className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full border shadow-sm backdrop-blur-sm flex items-center justify-center transition-all cursor-pointer ${showDeleteConfirm ? 'bg-red-500 border-red-600 text-white' : 'bg-card/50 border-border/60 hover:text-red-400 hover:bg-card/80'}`}
                 title={showDeleteConfirm ? 'Tap again to confirm delete' : 'Delete'}
+                aria-label={showDeleteConfirm ? 'Tap again to confirm delete' : 'Delete entry'}
               >
                 <Trash2 size={14} strokeWidth={2} />
               </button>
@@ -403,6 +410,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                 onClick={onClose}
                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-foreground text-background shadow-md border border-border/60 flex items-center justify-center hover:opacity-90 transition-colors cursor-pointer ml-0.5"
                 title="Close"
+                aria-label="Close"
               >
                 <X size={15} strokeWidth={2.5} />
               </button>

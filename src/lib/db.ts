@@ -59,6 +59,34 @@ export function isEpisodic(entry: Partial<MediaEntry>): boolean {
   return false;
 }
 
+export function sortEpisodes(episodes: EpisodeInfo[]): EpisodeInfo[] {
+  return [...episodes].sort((a, b) => {
+    if ((a.season || 1) !== (b.season || 1)) return (a.season || 1) - (b.season || 1);
+    return (a.number || 1) - (b.number || 1);
+  });
+}
+
+export function getSeasonNumbers(episodes: EpisodeInfo[]): number[] {
+  return Array.from(new Set(episodes.map(ep => ep.season || 1))).sort((a, b) => a - b);
+}
+
+// Returns a real (mutable) copy of an entry's episodes, synthesizing a placeholder
+// array from episodesTotal/episodesWatched when no explicit episodes[] is tracked yet.
+export function materializeEpisodes(entry: Partial<MediaEntry>): EpisodeInfo[] {
+  if (entry.episodes && entry.episodes.length > 0) {
+    return [...entry.episodes];
+  }
+  const total = Math.max(0, Number(entry.episodesTotal || 0));
+  if (total === 0) return [];
+  const watchedCount = Number(entry.episodesWatched || 0);
+  return Array.from({ length: total }, (_, i) => ({
+    name: `Episode ${i + 1}`,
+    season: 1,
+    number: i + 1,
+    watched: i < watchedCount,
+  }));
+}
+
 export function normalizeMediaType(type: unknown): MediaType {
   const value = String(type || '').trim().toLowerCase();
   if (value === 'series' || value === 'tv' || value === 'tv series' || value === 'show' || value === 'tv show') return 'TV Show';
@@ -83,14 +111,11 @@ export function getWatchedRuntimeMinutes(entry: Partial<MediaEntry>): number {
   let totalWatchedMins = 0;
 
   if (entry.episodes && entry.episodes.length > 0) {
-    const sortedEps = [...entry.episodes].sort((a, b) => {
-      if ((a.season || 1) !== (b.season || 1)) return (a.season || 1) - (b.season || 1);
-      return (a.number || 1) - (b.number || 1);
-    });
+    const sortedEps = sortEpisodes(entry.episodes);
 
     let knownSum = 0;
     let knownCount = 0;
-    
+
     // First pass: find average of known specific runtimes
     for (const ep of sortedEps) {
       if (ep.runtime && ep.runtime > 0) {

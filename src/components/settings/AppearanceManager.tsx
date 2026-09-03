@@ -2,15 +2,7 @@
 
 import { useState } from 'react';
 import { Palette, Check } from 'lucide-react';
-
-const COLORS = [
-  { id: 'red', name: 'Kino Red', hex: '#D71921', hover: '#a11319' },
-  { id: 'blue', name: 'Electric Blue', hex: '#3b82f6', hover: '#2563eb' },
-  { id: 'emerald', name: 'Emerald', hex: '#10b981', hover: '#059669' },
-  { id: 'purple', name: 'Neon Purple', hex: '#8b5cf6', hover: '#7c3aed' },
-  { id: 'amber', name: 'Amber', hex: '#f59e0b', hover: '#d97706' },
-  { id: 'rose', name: 'Rose', hex: '#f43f5e', hover: '#e11d48' },
-];
+import { APP_COLORS } from '@/lib/colors';
 
 export function AppearanceManager() {
   const [activeColor, setActiveColor] = useState(() => {
@@ -22,7 +14,7 @@ export function AppearanceManager() {
 
   const handleSelect = (colorId: string) => {
     setActiveColor(colorId);
-    const color = COLORS.find(c => c.id === colorId);
+    const color = APP_COLORS.find(c => c.id === colorId);
     if (color) {
       localStorage.setItem('kino_accent_color', colorId);
       document.documentElement.style.setProperty('--primary', color.hex);
@@ -45,8 +37,8 @@ export function AppearanceManager() {
 
       <div className="pt-6 border-t border-border/40">
         <h3 className="text-lg font-bold font-display uppercase tracking-widest text-foreground mb-4">Accent Color</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {COLORS.map((color) => (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {APP_COLORS.map((color) => (
             <button
               key={color.id}
               onClick={() => handleSelect(color.id)}

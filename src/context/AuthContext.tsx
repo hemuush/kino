@@ -8,6 +8,11 @@ import { useRouter, usePathname } from 'next/navigation';
 // We refresh proactively 5 minutes before expiry.
 const TOKEN_REFRESH_MARGIN_MS = 5 * 60 * 1000; // 5 minutes
 
+// Routes reachable without being signed in — legal pages must stay public for
+// Google OAuth consent-screen verification, and /share is the public recap
+// card meant for people who don't (yet) use the app.
+const PUBLIC_ROUTES = ['/login', '/privacy', '/terms', '/share'];
+
 interface UserProfile {
   name: string;
   email: string;
@@ -167,7 +172,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Redirect logic based on auth state
   useEffect(() => {
     if (!isLoading) {
-      if (!accessToken && pathname !== '/login') {
+      const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+      if (!accessToken && !isPublicRoute && pathname !== '/login') {
         router.push('/login');
       } else if (accessToken && pathname === '/login') {
         router.push('/');

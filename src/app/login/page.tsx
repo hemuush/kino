@@ -130,7 +130,7 @@ export default function Login() {
             <div className="relative z-10 space-y-6">
               
               <div className="space-y-3">
-                {features.map((feature, idx) => (
+                {features.map((feature) => (
                   <motion.div
                     key={feature.title}
                     className="group relative p-4 rounded-2xl flex items-center gap-4 transition-colors duration-300 hover:bg-muted/50 cursor-default overflow-hidden border border-transparent hover:border-border/40"

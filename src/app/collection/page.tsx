@@ -4,15 +4,16 @@ import { useState, useEffect, Suspense, useMemo, useRef, useCallback } from 'rea
 import { useMedia } from '@/context/MediaContext';
 import MediaCard from '@/components/MediaCard';
 import { MediaDetailModal } from '@/components/MediaDetailModal';
-import { Plus, Film, Heart, Shuffle, Search, Settings, Terminal, LayoutGrid, List, SlidersHorizontal, Activity, Play, Star, CheckCircle, Clock } from 'lucide-react';
+import { Plus, Film, Heart, Shuffle, Search, Settings, LayoutGrid, List, SlidersHorizontal } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MediaEntry, isEpisodic } from '@/lib/db';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PageLoader } from '@/components/ui/Loader';
+import { toast } from 'sonner';
 
 function CollectionContent() {
-    const { entries, isLoading, updateEntry, deleteEntry, batchUpdateEntries, genres, franchises } = useMedia();
+    const { entries, isLoading, updateEntry, deleteEntry, genres, franchises } = useMedia();
     const searchParams = useSearchParams();
     const router = useRouter();
     const typeParam = searchParams.get('type') as 'All' | 'Movie' | 'Series' | 'Anime' | null;
@@ -36,12 +37,6 @@ function CollectionContent() {
     
     // Dock state
     const [isFilterDockOpen, setIsFilterDockOpen] = useState(false);
-
-    // Derived states
-    const recentEntry = useMemo(() => {
-        if (!entries || entries.length === 0) return null;
-        return [...entries].sort((a, b) => b.createdAt - a.createdAt)[0];
-    }, [entries]);
 
     const sortedEntries = useMemo(() => {
         const filtered = entries.filter(e => {
@@ -99,15 +94,15 @@ function CollectionContent() {
         }
     };
 
-    const handleRandomPick = () => {
+    const handleRandomPick = useCallback(() => {
         const ptw = entries.filter(e => e.status === 'Plan to Watch');
         if (ptw.length === 0) {
-            alert("No items in 'Plan to Watch'!");
+            toast.error("No items in \"Plan to Watch\" yet.", { description: "Add something to your watchlist first." });
             return;
         }
         const random = ptw[crypto.getRandomValues(new Uint32Array(1))[0] % ptw.length];
         setSelectedEntry(random);
-    };
+    }, [entries]);
 
     // Listen for Cmd+K / Ctrl+K
     useEffect(() => {
@@ -145,7 +140,7 @@ function CollectionContent() {
 
         if (!cmdSearch) return base;
         return base.filter(opt => opt.title.toLowerCase().includes(cmdSearch.toLowerCase()) || opt.description.toLowerCase().includes(cmdSearch.toLowerCase()));
-    }, [cmdSearch, entries, router]);
+    }, [cmdSearch, handleRandomPick, router]);
 
     const handleCmdKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'ArrowDown') {

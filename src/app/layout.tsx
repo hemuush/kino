@@ -5,8 +5,23 @@ import { AppShell } from "@/components/AppShell";
 import { PWARegistration } from "@/components/PWARegistration";
 import { Toaster } from 'sonner';
 import { ReactNode } from "react";
+import { Inter, Space_Mono } from "next/font/google";
 
 import type { Metadata, Viewport } from "next";
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const spaceMono = Space_Mono({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-space-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Kino — Track What You Watch",
@@ -34,14 +49,11 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${spaceMono.variable}`}>
       <head>
         <meta name="application-name" content="Kino" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
       </head>
       <body>
         <Providers>

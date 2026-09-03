@@ -24,7 +24,6 @@ export function AppShell({ children }: AppShellProps) {
   const { resolvedTheme, setTheme } = useTheme();
   const [search, setSearch] = useState("");
   const [isRouteLoading, setIsRouteLoading] = useState(false);
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const [, startTransition] = useTransition();
   const routeLoadingStartedAt = useRef(0);
@@ -67,7 +66,26 @@ export function AppShell({ children }: AppShellProps) {
     return () => clearTimeout(timer);
   }, [pathname, isRouteLoading]);
 
+  const handleSearchChange = (next: string) => {
+    setSearch(next);
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
 
+    searchTimeoutRef.current = setTimeout(() => {
+      if (pathname === "/collection" || pathname === "/sagas") {
+        startTransition(() => {
+          const sp = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+          if (next.trim()) sp.set("q", next.trim());
+          else sp.delete("q");
+          router.replace(`${pathname}?${sp.toString()}`, { scroll: false });
+        });
+      }
+    }, 400);
+  };
+
+  const handleSearchSubmit = () => {
+    const base = pathname === "/sagas" ? "/sagas" : "/collection";
+    router.push(`${base}${search.trim() ? `?q=${encodeURIComponent(search.trim())}` : ""}`);
+  };
 
   const isLoginPage = pathname === "/login";
   const showTopSearch = pathname !== "/settings";
@@ -130,42 +148,7 @@ export function AppShell({ children }: AppShellProps) {
 
             <div className="hidden md:flex flex-1 justify-center max-w-sm">
               {showTopSearch ? (
-              <motion.div 
-                animate={{ width: isSearchFocused ? "100%" : "85%" }}
-                transition={{ type: "spring", stiffness: 350, damping: 28 }}
-                className="w-full relative"
-              >
-                <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  value={search}
-                  onFocus={() => setIsSearchFocused(true)}
-                  onBlur={() => setIsSearchFocused(false)}
-                  onChange={(e) => {
-                    const next = e.target.value;
-                    setSearch(next);
-                    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-                    
-                    searchTimeoutRef.current = setTimeout(() => {
-                      if (pathname === "/collection" || pathname === "/sagas") {
-                        startTransition(() => {
-                          const sp = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
-                          if (next.trim()) sp.set("q", next.trim());
-                          else sp.delete("q");
-                          router.replace(`${pathname}?${sp.toString()}`, { scroll: false });
-                        });
-                      }
-                    }, 400);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      const base = pathname === "/sagas" ? "/sagas" : "/collection";
-                      router.push(`${base}${search.trim() ? `?q=${encodeURIComponent(search.trim())}` : ""}`);
-                    }
-                  }}
-                  placeholder="Search collection..."
-                  className="h-9.5 w-full rounded-full border-2 border-border bg-muted/40 dark:bg-neutral-900/40 pl-10 pr-4 text-[12px] font-display uppercase tracking-widest text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-0 backdrop-blur-2xl transition-all"
-                />
-              </motion.div>
+                <SearchBar value={search} onChange={handleSearchChange} onSubmit={handleSearchSubmit} variant="desktop" />
               ) : <div />}
             </div>
 
@@ -194,57 +177,76 @@ export function AppShell({ children }: AppShellProps) {
                   </div>
                 </Link>
               )}
-              <button onClick={() => router.push("/settings")} className="hidden md:inline-flex p-2 sm:p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/8 text-muted-foreground hover:text-foreground transition" title="Settings">
+              <button onClick={() => router.push("/settings")} className="hidden md:inline-flex p-2 sm:p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/8 text-muted-foreground hover:text-foreground transition" title="Settings" aria-label="Settings">
                 <Settings size={16} />
               </button>
-              <button onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} className="inline-flex p-2 sm:p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/8 text-muted-foreground hover:text-foreground transition" title="Theme">
+              <button onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")} className="inline-flex p-2 sm:p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/8 text-muted-foreground hover:text-foreground transition" title="Theme" aria-label="Toggle light/dark theme">
                 {resolvedTheme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
               </button>
 
-              <button onClick={() => logout(false)} className="p-2 sm:p-2.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition" title="Logout">
+              <button onClick={() => logout(false)} className="p-2 sm:p-2.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition" title="Logout" aria-label="Log out">
                 <LogOut size={16} />
               </button>
             </div>
           </div>
-          {showTopSearch && <div className="md:hidden px-4 pb-3">
-            <div className="w-full relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                value={search}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setSearch(next);
-                  if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-                  
-                  searchTimeoutRef.current = setTimeout(() => {
-                    if (pathname === "/collection" || pathname === "/sagas") {
-                      startTransition(() => {
-                        const sp = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
-                        if (next.trim()) sp.set("q", next.trim());
-                        else sp.delete("q");
-                        router.replace(`${pathname}?${sp.toString()}`, { scroll: false });
-                      });
-                    }
-                  }, 400);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    const base = pathname === "/sagas" ? "/sagas" : "/collection";
-                    router.push(`${base}${search.trim() ? `?q=${encodeURIComponent(search.trim())}` : ""}`);
-                  }
-                }}
-                placeholder="Search collection..."
-                className="h-10 w-full rounded-full border-2 border-border bg-white/80 dark:bg-white/5 pl-10 pr-4 text-[12px] font-display uppercase tracking-widest text-foreground placeholder:text-muted-foreground outline-none focus:border-primary backdrop-blur-2xl"
-              />
+          {showTopSearch && (
+            <div className="md:hidden px-4 pb-3">
+              <SearchBar value={search} onChange={handleSearchChange} onSubmit={handleSearchSubmit} variant="mobile" />
             </div>
-          </div>}
+          )}
         </header>
       )}
 
       {showShell && isRouteLoading && <PageLoader fullScreen text="Loading page..." />}
       <main className={shellMainClass}>{children}</main>
       {showShell && <BottomNav />}
-      
+
     </div>
   );
+}
+
+interface SearchBarProps {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  variant: "desktop" | "mobile";
+}
+
+function SearchBar({ value, onChange, onSubmit, variant }: SearchBarProps) {
+  const [isFocused, setIsFocused] = useState(false);
+  const isDesktop = variant === "desktop";
+
+  const fields = (
+    <>
+      <Search size={isDesktop ? 15 : 16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+      <input
+        value={value}
+        onFocus={isDesktop ? () => setIsFocused(true) : undefined}
+        onBlur={isDesktop ? () => setIsFocused(false) : undefined}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") onSubmit(); }}
+        placeholder="Search collection..."
+        aria-label="Search your collection"
+        className={
+          isDesktop
+            ? "h-9.5 w-full rounded-full border-2 border-border bg-muted/40 dark:bg-neutral-900/40 pl-10 pr-4 text-[12px] font-display uppercase tracking-widest text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-0 backdrop-blur-2xl transition-all"
+            : "h-10 w-full rounded-full border-2 border-border bg-white/80 dark:bg-white/5 pl-10 pr-4 text-[12px] font-display uppercase tracking-widest text-foreground placeholder:text-muted-foreground outline-none focus:border-primary backdrop-blur-2xl"
+        }
+      />
+    </>
+  );
+
+  if (isDesktop) {
+    return (
+      <motion.div
+        animate={{ width: isFocused ? "100%" : "85%" }}
+        transition={{ type: "spring", stiffness: 350, damping: 28 }}
+        className="w-full relative"
+      >
+        {fields}
+      </motion.div>
+    );
+  }
+
+  return <div className="w-full relative">{fields}</div>;
 }

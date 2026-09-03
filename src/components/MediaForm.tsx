@@ -147,7 +147,8 @@ export function MediaForm({ onCancel, onSave, initialData, hideEpisodesTab }: Me
         return 'Watching';
       });
     }
-  }, [episodes, currentIsEpisodic]); // Intentionally omitting episodesTotal to avoid cycles
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- episodesTotal is read via setStatus's updater to avoid a set-episodesTotal -> re-run cycle
+  }, [episodes, currentIsEpisodic]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
