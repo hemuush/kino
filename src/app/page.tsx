@@ -12,6 +12,7 @@ import { PageLoader } from "@/components/ui/Loader";
 import { Skeleton, MediaCardSkeleton } from "@/components/ui/Skeleton";
 import { KinoLogo } from "@/components/KinoLogo";
 import { AmbientGlow } from "@/components/ui/AmbientGlow";
+import { ReactLenis } from "lenis/react";
 import { hueFromTitle } from "@/lib/colors";
 import { useRouter } from "next/navigation";
 
@@ -468,7 +469,7 @@ function DashboardContent() {
   }
 
   return (
-    <div className="absolute inset-0 overflow-y-auto bg-background text-foreground scroll-smooth hide-scrollbar pb-28 md:pb-20">
+    <ReactLenis root={false} className="absolute inset-0 overflow-y-auto bg-background text-foreground hide-scrollbar pb-28 md:pb-20">
       {/* Decorative ambient background glows */}
       <AmbientGlow glows={[
         "top-0 right-0 w-[55%] h-[40%] bg-primary/3 blur-[160px]",
@@ -507,7 +508,7 @@ function DashboardContent() {
                 <Play size={14} /> The Daily Reel
               </h2>
             </div>
-            <div className="flex gap-4 sm:gap-6 overflow-x-auto hide-scrollbar pb-4 pt-1 snap-x">
+            <div data-lenis-prevent className="flex gap-4 sm:gap-6 overflow-x-auto hide-scrollbar pb-4 pt-1 snap-x">
               {randomDeck.map((story, i) => (
                 <div key={`story-${story.id}-${i}`} className="flex flex-col items-center gap-2 shrink-0 snap-start group cursor-pointer" onClick={() => setSelectedEntry(story)}>
                   <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-[3px] border-primary p-1 transition-transform group-hover:scale-105 active:scale-95 shadow-lg">
@@ -533,7 +534,7 @@ function DashboardContent() {
           <div className="w-full space-y-6 lg:space-y-8 mt-12 mb-16">
             <SectionHeading eyebrow="UPCOMING & RECENT" title="Release Calendar" />
 
-            <div className="w-full overflow-x-auto hide-scrollbar scroll-smooth pb-6 px-3 sm:px-8 lg:px-12">
+            <div data-lenis-prevent className="w-full overflow-x-auto hide-scrollbar scroll-smooth pb-6 px-3 sm:px-8 lg:px-12">
               <div className="flex items-center gap-6 w-max relative pt-6 pb-2">
                 {/* Connecting line */}
                 <div className="absolute top-[42px] left-0 right-0 h-0.5 bg-border/60 z-0" />
@@ -577,7 +578,7 @@ function DashboardContent() {
         <div className="w-full space-y-10 sm:space-y-14 lg:space-y-16">
           
           {/* Filter Chips */}
-          <div className="flex items-center gap-2 px-3 sm:px-8 lg:px-12 overflow-x-auto hide-scrollbar w-full pt-4">
+          <div data-lenis-prevent className="flex items-center gap-2 px-3 sm:px-8 lg:px-12 overflow-x-auto hide-scrollbar w-full pt-4">
             <Filter size={14} className="text-muted-foreground mr-1" />
             {(['All', 'Movie', 'TV Show', 'Anime'] as const).map(f => (
               <button
@@ -608,7 +609,7 @@ function DashboardContent() {
                 }
               />
 
-              <div className="w-full overflow-x-auto hide-scrollbar scroll-smooth pb-4">
+              <div data-lenis-prevent className="w-full overflow-x-auto hide-scrollbar scroll-smooth pb-4">
                 <div className="flex gap-3 sm:gap-5 px-3 sm:px-8 lg:px-12 w-max">
                   {watching.map((entry, i) => {
                     const hasEpisodes = isEpisodic(entry) && entry.episodesTotal;
@@ -683,7 +684,7 @@ function DashboardContent() {
                 }
               />
 
-              <div className="w-full overflow-x-auto hide-scrollbar scroll-smooth pb-4">
+              <div data-lenis-prevent className="w-full overflow-x-auto hide-scrollbar scroll-smooth pb-4">
                 <div className="flex gap-3 sm:gap-5 px-3 sm:px-8 lg:px-12 w-max">
                   {planned.map((entry, i) => (
                     <div key={entry.id} className="w-[110px] xs:w-[125px] sm:w-[145px] lg:w-[165px] shrink-0 snap-start">
@@ -721,7 +722,7 @@ function DashboardContent() {
                 }
               />
 
-              <div className="w-full overflow-x-auto hide-scrollbar scroll-smooth pb-4">
+              <div data-lenis-prevent className="w-full overflow-x-auto hide-scrollbar scroll-smooth pb-4">
                 <div className="flex gap-3 sm:gap-5 px-3 sm:px-8 lg:px-12 w-max">
                   {completed.map((entry, i) => (
                     <div key={entry.id} className="w-[110px] xs:w-[125px] sm:w-[145px] lg:w-[165px] shrink-0 snap-start">
@@ -758,8 +759,7 @@ function DashboardContent() {
         />
       )}
 
-
-    </div>
+    </ReactLenis>
   );
 }
 

@@ -7,6 +7,7 @@ import { useMedia } from '@/context/MediaContext';
 import { MediaEntry, formatRuntime, isEpisodic, EpisodeInfo, getTotalRuntimeMinutes } from '@/lib/db';
 import { PageLoader } from '@/components/ui/Loader';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { ReactLenis } from 'lenis/react';
 import Link from 'next/link';
 
 function getYear(dateString?: string) {
@@ -138,7 +139,7 @@ export default function SagasPage() {
   if (isLoading) return <PageLoader text="Loading Universes..." />;
 
   return (
-    <div className="absolute inset-0 overflow-y-auto bg-background text-foreground font-sans select-none hide-scrollbar transition-colors duration-500">
+    <ReactLenis root={false} className="absolute inset-0 overflow-y-auto bg-background text-foreground font-sans select-none hide-scrollbar transition-colors duration-500">
       {/* Immersive Background */}
       <motion.div 
         style={{ y: backgroundY }}
@@ -406,6 +407,6 @@ export default function SagasPage() {
         </AnimatePresence>
 
       </div>
-    </div>
+    </ReactLenis>
   );
 }

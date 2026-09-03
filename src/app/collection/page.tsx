@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { PageLoader } from '@/components/ui/Loader';
 import { MediaCardSkeleton } from '@/components/ui/Skeleton';
 import { AmbientGlow } from '@/components/ui/AmbientGlow';
+import { ReactLenis } from 'lenis/react';
 import { toast } from 'sonner';
 
 function CollectionContent() {
@@ -160,7 +161,7 @@ function CollectionContent() {
     };
 
     return (
-        <div className="absolute inset-0 overflow-y-auto bg-background text-foreground scroll-smooth hide-scrollbar">
+        <ReactLenis root={false} className="absolute inset-0 overflow-y-auto bg-background text-foreground hide-scrollbar">
             {/* Ambient Backing */}
             <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.06)_1px,transparent_1px)] dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none opacity-100 z-0" />
@@ -428,7 +429,7 @@ function CollectionContent() {
                                 </kbd>
                             </div>
 
-                            <div className="max-h-[350px] overflow-y-auto p-3">
+                            <div data-lenis-prevent className="max-h-[350px] overflow-y-auto p-3">
                                 {cmdOptions.length > 0 ? (
                                     cmdOptions.map((opt, idx) => {
                                         const isSelected = idx === selectedCmdIdx;
@@ -483,7 +484,7 @@ function CollectionContent() {
                     />
                 )}
             </AnimatePresence>
-        </div>
+        </ReactLenis>
     );
 }
 
