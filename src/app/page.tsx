@@ -1,9 +1,10 @@
 "use client";
 
-import { ReactNode, Suspense, useEffect, useMemo, useState } from "react";
+import { ReactNode, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { Play, ChevronRight, Sparkles, Filter } from "lucide-react";
+import { Play, ChevronRight, Sparkles, Filter, Clock, X } from "lucide-react";
+import { toast } from "sonner";
 import { useMedia } from "@/context/MediaContext";
 import { MediaEntry, formatRuntime, isEpisodic } from "@/lib/db";
 import { MediaDetailModal } from "@/components/MediaDetailModal";
@@ -36,6 +37,45 @@ function colorFromTitle(title?: string) {
     b: `hsla(${hueB}, 85%, 55%, 0.08)`,
     glow: `hsla(${hueA}, 90%, 60%, 0.25)`,
   };
+}
+
+// "What to watch tonight" quick-pick: narrows the watchlist by how much time
+// you have and what you're in the mood for, then picks randomly from that pool.
+type QuickPickDuration = 'Any' | 'Quick' | 'Medium' | 'Long';
+type QuickPickMood = 'Any' | 'Feel-Good' | 'Intense' | 'Emotional' | 'Mind-Bending';
+
+const MOOD_GENRE_KEYWORDS: Record<Exclude<QuickPickMood, 'Any'>, string[]> = {
+  'Feel-Good': ['comedy', 'slice of life', 'animation'],
+  'Intense': ['action', 'thriller', 'horror'],
+  'Emotional': ['drama', 'romance'],
+  'Mind-Bending': ['sci-fi', 'mystery', 'supernatural', 'fantasy'],
+};
+
+// A rough "how long is one sitting" estimate — full runtime for a movie,
+// one episode's length for anything episodic (matches how `runtime` is
+// already used as the per-episode field on episodic entries in MediaForm).
+function getSessionRuntimeMinutes(entry: MediaEntry): number | null {
+  if (!isEpisodic(entry)) return entry.runtime || null;
+  if (entry.runtime) return entry.runtime;
+  const knownEpisodeRuntimes = (entry.episodes || [])
+    .map(ep => ep.runtime)
+    .filter((r): r is number => !!r && r > 0);
+  if (knownEpisodeRuntimes.length === 0) return null;
+  return Math.round(knownEpisodeRuntimes.reduce((sum, r) => sum + r, 0) / knownEpisodeRuntimes.length);
+}
+
+function matchesDuration(minutes: number | null, duration: QuickPickDuration): boolean {
+  if (duration === 'Any' || minutes === null) return true;
+  if (duration === 'Quick') return minutes < 45;
+  if (duration === 'Medium') return minutes >= 45 && minutes <= 90;
+  return minutes > 90;
+}
+
+function matchesMood(entry: MediaEntry, genreNamesById: Map<string, string>, mood: QuickPickMood): boolean {
+  if (mood === 'Any') return true;
+  const keywords = MOOD_GENRE_KEYWORDS[mood];
+  const entryGenreNames = (entry.genreIds || []).map(id => (genreNamesById.get(id) || '').toLowerCase());
+  return entryGenreNames.some(name => keywords.some(kw => name.includes(kw)));
 }
 
 interface SectionHeadingProps {
@@ -351,7 +391,7 @@ function SpotlightCard({ entry, setSelectedEntry, activeSlide, randomDeck, setAc
 
 function DashboardContent() {
   const router = useRouter();
-  const { entries, isLoading, updateEntry, deleteEntry } = useMedia();
+  const { entries, genres, isLoading, updateEntry, deleteEntry } = useMedia();
   const [selectedEntry, setSelectedEntry] = useState<MediaEntry | null>(null);
 
   // Deck slideshow state
@@ -387,11 +427,35 @@ function DashboardContent() {
   const planned = useMemo(() => entries.filter((e) => e.status === "Plan to Watch" && (shelfFilter === 'All' || e.type === shelfFilter)).slice(0, 24), [entries, shelfFilter]);
   const completed = useMemo(() => [...entries].filter((e) => e.status === "Completed" && (shelfFilter === 'All' || e.type === shelfFilter)).sort((a, b) => (b.updatedAt ?? b.createdAt) - (a.updatedAt ?? a.createdAt)).slice(0, 24), [entries, shelfFilter]);
 
-  const handleSuggestNext = () => {
-    const ptws = entries.filter(e => e.status === 'Plan to Watch' && (shelfFilter === 'All' || e.type === shelfFilter));
-    if (ptws.length === 0) return;
-    const pick = ptws[Math.floor(Math.random() * ptws.length)];
+  const genreNamesById = useMemo(() => new Map(genres.map(g => [g.id, g.name])), [genres]);
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickDuration, setPickDuration] = useState<QuickPickDuration>('Any');
+  const [pickMood, setPickMood] = useState<QuickPickMood>('Any');
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) setPickerOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [pickerOpen]);
+
+  const runQuickPick = () => {
+    const pool = entries.filter(e => e.status === 'Plan to Watch' && (shelfFilter === 'All' || e.type === shelfFilter));
+    if (pool.length === 0) return;
+    const filtered = pool.filter(e =>
+      matchesDuration(getSessionRuntimeMinutes(e), pickDuration) && matchesMood(e, genreNamesById, pickMood)
+    );
+    const finalPool = filtered.length > 0 ? filtered : pool;
+    if (filtered.length === 0 && (pickDuration !== 'Any' || pickMood !== 'Any')) {
+      toast.info("Nothing matched exactly — picked from your full watchlist instead.");
+    }
+    const pick = finalPool[Math.floor(Math.random() * finalPool.length)];
     setSelectedEntry(pick);
+    setPickerOpen(false);
   };
 
   // Release Calendar Timeline
@@ -674,9 +738,66 @@ function DashboardContent() {
                 title="Watchlist"
                 action={
                   <div className="flex items-center gap-3">
-                    <button onClick={handleSuggestNext} className="hidden sm:flex text-[11px] font-bold uppercase tracking-wider text-amber-500 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-1.5 rounded-full items-center gap-1.5 transition-colors border border-amber-500/20">
-                      <Sparkles size={12} /> Suggest Next
-                    </button>
+                    <div ref={pickerRef} className="relative">
+                      <button onClick={() => setPickerOpen(v => !v)} className="flex text-[11px] font-bold uppercase tracking-wider text-amber-500 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-1.5 rounded-full items-center gap-1.5 transition-colors border border-amber-500/20">
+                        <Sparkles size={12} /> <span className="hidden sm:inline">Watch Tonight?</span>
+                      </button>
+                      <AnimatePresence>
+                        {pickerOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                            className="absolute right-0 top-full mt-2 z-30 w-[280px] sm:w-72 p-4 rounded-2xl border border-border/60 bg-card/95 backdrop-blur-2xl shadow-xl"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-xs font-bold text-foreground tracking-tight">What to watch tonight?</span>
+                              <button onClick={() => setPickerOpen(false)} aria-label="Close" className="p-1 text-muted-foreground hover:text-foreground rounded-full hover:bg-muted/60 transition-colors">
+                                <X size={14} />
+                              </button>
+                            </div>
+
+                            <div className="space-y-1.5 mb-3">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Clock size={11} /> Got time for</span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {(['Any', 'Quick', 'Medium', 'Long'] as const).map(d => (
+                                  <button
+                                    key={d}
+                                    onClick={() => setPickDuration(d)}
+                                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-colors ${pickDuration === d ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent hover:border-border/50'}`}
+                                  >
+                                    {d === 'Any' ? 'Any' : d === 'Quick' ? '<45m' : d === 'Medium' ? '45–90m' : '90m+'}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="space-y-1.5 mb-4">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">In the mood for</span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {(['Any', 'Feel-Good', 'Intense', 'Emotional', 'Mind-Bending'] as const).map(m => (
+                                  <button
+                                    key={m}
+                                    onClick={() => setPickMood(m)}
+                                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-colors ${pickMood === m ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent hover:border-border/50'}`}
+                                  >
+                                    {m}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <button
+                              onClick={runQuickPick}
+                              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-foreground text-background hover:bg-foreground/90 transition text-xs font-bold"
+                            >
+                              <Sparkles size={13} /> Pick For Me
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                     <Link href="/collection?type=All" className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5">
                       See All <ChevronRight size={14} />
                     </Link>
