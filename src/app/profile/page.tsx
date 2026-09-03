@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { isEpisodic, getWatchedRuntimeMinutes } from "@/lib/db";
+import { AmbientGlow } from "@/components/ui/AmbientGlow";
 import { useMemo } from "react";
 
 
@@ -158,11 +159,11 @@ export default function ProfilePage() {
   return (
     <div className="absolute inset-0 overflow-y-auto bg-background text-foreground hide-scrollbar">
       {/* ── Ambient Background ── */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden>
-        <div className="absolute -top-1/4 -left-1/4 w-3/4 h-3/4 bg-primary/5 rounded-full blur-[160px]" />
-        <div className="absolute top-1/2 -right-1/4 w-2/4 h-2/4 bg-violet-500/5 rounded-full blur-[140px]" />
-        <div className="absolute -bottom-1/4 left-1/3 w-2/5 h-2/5 bg-blue-500/5 rounded-full blur-[120px]" />
-      </div>
+      <AmbientGlow fixed glows={[
+        "-top-1/4 -left-1/4 w-3/4 h-3/4 bg-primary/5 blur-[160px]",
+        "top-1/2 -right-1/4 w-2/4 h-2/4 bg-violet-500/5 blur-[140px]",
+        "-bottom-1/4 left-1/3 w-2/5 h-2/5 bg-blue-500/5 blur-[120px]",
+      ]} />
 
       <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12 pb-28">
 
@@ -192,7 +193,7 @@ export default function ProfilePage() {
           variants={{ show: { transition: { staggerChildren: 0.06 } } }}
           className="mb-6"
         >
-          <div className="relative rounded-[32px] overflow-hidden border border-border/60 bg-card/50 backdrop-blur-2xl shadow-lg">
+          <div className="relative rounded-4xl overflow-hidden border border-border/60 bg-card/50 backdrop-blur-2xl shadow-lg">
             {/* Gradient header band */}
             <div className="h-24 sm:h-32 bg-gradient-to-r from-primary/25 via-violet-500/15 to-blue-500/20 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-b from-transparent to-card/80" />

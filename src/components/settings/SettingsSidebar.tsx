@@ -41,7 +41,7 @@ export function SettingsSidebar({ activeTab, setActiveTab }: SettingsSidebarProp
                         <button
                             key={item.id}
                             onClick={() => setActiveTab(item.id)}
-                            className={`relative flex items-center gap-4 p-3 rounded-[20px] transition-all whitespace-nowrap snap-start text-left group shrink-0 lg:w-full outline-none ${
+                            className={`relative flex items-center gap-4 p-3 rounded-2xl transition-all whitespace-nowrap snap-start text-left group shrink-0 lg:w-full outline-none ${
                                 isActive
                                     ? 'shadow-sm'
                                     : 'hover:bg-foreground/5'
@@ -50,7 +50,7 @@ export function SettingsSidebar({ activeTab, setActiveTab }: SettingsSidebarProp
                             {isActive && (
                                 <motion.div 
                                     layoutId="activeTabIndicator"
-                                    className="absolute inset-0 bg-primary/10 border border-primary/20 rounded-[20px] z-0"
+                                    className="absolute inset-0 bg-primary/10 border border-primary/20 rounded-2xl z-0"
                                     initial={false}
                                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                                 />

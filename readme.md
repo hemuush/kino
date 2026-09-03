@@ -1,93 +1,87 @@
 # 🎬 Kino — Cinematic Watch Tracker
 
-**Live Demo:** [https://xkinox.vercel.app](https://xkinox.vercel.app)
+**Live:** [https://xkinox.vercel.app](https://xkinox.vercel.app)
 
-Kino is a premium, minimalist personal media tracker built to catalog and review your favorite Movies, TV Shows, and Anime. With an elegant dark obsidian and electric blue theme, lightning-fast smart-chunked Google Drive synchronization, and a custom analytics dashboard, Kino delivers a high-end tracking experience while maintaining 100% data privacy.
+Kino is a premium, minimalist personal media tracker for cataloging and reviewing your Movies, TV Shows, and Anime. It's a serverless PWA with a luxury dark-mode interface — there's no backend and no company database; your library lives entirely in your own Google Drive.
 
 ---
 
 ## ✨ Features
 
-- **📺 Comprehensive Media Cataloging**: Track Movies, TV Shows, and Anime in one unified system.
-- **☁️ 100% Cloud-First Architecture**: Zero local caching constraints. The app dynamically pulls and pushes directly to Google Drive AppData with zero footprint left on your local device.
-- **⚡ Smart Delta Sync Engine**: Under the hood, Kino slices your database into 50-item blocks. When you increment an episode, it uses a high-speed `cyrb53` mathematical hash to isolate the exact chunk that changed, uploading *only* that file in milliseconds instead of rewriting your entire database.
-- **📱 Progressive Web App (PWA) Native Experience**: Fully installable on iOS and Android devices. Kino launches in full-screen standalone mode with mobile-optimized touch docks, black-translucent status bars, and Service Worker offline-fallback shell caching.
-- **🔄 Infinite Scrolling Grid**: No clunky "Load More" buttons. Kino leverages a hardware-accelerated `IntersectionObserver` to fluidly render new media entries as you scroll, maintaining butter-smooth 60 FPS even with tens of thousands of items in your library.
-- **⚡ Advanced Watch Progress Tracker**:
-  - Detailed episode progress (e.g. `12 / 12` episodes watched) for TV Shows and Anime.
-  - Interactive increment (`+`) and decrement (`-`) buttons and a visual progress bar inside the detail view modal.
-  - Built-in **Episode Log**: A tabbed viewer in the detail modal to browse individual episodes, titles, and air dates.
-- **📊 Interactive Analytics Dashboard**:
-  - **Summary Stats**: Tracks overall watched titles, currently active watchlist items, total episodes watched, and average rating across all media.
-  - **Ratings Distribution Chart**: A custom CSS-only vertical bar chart displaying the frequency of scores from 1 to 10 with hover tooltips and entrance stagger animations.
-- **🌌 Sagas & Franchises Timeline**: Curate interconnected franchises into chronological viewing orders with a dedicated grid view.
-- **🌐 Metadata Suggestion Engine**: Auto-populates cover images, episode counts, and genre tags using the Gemini LLM with Google Search grounding.
-- **🔒 Private Cloud Sync**: Seamlessly syncs your watchlist to your Google Drive (`drive.appdata` folder) using secure OAuth consent. No central database, no tracking, complete privacy.
+- **📺 Unified cataloging** for Movies, TV Shows, and Anime, with per-episode progress tracking (season/episode grid, air dates, individual runtimes) for anything episodic.
+- **☁️ Google Drive-backed sync, not a company database.** Your library, genres, and sagas sync directly to a private `appDataFolder` in *your* Google Drive via OAuth (`drive.appdata` scope) — Kino's developers cannot read it, and it isn't visible in your regular Drive file list.
+- **⚡ Chunked delta sync.** The library is split into 50-item chunks (with cover images stored separately from metadata), each hashed before upload — so a single rating change re-uploads a few KB, not your whole collection.
+- **📱 Installable PWA** with offline shell caching, standalone full-screen mode, and mobile-optimized touch navigation.
+- **🔀 Cmd+K command palette** in the Collection view, plus infinite-scroll (no "Load More" buttons).
+- **🌌 Sagas** — group related titles (a franchise, a shared universe) into a chronological visual timeline, seasons and movies interleaved by release/air date.
+- **🏆 Achievements** — unlockable badges based on your watch history, and a **Wrapped**-style animated weekly/monthly recap you can share via a public link.
+- **🎨 8 accent color themes**, light/dark mode.
+- **📤 Export & account migration** — download your full library (including images) as a single JSON file to move it to a different Google account, or as a manual backup.
+- **🔒 Private by design.** OAuth is scoped to the app's own Drive folder only; no analytics, no tracking, no server-side copy of your data.
 
 ---
 
 ## 🛠️ Technical Stack
 
-- **Core Framework**: [Next.js 16.2](https://nextjs.org/) (App Router, Turbopack) & [React 19](https://react.dev/)
-- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) with a custom cinematic obsidian & cyber-blue theme
-- **Animations**: [Framer Motion](https://www.framer.com/motion/) for fluid transitions and micro-interactions
-- **Cloud Architecture**: Next-gen Client-Side Hash Chunking (cyrb53) bridging directly to Google Drive `appDataFolder`.
-- **PWA Integration**: Custom Web App Manifest & Network-first Service Worker Strategy.
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router, Turbopack) + [React 19](https://react.dev/)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) (CSS-first `@theme` config), `next/font/google`
+- **Animations**: [Framer Motion](https://www.framer.com/motion/)
+- **Auth**: Google Identity Services OAuth2 (`@react-oauth/google`)
+- **Storage**: No database — chunked JSON sync directly to Google Drive `appDataFolder` (see `CLAUDE.md` for the architecture)
+- **PWA**: Web App Manifest + a network-first Service Worker
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
+- Node.js 18+
+- npm
 
-- Node.js (version 18 or higher)
-- npm, yarn, or pnpm
+### Setup
 
-### Installation
-
-1. Clone the repository and navigate to the directory:
+1. Clone and install:
    ```bash
-   git clone https://github.com/your-username/kino.git
+   git clone https://github.com/hemuush/kino.git
    cd kino
-   ```
-
-2. Install dependencies:
-   ```bash
    npm install
    ```
 
-3. Configure your Google OAuth client:
-   - Go to the [Google Cloud Console](https://console.cloud.google.com/).
-   - Create a new project.
-   - Set up your OAuth consent screen (internal/external).
-   - Create Credentials → **OAuth Client ID** (Web Application).
-   - Set Authorized JavaScript Origins to: `http://localhost:3000`.
-   - Set Authorized Redirect URIs to: `http://localhost:3000`.
+2. Create a Google OAuth client:
+   - [Google Cloud Console](https://console.cloud.google.com/) → new project → OAuth consent screen → Credentials → **OAuth Client ID** (Web application)
+   - Authorized JavaScript origins: `http://localhost:3000`
+   - Authorized redirect URIs: `http://localhost:3000`
 
-4. Create a `.env.local` file in the root directory and add your Client ID:
+3. Create `.env.local` in the project root:
    ```env
-   NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
+   NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
    ```
 
-5. Run the development server:
+4. Run it:
    ```bash
    npm run dev
    ```
+   Open [http://localhost:3000](http://localhost:3000).
 
-6. Open [http://localhost:3000](http://localhost:3000) in your browser.
+### Other commands
+```bash
+npm run build   # production build (also type-checks every route)
+npm run start   # run a production build locally
+npm run lint    # eslint
+npx vitest run  # unit + property tests for src/lib/db.ts
+```
 
 ---
 
 ## 🔒 Privacy & Data Design
 
-Your data belongs solely to you. Kino connects directly to the Google Drive API on the client side:
-- Auth credentials and session tokens are stored securely in memory.
-- **Zero Local Footprint**: Data is destroyed locally on tab closure.
-- All syncing happens via highly optimized Delta Chunk Updates directly between your browser and your private Google Drive AppData folder (`drive.appdata`).
-- Third-party applications (and the Kino frontend developers) cannot read or write to your broader Google Drive files, only to files created by the application itself.
+- Your library, genres, and sagas are stored **only** in your Google Drive's `appDataFolder` — a sandboxed folder that only this app can see, invisible in your normal Drive file browser.
+- Kino requests the narrowest possible OAuth scope (`drive.appdata`) — it cannot read or write any other file in your Drive.
+- Your session (profile info, a 30-day login) is kept in your browser's `localStorage` so you don't have to sign in every visit; your media library itself is **not** cached to disk — it lives in memory and is re-fetched from Drive on load.
+- There is no company server or database in this project's architecture — nothing to breach, because there's nothing centrally stored.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+No license file is currently published for this repository — all rights reserved by default. Contact the repository owner if you want to use this code.

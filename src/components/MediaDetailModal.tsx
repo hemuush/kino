@@ -342,7 +342,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
           animate={{ opacity: isTheaterMode ? 0 : 1, y: isTheaterMode ? 40 : 0, scale: isTheaterMode ? 0.95 : 1 }}
           exit={{ opacity: 0, y: 80 }}
           transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-          className={`relative w-full ${currentIsEpisodic ? 'max-w-2xl md:max-w-4xl lg:max-w-5xl' : 'max-w-2xl'} h-full sm:h-auto max-h-full sm:max-h-[88vh] bg-card/80 dark:bg-[#0c0c0d]/90 backdrop-blur-3xl rounded-t-[28px] sm:rounded-[32px] overflow-hidden z-[201] flex flex-col shadow-[0_0_80px_-20px_rgba(0,0,0,0.5)] border border-border/60 border-b-0 sm:border-b ${isTheaterMode ? 'pointer-events-none' : ''}`}
+          className={`relative w-full ${currentIsEpisodic ? 'max-w-2xl md:max-w-4xl lg:max-w-5xl' : 'max-w-2xl'} h-full sm:h-auto max-h-full sm:max-h-[88vh] bg-card/80 dark:bg-[#0c0c0d]/90 backdrop-blur-3xl rounded-t-[28px] sm:rounded-4xl overflow-hidden z-[201] flex flex-col shadow-[0_0_80px_-20px_rgba(0,0,0,0.5)] border border-border/60 border-b-0 sm:border-b ${isTheaterMode ? 'pointer-events-none' : ''}`}
         >
           {/* Background blur from poster */}
           {entry.coverImage && (
@@ -426,7 +426,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                 exit={{ height: 0, opacity: 0 }}
                 className="px-4 sm:px-6 py-2 shrink-0 bg-black/20"
               >
-                <div className="bg-red-500/10 border border-red-500/20 backdrop-blur-md rounded-[16px] px-4 py-3 shadow-inner">
+                <div className="bg-red-500/10 border border-red-500/20 backdrop-blur-md rounded-xl px-4 py-3 shadow-inner">
                   <p className="text-sm font-semibold text-red-500 text-center flex items-center justify-center gap-2">
                     <Trash2 size={15} /> Click delete again to confirm — this cannot be undone
                   </p>
@@ -469,7 +469,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
               </div>
 
               {entryFranchise && (
-                <div className="hidden sm:block mt-5 bg-primary/10 border border-primary/20 backdrop-blur-sm rounded-[20px] p-4 text-center shadow-sm">
+                <div className="hidden sm:block mt-5 bg-primary/10 border border-primary/20 backdrop-blur-sm rounded-2xl p-4 text-center shadow-sm">
                   <Film size={14} className="text-primary mx-auto mb-1.5 opacity-80" />
                   <p className="text-[9px] font-mono uppercase tracking-widest text-primary/70">UNIVERSE</p>
                   <p className="text-sm font-bold text-foreground mt-1">{entryFranchise.name}</p>
@@ -478,7 +478,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
 
               {/* Rating widget (visible on desktop) */}
               <div className="hidden sm:block mt-5">
-                  <div className="bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl border border-border/60 rounded-[20px] p-4 shadow-sm text-center">
+                  <div className="bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl border border-border/60 rounded-2xl p-4 shadow-sm text-center">
                     <p className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground mb-3">Your Rating</p>
                     <div className="flex flex-wrap gap-0.5">
                       {Array.from({ length: 10 }, (_, i) => i + 1).map((v) => (
@@ -563,7 +563,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                     )}
 
                     {/* Rating (mobile) */}
-                      <div className="sm:hidden bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl border border-border/60 rounded-[24px] p-5 shadow-sm text-center">
+                      <div className="sm:hidden bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl border border-border/60 rounded-3xl p-5 shadow-sm text-center">
                         <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-4">Your Rating</p>
                         <div className="flex items-center gap-1">
                           {Array.from({ length: 10 }, (_, i) => i + 1).map((v) => (
@@ -643,7 +643,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
 
                     {/* Review */}
                     {entry.review && (
-                      <div className="rounded-[24px] border border-border/60 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl p-5 shadow-sm">
+                      <div className="rounded-3xl border border-border/60 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl p-5 shadow-sm">
                         <h3 className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-3">YOUR NOTES</h3>
                         <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">{entry.review}</p>
                       </div>
@@ -760,7 +760,7 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                 initial={{ scale: 0.94, y: 16 }}
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.94, y: 16 }}
-                className="relative w-full max-w-sm bg-card border border-border/80 rounded-[24px] shadow-2xl p-6 z-10"
+                className="relative w-full max-w-sm bg-card border border-border/80 rounded-3xl shadow-2xl p-6 z-10"
               >
                 <div className="flex items-center justify-between mb-5">
                   <h3 className="text-base font-display uppercase tracking-widest font-bold text-foreground">Add Episode</h3>

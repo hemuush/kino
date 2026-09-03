@@ -393,8 +393,8 @@ export function MediaForm({ onCancel, onSave, initialData, hideEpisodesTab }: Me
   );
 
   return (
-    <div className="w-full max-w-[95%] sm:max-w-4xl rounded-[32px] overflow-hidden flex flex-col border border-white/10 bg-card/60 dark:bg-[#0c0c0d]/70 backdrop-blur-3xl shadow-2xl mx-auto h-full max-h-[850px] relative z-10">
-      <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent dark:from-white/[0.02] pointer-events-none rounded-[32px]" />
+    <div className="w-full max-w-[95%] sm:max-w-4xl rounded-4xl overflow-hidden flex flex-col border border-white/10 bg-card/60 dark:bg-[#0c0c0d]/70 backdrop-blur-3xl shadow-2xl mx-auto h-full max-h-[850px] relative z-10">
+      <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent dark:from-white/[0.02] pointer-events-none rounded-4xl" />
       
       {/* Header */}
       <div className="flex flex-col items-center justify-center px-4 sm:px-8 pt-8 pb-4 shrink-0 relative z-10">

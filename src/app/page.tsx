@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { ReactNode, Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Play, ChevronRight, Sparkles, Filter } from "lucide-react";
@@ -10,6 +10,7 @@ import { MediaDetailModal } from "@/components/MediaDetailModal";
 import MediaCard from "@/components/MediaCard";
 import { PageLoader } from "@/components/ui/Loader";
 import { KinoLogo } from "@/components/KinoLogo";
+import { AmbientGlow } from "@/components/ui/AmbientGlow";
 import { hueFromTitle } from "@/lib/colors";
 import { useRouter } from "next/navigation";
 
@@ -33,6 +34,24 @@ function colorFromTitle(title?: string) {
     b: `hsla(${hueB}, 85%, 55%, 0.08)`,
     glow: `hsla(${hueA}, 90%, 60%, 0.25)`,
   };
+}
+
+interface SectionHeadingProps {
+  eyebrow: string;
+  title: string;
+  action?: ReactNode;
+}
+
+function SectionHeading({ eyebrow, title, action }: SectionHeadingProps) {
+  return (
+    <div className="flex items-end justify-between px-3 sm:px-8 lg:px-12">
+      <div className="space-y-1">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-primary/85">{eyebrow}</span>
+        <h4 className="text-lg sm:text-2xl lg:text-4xl font-bold tracking-tight text-foreground leading-none">{title}</h4>
+      </div>
+      {action}
+    </div>
+  );
 }
 
 interface DiscProps {
@@ -166,7 +185,7 @@ function SpotlightCard({ entry, setSelectedEntry, activeSlide, randomDeck, setAc
                   {statsGrid.map((item, idx) => (
                     <div key={idx} className="space-y-1">
                       <p className="text-[8.5px] font-mono tracking-widest text-muted-foreground uppercase">{item.label}</p>
-                      <p className="text-xs.5 font-bold text-foreground truncate">{item.value}</p>
+                      <p className="text-sm font-bold text-foreground truncate">{item.value}</p>
                     </div>
                   ))}
                 </div>
@@ -392,8 +411,10 @@ function DashboardContent() {
   if (entries.length === 0) {
     return (
       <div className="absolute inset-0 flex items-center justify-center bg-background text-foreground overflow-hidden px-4">
-        <div className="absolute top-[-10%] right-[-10%] w-[60%] h-[50%] bg-primary/5 rounded-full blur-[160px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[45%] bg-purple-500/5 rounded-full blur-[140px] pointer-events-none" />
+        <AmbientGlow glows={[
+          "top-[-10%] right-[-10%] w-[60%] h-[50%] bg-primary/5 blur-[160px]",
+          "bottom-[-10%] left-[-10%] w-[50%] h-[45%] bg-purple-500/5 blur-[140px]",
+        ]} />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -416,8 +437,10 @@ function DashboardContent() {
   return (
     <div className="absolute inset-0 overflow-y-auto bg-background text-foreground scroll-smooth hide-scrollbar pb-28 md:pb-20">
       {/* Decorative ambient background glows */}
-      <div className="absolute top-0 right-0 w-[55%] h-[40%] bg-primary/3 rounded-full blur-[160px] pointer-events-none" />
-      <div className="absolute bottom-[20%] left-0 w-[45%] h-[35%] bg-purple-500/3 rounded-full blur-[140px] pointer-events-none" />
+      <AmbientGlow glows={[
+        "top-0 right-0 w-[55%] h-[40%] bg-primary/3 blur-[160px]",
+        "bottom-[20%] left-0 w-[45%] h-[35%] bg-purple-500/3 blur-[140px]",
+      ]} />
 
       {/* Main Narrative Container (Apple/Nothing Scroll tour layout style) */}
       <div className="mx-auto w-full max-w-[2400px] py-5 sm:py-10 space-y-12 sm:space-y-20 lg:space-y-24">
@@ -475,11 +498,8 @@ function DashboardContent() {
         {/* Interactive Release Calendar */}
         {timelineItems.length > 0 && (
           <div className="w-full space-y-6 lg:space-y-8 mt-12 mb-16">
-            <div className="space-y-1 px-3 sm:px-8 lg:px-12">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-primary/85">UPCOMING & RECENT</span>
-              <h4 className="text-lg sm:text-2xl lg:text-3.5xl font-bold tracking-tight text-foreground leading-none">Release Calendar</h4>
-            </div>
-            
+            <SectionHeading eyebrow="UPCOMING & RECENT" title="Release Calendar" />
+
             <div className="w-full overflow-x-auto hide-scrollbar scroll-smooth pb-6 px-3 sm:px-8 lg:px-12">
               <div className="flex items-center gap-6 w-max relative pt-6 pb-2">
                 {/* Connecting line */}
@@ -545,16 +565,16 @@ function DashboardContent() {
               transition={{ duration: 0.6 }}
               className="space-y-6 w-full text-left"
             >
-              <div className="flex items-end justify-between px-3 sm:px-8 lg:px-12">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-primary/85">ACTIVE TRACKING</span>
-                  <h4 className="text-lg sm:text-2xl lg:text-3.5xl font-bold tracking-tight text-foreground leading-none">Continue Watching</h4>
-                </div>
-                <Link href="/collection?type=All" className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5">
-                  See All <ChevronRight size={14} />
-                </Link>
-              </div>
-              
+              <SectionHeading
+                eyebrow="ACTIVE TRACKING"
+                title="Continue Watching"
+                action={
+                  <Link href="/collection?type=All" className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5">
+                    See All <ChevronRight size={14} />
+                  </Link>
+                }
+              />
+
               <div className="w-full overflow-x-auto hide-scrollbar scroll-smooth pb-4">
                 <div className="flex gap-3 sm:gap-5 px-3 sm:px-8 lg:px-12 w-max">
                   {watching.map((entry, i) => {
@@ -615,21 +635,21 @@ function DashboardContent() {
               transition={{ duration: 0.6 }}
               className="space-y-6 w-full text-left"
             >
-              <div className="flex items-end justify-between px-3 sm:px-8 lg:px-12">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-primary/85">UP NEXT</span>
-                  <h4 className="text-lg sm:text-2xl lg:text-3.5xl font-bold tracking-tight text-foreground leading-none">Watchlist</h4>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button onClick={handleSuggestNext} className="hidden sm:flex text-[11px] font-bold uppercase tracking-wider text-amber-500 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-1.5 rounded-full items-center gap-1.5 transition-colors border border-amber-500/20">
-                    <Sparkles size={12} /> Suggest Next
-                  </button>
-                  <Link href="/collection?type=All" className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5">
-                    See All <ChevronRight size={14} />
-                  </Link>
-                </div>
-              </div>
-              
+              <SectionHeading
+                eyebrow="UP NEXT"
+                title="Watchlist"
+                action={
+                  <div className="flex items-center gap-3">
+                    <button onClick={handleSuggestNext} className="hidden sm:flex text-[11px] font-bold uppercase tracking-wider text-amber-500 bg-amber-500/10 hover:bg-amber-500/20 px-3 py-1.5 rounded-full items-center gap-1.5 transition-colors border border-amber-500/20">
+                      <Sparkles size={12} /> Suggest Next
+                    </button>
+                    <Link href="/collection?type=All" className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5">
+                      See All <ChevronRight size={14} />
+                    </Link>
+                  </div>
+                }
+              />
+
               <div className="w-full overflow-x-auto hide-scrollbar scroll-smooth pb-4">
                 <div className="flex gap-3 sm:gap-5 px-3 sm:px-8 lg:px-12 w-max">
                   {planned.map((entry, i) => (
@@ -658,16 +678,16 @@ function DashboardContent() {
               transition={{ duration: 0.6 }}
               className="space-y-6 w-full text-left"
             >
-              <div className="flex items-end justify-between px-3 sm:px-8 lg:px-12">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-primary/85">FINISHED TITLES</span>
-                  <h4 className="text-lg sm:text-2xl lg:text-3.5xl font-bold tracking-tight text-foreground leading-none">Recently Completed</h4>
-                </div>
-                <Link href="/collection?type=All" className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5">
-                  See All <ChevronRight size={14} />
-                </Link>
-              </div>
-              
+              <SectionHeading
+                eyebrow="FINISHED TITLES"
+                title="Recently Completed"
+                action={
+                  <Link href="/collection?type=All" className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5">
+                    See All <ChevronRight size={14} />
+                  </Link>
+                }
+              />
+
               <div className="w-full overflow-x-auto hide-scrollbar scroll-smooth pb-4">
                 <div className="flex gap-3 sm:gap-5 px-3 sm:px-8 lg:px-12 w-max">
                   {completed.map((entry, i) => (

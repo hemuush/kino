@@ -10,6 +10,7 @@ import { MediaEntry, isEpisodic } from '@/lib/db';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PageLoader } from '@/components/ui/Loader';
+import { AmbientGlow } from '@/components/ui/AmbientGlow';
 import { toast } from 'sonner';
 
 function CollectionContent() {
@@ -162,9 +163,11 @@ function CollectionContent() {
             {/* Ambient Backing */}
             <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.06)_1px,transparent_1px)] dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none opacity-100 z-0" />
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
             </div>
+            <AmbientGlow fixed glows={[
+              "top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px]",
+              "bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 blur-[120px]",
+            ]} />
 
             <div className="relative z-10 mx-auto w-full max-w-[2400px] py-4 sm:py-6 px-4 sm:px-8 lg:px-12 pb-48">
                 
@@ -195,7 +198,7 @@ function CollectionContent() {
                             </Link>
                         </div>
                     ) : sortedEntries.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-center border border-border/40 rounded-[32px] bg-card/20 backdrop-blur-sm">
+                        <div className="flex flex-col items-center justify-center py-20 text-center border border-border/40 rounded-4xl bg-card/20 backdrop-blur-sm">
                             <Search size={32} className="text-muted-foreground/30 mb-4" />
                             <h3 className="text-lg font-bold mb-1">No Matches Found</h3>
                             <p className="text-muted-foreground text-sm">Try adjusting your filters or search query.</p>
@@ -237,7 +240,7 @@ function CollectionContent() {
                                             animate={{ opacity: 1, y: 0 }}
                                             exit={{ opacity: 0, scale: 0.95 }}
                                             transition={{ duration: 0.2, delay: Math.min(i * 0.02, 0.2) }}
-                                            className="rounded-[24px] border border-border/80 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-muted/50 transition-colors shadow-sm cursor-pointer group"
+                                            className="rounded-3xl border border-border/80 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-4 hover:bg-muted/50 transition-colors shadow-sm cursor-pointer group"
                                             onClick={() => router.push(`/media/${entry.id}`)}
                                         >
                                             <div className="flex gap-4 flex-1 items-center">
@@ -404,7 +407,7 @@ function CollectionContent() {
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: -20 }}
                             transition={{ type: "spring", bounce: 0, duration: 0.2 }}
-                            className="relative w-full max-w-xl bg-card dark:bg-[#0c0c0d] border border-border/80 rounded-[32px] overflow-hidden shadow-2xl z-10 flex flex-col"
+                            className="relative w-full max-w-xl bg-card dark:bg-[#0c0c0d] border border-border/80 rounded-4xl overflow-hidden shadow-2xl z-10 flex flex-col"
                             onKeyDown={handleCmdKeyDown}
                         >
                             <div className="flex items-center border-b border-border/60 px-6 py-4">

@@ -166,7 +166,7 @@ export default function SagasPage() {
 
 
               {filteredSagaNames.length === 0 && queryParam ? (
-                <div className="flex flex-col items-center justify-center py-32 text-center border border-dashed border-border/40 rounded-[32px] bg-card/5 backdrop-blur-sm">
+                <div className="flex flex-col items-center justify-center py-32 text-center border border-dashed border-border/40 rounded-4xl bg-card/5 backdrop-blur-sm">
                   <Search size={48} className="text-muted-foreground/30 mb-6" />
                   <p className="text-muted-foreground text-lg font-medium">No universes found matching &quot;{queryParam}&quot;</p>
                   <button onClick={() => router.replace('/sagas')} className="mt-6 px-6 py-2.5 rounded-full bg-primary/10 text-primary text-sm font-bold uppercase tracking-widest hover:bg-primary/20 transition-colors">
@@ -174,7 +174,7 @@ export default function SagasPage() {
                   </button>
                 </div>
               ) : sagaNames.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-32 text-center border border-dashed border-border/40 rounded-[32px] bg-card/5 backdrop-blur-sm">
+                <div className="flex flex-col items-center justify-center py-32 text-center border border-dashed border-border/40 rounded-4xl bg-card/5 backdrop-blur-sm">
                   <Film size={64} className="text-muted-foreground/20 mb-8" />
                   <p className="text-foreground text-2xl font-bold">No Sagas Configured</p>
                   <p className="text-muted-foreground mt-4 max-w-md leading-relaxed text-lg">
@@ -197,7 +197,7 @@ export default function SagasPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: Math.min(i, 12) * 0.05, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                         onClick={() => setSelectedSaga(saga)}
-                        className="group relative flex flex-col text-left overflow-hidden rounded-[16px] bg-card/20 dark:bg-black/20 border border-border/30 backdrop-blur-xl hover:border-primary/50 transition-all duration-300 hover:shadow-[0_10px_20px_-10px_rgba(var(--primary),0.3)] hover:-translate-y-1 aspect-[4/3]"
+                        className="group relative flex flex-col text-left overflow-hidden rounded-xl bg-card/20 dark:bg-black/20 border border-border/30 backdrop-blur-xl hover:border-primary/50 transition-all duration-300 hover:shadow-[0_10px_20px_-10px_rgba(var(--primary),0.3)] hover:-translate-y-1 aspect-[4/3]"
                       >
                         {/* Cinematic Cover Background */}
                         <div className="absolute inset-0 z-0">
@@ -340,10 +340,10 @@ export default function SagasPage() {
                         {/* Card Side */}
                         <div className="w-full md:w-1/2 pl-[70px] md:pl-0 px-4 md:px-12">
                           <Link href={`/media/${node.media.id}`} className="block">
-                            <div className="flex flex-col sm:flex-row gap-3 p-2 sm:p-3 rounded-[16px] border border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 hover:border-primary/40 transition-all duration-300 hover:shadow-[0_10px_20px_-10px_rgba(var(--primary),0.2)] hover:-translate-y-1 group/card">
+                            <div className="flex flex-col sm:flex-row gap-3 p-2 sm:p-3 rounded-xl border border-border/40 bg-card/40 backdrop-blur-xl hover:bg-card/60 hover:border-primary/40 transition-all duration-300 hover:shadow-[0_10px_20px_-10px_rgba(var(--primary),0.2)] hover:-translate-y-1 group/card">
                               
                               {/* Cover */}
-                              <div className="relative w-16 sm:w-[80px] shrink-0 aspect-[2/3] rounded-[12px] overflow-hidden bg-muted/20 border border-border/20 shadow-sm">
+                              <div className="relative w-16 sm:w-[80px] shrink-0 aspect-[2/3] rounded-lg overflow-hidden bg-muted/20 border border-border/20 shadow-sm">
                                 {node.media.coverImage ? (
                                   <img src={node.media.coverImage} alt="" className="h-full w-full object-cover transition-transform duration-700 group-hover/card:scale-110" />
                                 ) : (

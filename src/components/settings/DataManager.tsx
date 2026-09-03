@@ -147,7 +147,7 @@ export function DataManager() {
           { label: 'Sagas', value: franchises.length, icon: Cloud, color: 'text-sky-500', bg: 'bg-sky-500/10' },
           { label: 'Local Cache', value: localSize, icon: Server, color: 'text-emerald-500', bg: 'bg-emerald-500/10' }
         ].map((stat, i) => (
-          <div key={i} className="rounded-[24px] border border-border/80 bg-card/65 dark:bg-[#0c0c0d]/80 p-5 backdrop-blur-xl shadow-sm flex items-center gap-4">
+          <div key={i} className="rounded-3xl border border-border/80 bg-card/65 dark:bg-[#0c0c0d]/80 p-5 backdrop-blur-xl shadow-sm flex items-center gap-4">
             <div className={`p-3 rounded-2xl ${stat.bg} ${stat.color}`}>
               <stat.icon size={24} />
             </div>
@@ -162,7 +162,7 @@ export function DataManager() {
       {/* Sync Status Banner */}
       <motion.div 
         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-        className={`relative overflow-hidden rounded-[24px] border px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 backdrop-blur-xl shadow-sm`}
+        className={`relative overflow-hidden rounded-3xl border px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 backdrop-blur-xl shadow-sm`}
         style={{
           borderColor: isSynced ? 'rgba(34,197,94,0.3)' : isError ? 'rgba(239,68,68,0.3)' : 'rgba(41,151,255,0.3)',
           background: isSynced ? 'rgba(34,197,94,0.08)' : isError ? 'rgba(239,68,68,0.08)' : 'rgba(41,151,255,0.08)',
@@ -195,7 +195,7 @@ export function DataManager() {
       {/* Google Drive Backup */}
       <motion.section 
         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-        className="rounded-[24px] border border-border/80 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl shadow-sm p-8"
+        className="rounded-3xl border border-border/80 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl shadow-sm p-8"
       >
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
           <div>
@@ -213,7 +213,7 @@ export function DataManager() {
         </header>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <div className="rounded-[20px] border border-border/40 bg-background/40 p-6 flex flex-col justify-between h-[140px]">
+          <div className="rounded-2xl border border-border/40 bg-background/40 p-6 flex flex-col justify-between h-[140px]">
             <div>
               <p className="text-[10px] font-mono tracking-[0.2em] text-muted-foreground uppercase font-bold">Drive Size & Chunks</p>
               <div className="mt-2 text-4xl font-black text-foreground font-display flex items-baseline gap-2">
@@ -230,7 +230,7 @@ export function DataManager() {
             </div>
             <p className="mt-auto text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Configured at 50 items / chunk</p>
           </div>
-          <div className="rounded-[20px] border border-border/40 bg-background/40 p-6 flex flex-col justify-between h-[140px]">
+          <div className="rounded-2xl border border-border/40 bg-background/40 p-6 flex flex-col justify-between h-[140px]">
             <div>
               <p className="text-[10px] font-mono tracking-[0.2em] text-muted-foreground uppercase font-bold">Cloud Modified</p>
               <div className="mt-3 text-lg font-bold text-foreground">
@@ -276,7 +276,7 @@ export function DataManager() {
       {/* Account Migration */}
       <motion.section
         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-        className="rounded-[24px] border border-border/80 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl shadow-sm p-8"
+        className="rounded-3xl border border-border/80 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl shadow-sm p-8"
       >
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-6">
           <div>
@@ -315,7 +315,7 @@ export function DataManager() {
       {/* Import Section */}
       <motion.section
         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-        className="rounded-[24px] border border-border/80 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl shadow-sm p-8"
+        className="rounded-3xl border border-border/80 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl shadow-sm p-8"
       >
         <header className="mb-6">
           <h3 className="font-display text-2xl font-bold tracking-tight text-foreground">Import Manual Backup</h3>
@@ -329,7 +329,7 @@ export function DataManager() {
       {/* Danger Zone */}
       <motion.section 
         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-        className="rounded-[24px] border border-red-500/20 bg-red-500/5 backdrop-blur-xl p-8 relative overflow-hidden"
+        className="rounded-3xl border border-red-500/20 bg-red-500/5 backdrop-blur-xl p-8 relative overflow-hidden"
       >
         <div className="absolute top-0 left-0 w-2 h-full bg-red-500/80"></div>
         <header className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-6">

@@ -176,7 +176,7 @@ export default function JsonImporter() {
                                 <h4 className="text-sm font-bold text-foreground mb-2">JSON Structure Example</h4>
                                 <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
                                     Notice how <b>TV Shows</b> can support a rich <code>episodes</code> array object tracking individual episodes, runtimes, and exact air dates. <br/>
-                                    <strong className="text-primary">Note on Images:</strong> Please do <b>not</b> include <code>coverImage</code> links in your JSON. The system automatically fetches high-quality images from our database.
+                                    <strong className="text-primary">Note on Images:</strong> Cover images aren&apos;t fetched automatically — this JSON format has no <code>coverImage</code> field. Add a poster to each entry afterward from its detail page.
                                 </p>
                                 <pre className="bg-background border border-border/50 p-4 rounded-xl text-xs overflow-x-auto text-emerald-400 hide-scrollbar leading-relaxed">
                                     {`[

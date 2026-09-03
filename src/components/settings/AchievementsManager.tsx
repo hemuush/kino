@@ -83,7 +83,7 @@ export function AchievementsManager() {
                     {badges.map((badge) => (
                         <div 
                             key={badge.id}
-                            className={`group relative overflow-hidden rounded-[24px] border-2 p-5 sm:p-6 flex flex-col items-center text-center transition-all duration-500 ${
+                            className={`group relative overflow-hidden rounded-3xl border-2 p-5 sm:p-6 flex flex-col items-center text-center transition-all duration-500 ${
                                 badge.unlocked 
                                     ? `bg-gradient-to-b from-card/80 to-card/40 ${badge.color} border-current/20 shadow-[0_8px_30px_rgb(0,0,0,0.08)] backdrop-blur-xl hover:-translate-y-2 hover:shadow-[0_15px_40px_rgb(0,0,0,0.12)] hover:border-current/40 cursor-pointer` 
                                     : 'bg-muted/10 border-dashed border-border/20 opacity-50 grayscale hover:grayscale-0 hover:opacity-80 transition-all duration-500'
@@ -119,7 +119,7 @@ export function AchievementsManager() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <button 
                         onClick={() => router.push('/wraps?type=weekly')}
-                        className="relative group overflow-hidden rounded-[24px] border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 sm:p-8 text-left transition-all hover:border-primary/50 hover:shadow-[0_0_40px_rgba(var(--primary),0.15)] hover:-translate-y-1"
+                        className="relative group overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 sm:p-8 text-left transition-all hover:border-primary/50 hover:shadow-[0_0_40px_rgba(var(--primary),0.15)] hover:-translate-y-1"
                     >
                         <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500 ease-out" />
                         <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity duration-500 group-hover:scale-110 transform origin-top-right">
@@ -136,7 +136,7 @@ export function AchievementsManager() {
 
                     <button 
                         onClick={() => router.push('/wraps?type=monthly')}
-                        className="relative group overflow-hidden rounded-[24px] border border-purple-500/20 bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent p-6 sm:p-8 text-left transition-all hover:border-purple-500/50 hover:shadow-[0_0_40px_rgba(168,85,247,0.15)] hover:-translate-y-1"
+                        className="relative group overflow-hidden rounded-3xl border border-purple-500/20 bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent p-6 sm:p-8 text-left transition-all hover:border-purple-500/50 hover:shadow-[0_0_40px_rgba(168,85,247,0.15)] hover:-translate-y-1"
                     >
                         <div className="absolute inset-0 bg-gradient-to-t from-purple-500/10 to-transparent translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500 ease-out" />
                         <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity duration-500 group-hover:scale-110 transform origin-top-right">

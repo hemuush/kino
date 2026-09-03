@@ -122,10 +122,10 @@ export default function Login() {
             initial={{ opacity: 0, scale: 0.9, rotateX: 10 }}
             animate={{ opacity: 1, scale: 1, rotateX: 0 }}
             transition={{ duration: 1, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="relative w-full rounded-[32px] border border-border/50 bg-card/60 dark:bg-card/40 backdrop-blur-3xl shadow-[0_24px_54px_rgba(0,0,0,0.1)] dark:shadow-[0_24px_54px_rgba(0,0,0,0.3)] p-8 sm:p-10"
+            className="relative w-full rounded-4xl border border-border/50 bg-card/60 dark:bg-card/40 backdrop-blur-3xl shadow-[0_24px_54px_rgba(0,0,0,0.1)] dark:shadow-[0_24px_54px_rgba(0,0,0,0.3)] p-8 sm:p-10"
           >
             {/* Inner glow */}
-            <div className="absolute inset-0 rounded-[32px] shadow-[inset_0_0_30px_rgba(var(--primary),0.03)] pointer-events-none" />
+            <div className="absolute inset-0 rounded-4xl shadow-[inset_0_0_30px_rgba(var(--primary),0.03)] pointer-events-none" />
             
             <div className="relative z-10 space-y-6">
               

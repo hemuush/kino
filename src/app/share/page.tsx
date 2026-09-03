@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Clock, TrendingUp, Sparkles, CheckCircle2, Star } from 'lucide-react';
 import Link from 'next/link';
 import { KinoLogo } from '@/components/KinoLogo';
+import { AmbientGlow } from '@/components/ui/AmbientGlow';
 
 interface ShareData {
   t?: string;
@@ -55,14 +56,16 @@ function ShareContent() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 sm:p-8 relative overflow-hidden">
       {/* Immersive background glows */}
-      <div className="absolute top-[-10%] right-[-10%] w-[70%] h-[60%] bg-primary/20 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[70%] h-[60%] bg-purple-500/20 rounded-full blur-[140px] pointer-events-none" />
+      <AmbientGlow glows={[
+        "top-[-10%] right-[-10%] w-[70%] h-[60%] bg-primary/20 blur-[140px]",
+        "bottom-[-10%] left-[-10%] w-[70%] h-[60%] bg-purple-500/20 blur-[140px]",
+      ]} />
 
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.6, type: "spring", bounce: 0.4 }}
-        className="w-full max-w-sm sm:max-w-md aspect-[4/5] sm:aspect-auto bg-gradient-to-b from-card/90 to-card/40 backdrop-blur-3xl border border-white/10 shadow-2xl rounded-[32px] sm:rounded-[40px] p-6 sm:p-10 flex flex-col relative z-10 overflow-hidden"
+        className="w-full max-w-sm sm:max-w-md aspect-[4/5] sm:aspect-auto bg-gradient-to-b from-card/90 to-card/40 backdrop-blur-3xl border border-white/10 shadow-2xl rounded-4xl sm:rounded-[40px] p-6 sm:p-10 flex flex-col relative z-10 overflow-hidden"
       >
         {/* Card internal glow */}
         <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 via-transparent to-purple-500/10 pointer-events-none" />
