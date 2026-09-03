@@ -3,7 +3,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode, useMemo } from 'react';
-import { MediaEntry, Tag, DEFAULT_GENRES, normalizeMediaType, normalizeWatchStatus } from '@/lib/db';
+import { MediaEntry, Tag, JournalEntry, DEFAULT_GENRES, normalizeMediaType, normalizeWatchStatus } from '@/lib/db';
 import { useAuth } from '@/context/AuthContext';
 import { TokenExpiredError, downloadBackupFromDrive, uploadBackupToDrive, deleteBackupFromDrive, getBackupMetadataFromDrive, BackupData } from '@/lib/googleDrive';
 import { toast } from 'sonner';
@@ -20,11 +20,15 @@ interface MediaContextType {
   setGenres: (genres: Tag[]) => void;
   franchises: Tag[];
   setFranchises: (franchises: Tag[]) => void;
+  journal: JournalEntry[];
+  addJournalEntry: (date: string, text: string) => Promise<void>;
+  updateJournalEntry: (id: string, updates: { date?: string; text?: string }) => Promise<void>;
+  deleteJournalEntry: (id: string) => Promise<void>;
   syncStatus: SyncStatus;
   lastSyncedAt: number | null;
   batchUpdateEntries: (entries: MediaEntry[]) => Promise<void>;
   wipeAllData: () => Promise<void>;
-  importData: (data: { entries?: MediaEntry[], genres?: Tag[], franchises?: Tag[] }) => Promise<void>;
+  importData: (data: { entries?: MediaEntry[], genres?: Tag[], franchises?: Tag[], journal?: JournalEntry[] }) => Promise<void>;
   forceSync: () => Promise<void>;
 }
 
@@ -36,12 +40,13 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<MediaEntry[]>([]);
   const [genres, setGenres] = useState<Tag[]>([]);
   const [franchises, setFranchises] = useState<Tag[]>([]);
+  const [journal, setJournal] = useState<JournalEntry[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle');
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
 
   const uploadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const latestDataRef = useRef<{ entries: MediaEntry[]; genres: Tag[]; franchises: Tag[]; }>({ entries: [], genres: [], franchises: [] });
+  const latestDataRef = useRef<{ entries: MediaEntry[]; genres: Tag[]; franchises: Tag[]; journal: JournalEntry[]; }>({ entries: [], genres: [], franchises: [], journal: [] });
   const hasFetchedFromDriveRef = useRef<boolean>(false);
 
   // Warn before unload when upload is pending
@@ -58,8 +63,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   }, [syncStatus]);
 
   // updateStateAndRef: immediately write to React state
-  const updateStateAndRef = useCallback((newEntries?: MediaEntry[], newGenres?: Tag[], newFranchises?: Tag[], _skipIdb = false) => {
-    const _now = Date.now();
+  const updateStateAndRef = useCallback((newEntries?: MediaEntry[], newGenres?: Tag[], newFranchises?: Tag[], newJournal?: JournalEntry[]) => {
     if (newEntries !== undefined) {
       setEntries(newEntries);
       latestDataRef.current.entries = newEntries;
@@ -71,6 +75,10 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     if (newFranchises !== undefined) {
       setFranchises(newFranchises);
       latestDataRef.current.franchises = newFranchises;
+    }
+    if (newJournal !== undefined) {
+      setJournal(newJournal);
+      latestDataRef.current.journal = newJournal;
     }
   }, []);
 
@@ -86,11 +94,12 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     setSyncStatus('syncing');
     uploadTimeoutRef.current = setTimeout(async () => {
       try {
-        const { entries: currentEntries, genres: currentGenres, franchises: currentFranchises } = latestDataRef.current;
+        const { entries: currentEntries, genres: currentGenres, franchises: currentFranchises, journal: currentJournal } = latestDataRef.current;
         await uploadBackupToDrive(accessToken, {
           entries: currentEntries,
           genres: currentGenres,
           franchises: currentFranchises,
+          journal: currentJournal,
           timestamp: Date.now()
         });
         setSyncStatus('synced');
@@ -158,6 +167,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         let fetchedEntries: MediaEntry[] = [];
         let fetchedGenres: Tag[] = [];
         let fetchedFranchises: Tag[] = [];
+        let fetchedJournal: JournalEntry[] = [];
 
         if (backup) {
           if (Array.isArray(backup)) {
@@ -166,11 +176,12 @@ export function MediaProvider({ children }: { children: ReactNode }) {
             fetchedEntries = backup.entries?.map(e => ({ ...e, type: normalizeMediaType(e.type), status: normalizeWatchStatus(e.status) })) || [];
             fetchedGenres = backup.genres || [];
             fetchedFranchises = backup.franchises || [];
+            fetchedJournal = backup.journal || [];
           }
         }
 
         const cloudTimestamp = backup && 'timestamp' in backup && typeof backup.timestamp === 'number' ? backup.timestamp : 0;
-        
+
         if (backup) {
           // Drive data exists — use Drive data
           if (fetchedGenres.length === 0) {
@@ -178,7 +189,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
           }
           // Use Drive data entirely
           // Note: fetchedEntries is already hydrated, we overwrite to ensure consistency with genres/franchises
-          updateStateAndRef(fetchedEntries, fetchedGenres, fetchedFranchises);
+          updateStateAndRef(fetchedEntries, fetchedGenres, fetchedFranchises, fetchedJournal);
           if (cloudTimestamp > 0) setLastSyncedAt(cloudTimestamp);
         } else {
           // No drive data, keep local data, ensure genres exist
@@ -209,6 +220,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         entries: latestDataRef.current.entries,
         genres: latestDataRef.current.genres,
         franchises: latestDataRef.current.franchises,
+        journal: latestDataRef.current.journal,
         timestamp: Date.now()
       });
       setSyncStatus('synced');
@@ -237,14 +249,16 @@ export function MediaProvider({ children }: { children: ReactNode }) {
                 let fetchedEntries = [];
                 let fetchedGenres: Tag[] = [];
                 let fetchedFranchises: Tag[] = [];
+                let fetchedJournal: JournalEntry[] = [];
                 if (Array.isArray(backup)) {
                   fetchedEntries = backup.map(e => ({ ...e, type: normalizeMediaType(e.type), status: normalizeWatchStatus(e.status) }));
                 } else {
                   fetchedEntries = backup.entries?.map(e => ({ ...e, type: normalizeMediaType(e.type), status: normalizeWatchStatus(e.status) })) || [];
                   fetchedGenres = backup.genres || [];
                   fetchedFranchises = backup.franchises || [];
+                  fetchedJournal = backup.journal || [];
                 }
-                updateStateAndRef(fetchedEntries, fetchedGenres, fetchedFranchises);
+                updateStateAndRef(fetchedEntries, fetchedGenres, fetchedFranchises, fetchedJournal);
                 setLastSyncedAt(Date.now());
                 toast.success("Library updated from another device");
               }
@@ -270,11 +284,24 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     triggerUpload(true);
   }, [updateStateAndRef, triggerUpload]);
 
-  const importData = useCallback(async (data: { entries?: MediaEntry[], genres?: Tag[], franchises?: Tag[] }) => {
+  const importData = useCallback(async (data: { entries?: MediaEntry[], genres?: Tag[], franchises?: Tag[], journal?: JournalEntry[] }) => {
     const mergedEntries = [...latestDataRef.current.entries];
     const mergedGenres = [...latestDataRef.current.genres];
     const mergedFranchises = [...latestDataRef.current.franchises];
+    const mergedJournal = [...latestDataRef.current.journal];
     let hasChanges = false;
+
+    if (data.journal && data.journal.length > 0) {
+      hasChanges = true;
+      data.journal.forEach(imported => {
+        const existingIndex = mergedJournal.findIndex(j => j.id === imported.id);
+        if (existingIndex >= 0) {
+          mergedJournal[existingIndex] = { ...mergedJournal[existingIndex], ...imported };
+        } else {
+          mergedJournal.push({ ...imported, id: imported.id || crypto.randomUUID() });
+        }
+      });
+    }
 
     if (data.genres && data.genres.length > 0) {
       hasChanges = true;
@@ -363,7 +390,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     }
 
     if (hasChanges) {
-      updateStateAndRef(mergedEntries, mergedGenres, mergedFranchises);
+      updateStateAndRef(mergedEntries, mergedGenres, mergedFranchises, mergedJournal);
       triggerUpload();
       toast.success(`Import complete! ${data.entries?.length || 0} entries processed.`);
     }
@@ -400,6 +427,27 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     triggerUpload(true);
   }, [updateStateAndRef, triggerUpload]);
 
+  const addJournalEntry = useCallback(async (date: string, text: string) => {
+    const newEntry: JournalEntry = { id: crypto.randomUUID(), date, text, createdAt: Date.now() };
+    const updatedJournal = [newEntry, ...latestDataRef.current.journal];
+    updateStateAndRef(undefined, undefined, undefined, updatedJournal);
+    triggerUpload();
+  }, [updateStateAndRef, triggerUpload]);
+
+  const updateJournalEntry = useCallback(async (id: string, updates: { date?: string; text?: string }) => {
+    const updatedJournal = latestDataRef.current.journal.map(j =>
+      j.id === id ? { ...j, ...updates, updatedAt: Date.now() } : j
+    );
+    updateStateAndRef(undefined, undefined, undefined, updatedJournal);
+    triggerUpload();
+  }, [updateStateAndRef, triggerUpload]);
+
+  const deleteJournalEntry = useCallback(async (id: string) => {
+    const updatedJournal = latestDataRef.current.journal.filter(j => j.id !== id);
+    updateStateAndRef(undefined, undefined, undefined, updatedJournal);
+    triggerUpload();
+  }, [updateStateAndRef, triggerUpload]);
+
   const wipeAllData = useCallback(async () => {
     if (!accessToken) return;
     try {
@@ -414,7 +462,8 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     setEntries([]);
     setGenres(emptyGenres);
     setFranchises([]);
-    latestDataRef.current = { entries: [], genres: emptyGenres, franchises: [] };
+    setJournal([]);
+    latestDataRef.current = { entries: [], genres: emptyGenres, franchises: [], journal: [] };
     setLastSyncedAt(null);
     setSyncStatus('idle');
   }, [accessToken]);
@@ -423,9 +472,10 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     entries, isLoading, addEntry, updateEntry, deleteEntry,
     genres, setGenres: saveGenres,
     franchises, setFranchises: saveFranchises,
+    journal, addJournalEntry, updateJournalEntry, deleteJournalEntry,
     syncStatus, lastSyncedAt,
     batchUpdateEntries, wipeAllData, importData, forceSync
-  }), [entries, isLoading, addEntry, updateEntry, deleteEntry, genres, saveGenres, franchises, saveFranchises, syncStatus, lastSyncedAt, batchUpdateEntries, wipeAllData, importData, forceSync]);
+  }), [entries, isLoading, addEntry, updateEntry, deleteEntry, genres, saveGenres, franchises, saveFranchises, journal, addJournalEntry, updateJournalEntry, deleteJournalEntry, syncStatus, lastSyncedAt, batchUpdateEntries, wipeAllData, importData, forceSync]);
 
   return (
     <MediaContext.Provider value={contextValue}>

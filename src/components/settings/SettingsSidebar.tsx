@@ -1,18 +1,19 @@
 "use client";
 
-import { Film, Tag, Database, Settings2, Trophy, Palette, Shield } from 'lucide-react';
+import { Film, Tag, Database, Settings2, Trophy, Palette, Shield, NotebookPen } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 
 interface SettingsSidebarProps {
-    activeTab: 'sagas' | 'genres' | 'data' | 'achievements' | 'appearance';
-    setActiveTab: (tab: 'sagas' | 'genres' | 'data' | 'achievements' | 'appearance') => void;
+    activeTab: 'sagas' | 'genres' | 'data' | 'achievements' | 'appearance' | 'journal';
+    setActiveTab: (tab: 'sagas' | 'genres' | 'data' | 'achievements' | 'appearance' | 'journal') => void;
 }
 
 export function SettingsSidebar({ activeTab, setActiveTab }: SettingsSidebarProps) {
     const navItems = [
         { id: 'data', label: 'Data & Cloud', icon: Database, desc: 'Sync & Backups' },
         { id: 'appearance', label: 'Appearance', icon: Palette, desc: 'Theme & Colors' },
+        { id: 'journal', label: 'Journal', icon: NotebookPen, desc: 'Private Notes' },
         { id: 'achievements', label: 'Achievements', icon: Trophy, desc: 'Milestones & Badges' },
         { id: 'sagas', label: 'Sagas', icon: Film, desc: 'Franchise Map' },
         { id: 'genres', label: 'Genres Matrix', icon: Tag, desc: 'Categories' },

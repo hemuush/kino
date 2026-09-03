@@ -48,6 +48,14 @@ export interface MediaEntry {
   lastRefreshedAt?: number;
 }
 
+export interface JournalEntry {
+  id: string;
+  date: string; // YYYY-MM-DD — the date the entry is about, not necessarily createdAt's day
+  text: string;
+  createdAt: number;
+  updatedAt?: number;
+}
+
 export const DEFAULT_GENRES: string[] = [
   'Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Horror',
   'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'Slice of Life', 'Supernatural', 'Documentary', 'Animation'

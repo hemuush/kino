@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+// Update this whenever the policy text below actually changes.
+const LAST_UPDATED = 'September 3, 2026';
+
 export default function TermsOfService() {
   return (
     <div className="absolute inset-0 overflow-y-auto bg-background text-foreground font-sans px-4 py-12 md:py-24">
@@ -29,7 +32,7 @@ export default function TermsOfService() {
           </div>
           
           <div className="prose prose-neutral dark:prose-invert prose-p:text-muted-foreground max-w-none space-y-6 text-sm leading-relaxed">
-            <p className="text-base font-medium text-foreground">Last Updated: {new Date().toLocaleDateString()}</p>
+            <p className="text-base font-medium text-foreground">Last Updated: {LAST_UPDATED}</p>
             
             <section className="space-y-3">
               <h2 className="text-xl font-display font-bold text-foreground">1. Acceptance of Terms</h2>

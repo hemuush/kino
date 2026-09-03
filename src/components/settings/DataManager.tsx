@@ -43,7 +43,7 @@ function timeAgo(timestamp: number | null): string {
 }
 
 export function DataManager() {
-  const { wipeAllData, syncStatus, lastSyncedAt, entries, genres, franchises, forceSync } = useMedia();
+  const { wipeAllData, syncStatus, lastSyncedAt, entries, genres, franchises, journal, forceSync } = useMedia();
   const { accessToken, logout } = useAuth();
   const [backupMetadata, setBackupMetadata] = useState<BackupMetadata | null>(null);
   const [isMetadataLoading, setIsMetadataLoading] = useState(false);
@@ -84,7 +84,7 @@ export function DataManager() {
 
   const handleExport = () => {
     try {
-      const payload = { entries, genres, franchises, exportedAt: Date.now() };
+      const payload = { entries, genres, franchises, journal, exportedAt: Date.now() };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

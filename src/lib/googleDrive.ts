@@ -1,5 +1,5 @@
 // src/lib/googleDrive.ts
-import { MediaEntry } from './db';
+import { MediaEntry, JournalEntry } from './db';
 
 const BACKUP_INDEX_NAME = 'kino-index.json';
 const LEGACY_BACKUP_NAME = 'kino-backup.json';
@@ -110,6 +110,7 @@ export interface BackupData {
   entries: MediaEntry[];
   genres: { id: string; name: string }[];
   franchises: { id: string; name: string }[];
+  journal?: JournalEntry[];
   timestamp?: number;
 }
 
@@ -202,6 +203,7 @@ export async function uploadBackupToDrive(accessToken: string, rawData: BackupDa
   const indexData = {
     genres: data.genres,
     franchises: data.franchises,
+    journal: data.journal || [],
     timestamp: data.timestamp || Date.now(),
     chunkCount: chunks.length,
     totalEntries: entries.length,
@@ -321,6 +323,7 @@ export async function downloadBackupFromDrive(
     entries: allEntries,
     genres: indexData.genres || [],
     franchises: indexData.franchises || [],
+    journal: indexData.journal || [],
     timestamp: indexData.timestamp
   };
 }

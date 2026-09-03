@@ -4,12 +4,13 @@
 import React, { useState, useRef } from 'react';
 import { useMedia } from '@/context/MediaContext';
 import { Upload, FileJson, Check, X, AlertCircle, Info, ChevronDown, ChevronUp, Tv, Film, MonitorPlay, ClipboardPaste, FileText } from 'lucide-react';
-import { MediaEntry, Tag, normalizeMediaType } from '@/lib/db';
+import { MediaEntry, Tag, JournalEntry, normalizeMediaType } from '@/lib/db';
 
 interface ParsedData {
     entries: MediaEntry[];
     genres: Tag[];
     franchises: Tag[];
+    journal: JournalEntry[];
     stats: {
         movies: number;
         tvShows: number;
@@ -41,6 +42,7 @@ export default function JsonImporter() {
             let entries: MediaEntry[] = [];
             let genres: Tag[] = [];
             let franchises: Tag[] = [];
+            let journal: JournalEntry[] = [];
 
             if (Array.isArray(json)) {
                 entries = json;
@@ -49,6 +51,7 @@ export default function JsonImporter() {
                     entries = json.entries;
                     if (json.genres) genres = json.genres;
                     if (json.franchises) franchises = json.franchises;
+                    if (json.journal) journal = json.journal;
                 } else if (json.title && json.type) {
                     entries = [json];
                 } else {
@@ -58,7 +61,7 @@ export default function JsonImporter() {
                 throw new Error("Invalid format.");
             }
 
-            if (entries.length === 0 && genres.length === 0 && franchises.length === 0) {
+            if (entries.length === 0 && genres.length === 0 && franchises.length === 0 && journal.length === 0) {
                 throw new Error("No data found to import in this payload.");
             }
 
@@ -70,7 +73,7 @@ export default function JsonImporter() {
                 anime: entries.filter(ent => ent.type === 'Anime').length,
             };
 
-            setParsedData({ entries, genres, franchises, stats });
+            setParsedData({ entries, genres, franchises, journal, stats });
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to parse JSON. Please check your syntax.");
         }
