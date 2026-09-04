@@ -10,4 +10,4 @@ This project's full technical guide — architecture, route map, data flow, and 
 4. **No dead code.** No unused imports/vars, no no-op props/styles, no state that's set but never read. Reuse the shared helpers in `src/lib/db.ts` (episode logic) and `src/lib/colors.ts` (accent/hash colors) instead of reimplementing them inline — this codebase has been swept clean of duplicated logic; keep it that way.
 5. **Match the existing aesthetic.** Luxury dark-mode, glassmorphic, deep-dark-tone design system. Don't introduce a different visual language without being asked.
 
-For anything else — route map, data architecture, testing, styling conventions — see `CLAUDE.md`.
+For anything else — route map, data architecture, testing, styling conventions — see `CLAUDE.md`. For exhaustive, per-function/per-component/per-page detail, `CLAUDE.md` links out to `docs/data-and-sync.md`, `docs/components.md`, and `docs/pages.md`.
