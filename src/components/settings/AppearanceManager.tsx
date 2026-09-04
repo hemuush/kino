@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Palette, Check } from 'lucide-react';
 import { APP_COLORS } from '@/lib/colors';
-import { SettingsSectionHeader } from './SettingsSectionHeader';
+import { SectionHeader } from '../ui/SectionHeader';
 
 export function AppearanceManager() {
   const [activeColor, setActiveColor] = useState(() => {
@@ -26,7 +26,7 @@ export function AppearanceManager() {
 
   return (
     <section className="space-y-10">
-      <SettingsSectionHeader
+      <SectionHeader
         icon={<Palette size={26} strokeWidth={2.5} />}
         title="Appearance"
         description="Customize your Kino experience."

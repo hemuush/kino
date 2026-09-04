@@ -6,7 +6,7 @@ import { JournalEntry } from '@/lib/db';
 import { NotebookPen, Trash2, Edit2, Check, X, CalendarDays } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { SettingsSectionHeader } from './SettingsSectionHeader';
+import { SectionHeader } from '../ui/SectionHeader';
 
 function toISODate(d: Date): string {
     return d.toISOString().split('T')[0];
@@ -69,7 +69,7 @@ export function JournalManager() {
     return (
         <div className="flex flex-col h-full">
             <header className="mb-8">
-                <SettingsSectionHeader
+                <SectionHeader
                     icon={<NotebookPen size={26} strokeWidth={2.5} />}
                     title="Journal"
                     description="Freeform, date-stamped notes — private to you, synced to your Drive, never shown on your public profile."

@@ -2,7 +2,7 @@
 
 import { useMedia } from "@/context/MediaContext";
 import { useAuth } from "@/context/AuthContext";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   PlayCircle,
   Heart,
@@ -15,11 +15,23 @@ import {
   TrendingUp,
   Clapperboard,
   User,
+  LayoutGrid,
+  NotebookPen,
 } from "lucide-react";
 import Link from "next/link";
 import { isEpisodic, getWatchedRuntimeMinutes } from "@/lib/db";
 import { AmbientGlow } from "@/components/ui/AmbientGlow";
-import { useMemo } from "react";
+import { AchievementsManager } from "@/components/profile/AchievementsManager";
+import { JournalManager } from "@/components/profile/JournalManager";
+import { useMemo, useState } from "react";
+
+type ProfileTab = 'overview' | 'achievements' | 'journal';
+
+const PROFILE_TABS: { id: ProfileTab; label: string; icon: typeof LayoutGrid }[] = [
+  { id: 'overview', label: 'Overview', icon: LayoutGrid },
+  { id: 'achievements', label: 'Achievements', icon: Trophy },
+  { id: 'journal', label: 'Journal', icon: NotebookPen },
+];
 
 
 const fadeUp = {
@@ -70,6 +82,7 @@ function StatPill({ icon, label, value, sub, index, accent = "text-primary" }: S
 export default function ProfilePage() {
   const { entries, isLoading } = useMedia();
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
 
   const stats = useMemo(() => {
     let totalWatchMinutes = 0;
@@ -291,6 +304,48 @@ export default function ProfilePage() {
           </div>
         </motion.section>
 
+        {/* ── Tab Switcher ── */}
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 28, delay: 0.1 }}
+          className="mb-6 flex justify-center sm:justify-start"
+        >
+          <nav className="inline-flex items-center gap-1 rounded-2xl border border-border bg-muted/30 p-1 backdrop-blur-2xl">
+            {PROFILE_TABS.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-[12px] tracking-wider uppercase font-display font-semibold transition-colors relative z-10 ${
+                    isActive ? "text-primary-foreground dark:text-black" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <tab.icon size={14} /> <span className="mt-0.5">{tab.label}</span>
+                  {isActive && (
+                    <motion.div
+                      layoutId="profile-active-tab-pill"
+                      className="absolute inset-0 bg-primary rounded-xl border border-primary -z-10 shadow-sm"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </motion.div>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          >
+        {activeTab === 'overview' && (
+        <>
         {/* ── Stats Row ── */}
         <motion.section
           initial="hidden"
@@ -549,6 +604,22 @@ export default function ProfilePage() {
             </div>
           </motion.div>
         </motion.section>
+        </>
+        )}
+
+        {activeTab === 'achievements' && (
+          <div className="rounded-[28px] border border-border/60 bg-card/60 backdrop-blur-xl shadow-sm p-6 sm:p-8">
+            <AchievementsManager />
+          </div>
+        )}
+
+        {activeTab === 'journal' && (
+          <div className="rounded-[28px] border border-border/60 bg-card/60 backdrop-blur-xl shadow-sm p-6 sm:p-8 min-h-[500px] flex flex-col">
+            <JournalManager />
+          </div>
+        )}
+          </motion.div>
+        </AnimatePresence>
 
       </div>
     </div>

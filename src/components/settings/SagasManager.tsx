@@ -5,7 +5,7 @@ import { useMedia } from '@/context/MediaContext';
 import { Tag as DbTag } from '@/lib/db';
 import { Trash2, Edit2, Check, X, Plus, Film } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SettingsSectionHeader } from './SettingsSectionHeader';
+import { SectionHeader } from '../ui/SectionHeader';
 
 export function SagasManager() {
     const { franchises, setFranchises } = useMedia();
@@ -40,7 +40,7 @@ export function SagasManager() {
     return (
         <div className="flex flex-col h-full">
             <header className="mb-8">
-                <SettingsSectionHeader
+                <SectionHeader
                     icon={<Film size={26} strokeWidth={2.5} />}
                     title="Sagas Management"
                     description="Organize your collection by managing cinematic universes and franchises."

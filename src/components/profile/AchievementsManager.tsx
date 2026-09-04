@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { useMedia } from '@/context/MediaContext';
 import { Trophy, CalendarDays, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { SettingsSectionHeader } from './SettingsSectionHeader';
+import { SectionHeader } from '../ui/SectionHeader';
 
 export function AchievementsManager() {
     const { entries } = useMedia();
@@ -51,7 +51,7 @@ export function AchievementsManager() {
             {/* Badges Section */}
             <div className="space-y-8">
                 <div className="flex flex-col gap-4">
-                    <SettingsSectionHeader
+                    <SectionHeader
                         icon={<Trophy size={24} strokeWidth={2.5} />}
                         title="Achievements"
                         description="Track your milestones and earn badges based on your watch history and library curation."
@@ -100,7 +100,7 @@ export function AchievementsManager() {
 
             {/* Recaps Section */}
             <div className="space-y-8 pt-8 border-t border-border/30">
-                <SettingsSectionHeader
+                <SectionHeader
                     icon={<Calendar size={24} strokeWidth={2.5} />}
                     title="Your Wrapped"
                     description="Relive your cinematic journey. Generate your interactive Kino Wrapped for the past week or month."

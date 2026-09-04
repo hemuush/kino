@@ -44,8 +44,8 @@ For the full request/response shape of the Drive sync (index file JSON, chunk na
 | `/media/[id]/edit` | Full structured edit form (`MediaForm` in edit mode) — all fields at once, including type/status/rating/bulk episode generation. Complementary to the quick-edit modals above, not a replacement. |
 | `/add` | `MediaForm` in create mode. |
 | `/sagas` | Franchise/saga chronological timelines. |
-| `/settings` | Tabbed: Data & Cloud (sync status, export/import, account migration, wipe), Appearance (accent color), Journal (private date-stamped notes), Achievements (badges + Wrapped recap launchers), Sagas, Genres. |
-| `/profile` | Public-style stats page (watch time, badge tier, personality label, library mix, favorites). |
+| `/settings` | Tabbed, config-only: Data & Cloud (sync status, export/import, account migration, wipe), Appearance (accent color), Sagas, Genres. |
+| `/profile` | Tabbed identity page: **Overview** (watch time, badge tier, personality label, library mix, favorites), **Achievements** (badges + Wrapped recap launchers), **Journal** (private date-stamped notes). |
 | `/wraps?type=weekly\|monthly` | Full-screen animated recap slideshow, ends with a shareable link. |
 | `/share?d=<base64>` | **Public** — the shareable recap card decoded from the URL param. Must stay reachable while signed out. |
 | `/privacy`, `/terms` | **Public** legal pages (required public for Google OAuth consent-screen verification). |
@@ -60,7 +60,7 @@ For the full request/response shape of the Drive sync (index file JSON, chunk na
 * **Aesthetics**: luxury dark-mode design system — deep dark background tones (`#03050c`), glassmorphic panels (`backdrop-blur`, translucent borders), glowing radial ambient backdrops. Match the existing component patterns rather than introducing a new visual language.
 * **`<img>` over `next/image`**: intentional. Every image in this app is a user-uploaded base64 `data:` URI (compressed client-side to webp via canvas before storage), not an optimizable remote asset — `next/image` doesn't meaningfully help here and forcing it across ~15 call sites risks layout regressions for no real gain. `npm run lint` will still flag these; that's expected and fine.
 * **Toasts, not `alert()`**: use `sonner`'s `toast.success`/`toast.error` for all user feedback. `window.confirm()` is acceptable only for the single irreversible "wipe all data" action.
-* **Shared UI primitives — reuse, don't re-hand-roll**: `src/components/ui/AmbientGlow.tsx` (background glow blobs), `src/components/ui/Skeleton.tsx` (`Skeleton`/`MediaCardSkeleton` shimmer placeholders), `src/components/BrandedSplash.tsx` (full-screen branded loading state), `src/components/ui/Badge.tsx`, and `src/components/ui/Loader.tsx` (`PageLoader`). If a page needs a loading state or a background glow, use these instead of writing new divs.
+* **Shared UI primitives — reuse, don't re-hand-roll**: `src/components/ui/AmbientGlow.tsx` (background glow blobs), `src/components/ui/Skeleton.tsx` (`Skeleton`/`MediaCardSkeleton` shimmer placeholders), `src/components/BrandedSplash.tsx` (full-screen branded loading state), `src/components/ui/Badge.tsx`, `src/components/ui/Loader.tsx` (`PageLoader`), and `src/components/ui/SectionHeader.tsx` (the icon+title+description header used by every Settings tab and every Profile tab). If a page needs a loading state, a background glow, or a tab-panel header, use these instead of writing new divs.
 * **Border radius is a token scale, not arbitrary values**: `rounded-lg/xl/2xl/3xl/4xl` map to 12/16/20/24/32px via `--radius-*` in `globals.css`'s `@theme` block. Don't add new `rounded-[Npx]` arbitrary values for one of those five sizes — use the token.
 
 ## Testing

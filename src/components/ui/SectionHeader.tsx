@@ -19,18 +19,18 @@ const TONE_STYLES: Record<Tone, { box: string; glow: string }> = {
     },
 };
 
-interface SettingsSectionHeaderProps {
+interface SectionHeaderProps {
     icon: ReactNode;
     title: string;
     description: string;
     tone?: Tone;
     action?: ReactNode;
-    /** Use a smaller box/heading for a sub-section header within a tab that already has a primary header above it. */
+    /** Use a smaller box/heading for a sub-section header within a panel that already has a primary header above it. */
     compact?: boolean;
 }
 
-/** The one header shape every Settings tab (and sub-section) should use, so all six tabs read as one settings app. */
-export function SettingsSectionHeader({ icon, title, description, tone = 'primary', action, compact = false }: SettingsSectionHeaderProps) {
+/** The one icon+title+description header shape used across Settings tabs and Profile tabs, so every tabbed panel in the app reads consistently. */
+export function SectionHeader({ icon, title, description, tone = 'primary', action, compact = false }: SectionHeaderProps) {
     const t = TONE_STYLES[tone];
     return (
         <div className="flex items-center justify-between gap-4 flex-wrap">

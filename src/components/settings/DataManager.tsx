@@ -8,7 +8,7 @@ import { getBackupMetadataFromDrive, BackupMetadata, TokenExpiredError } from '@
 import { Trash2, AlertTriangle, Database, RefreshCw, CheckCircle, Clock, AlertCircle, Cloud, Server, Box, Download, ArrowRightLeft, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SettingsSectionHeader } from './SettingsSectionHeader';
+import { SectionHeader } from '../ui/SectionHeader';
 
 function formatBytes(bytes: number) {
   if (!bytes || bytes <= 0) return '0 B';
@@ -128,7 +128,7 @@ export function DataManager() {
   return (
     <div className="flex flex-col flex-1 gap-8 pb-4">
       
-      <SettingsSectionHeader
+      <SectionHeader
         icon={<Database size={26} strokeWidth={2.5} />}
         title="Data & Cloud"
         description="Manage your local cache and Google Drive sync."

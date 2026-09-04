@@ -6,16 +6,14 @@ import { SettingsSidebar } from '@/components/settings/SettingsSidebar';
 import { SagasManager } from '@/components/settings/SagasManager';
 import { GenresManager } from '@/components/settings/GenresManager';
 import { DataManager } from '@/components/settings/DataManager';
-import { AchievementsManager } from '@/components/settings/AchievementsManager';
 import { AppearanceManager } from '@/components/settings/AppearanceManager';
-import { JournalManager } from '@/components/settings/JournalManager';
 import { PageLoader } from '@/components/ui/Loader';
 import { AmbientGlow } from '@/components/ui/AmbientGlow';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function SettingsPage() {
   const { isLoading } = useMedia();
-  const [activeTab, setActiveTab] = useState<'sagas' | 'genres' | 'data' | 'achievements' | 'appearance' | 'journal'>('data');
+  const [activeTab, setActiveTab] = useState<'sagas' | 'genres' | 'data' | 'appearance'>('data');
 
   if (isLoading) {
     return <PageLoader text="Loading settings..." />;
@@ -54,9 +52,7 @@ export default function SettingsPage() {
                   {activeTab === 'sagas' && <SagasManager />}
                   {activeTab === 'genres' && <GenresManager />}
                   {activeTab === 'data' && <DataManager />}
-                  {activeTab === 'achievements' && <AchievementsManager />}
                   {activeTab === 'appearance' && <AppearanceManager />}
-                  {activeTab === 'journal' && <JournalManager />}
                 </div>
               </motion.div>
             </AnimatePresence>
