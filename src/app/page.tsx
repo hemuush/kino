@@ -276,7 +276,7 @@ function SpotlightCard({ entry, setSelectedEntry, activeSlide, randomDeck, setAc
       {/* Apple styling glassmorphic backplate */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
 
-      <section className="relative w-full h-full rounded-[23px] border border-border overflow-hidden bg-card/65 dark:bg-[#0c0c0d]/90 p-5 sm:p-10 lg:p-16 flex flex-col justify-center">
+      <section className="relative w-full h-full rounded-[23px] border border-border overflow-hidden bg-card/65 dark:bg-[#0c0c0d]/90 p-5 sm:p-8 lg:p-10 flex flex-col justify-center">
         
         {/* Ambient color light projection */}
         <div className="absolute inset-0 overflow-hidden opacity-[0.25] dark:opacity-[0.35] pointer-events-none z-0">
@@ -299,10 +299,10 @@ function SpotlightCard({ entry, setSelectedEntry, activeSlide, randomDeck, setAc
               animate={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
               exit={{ opacity: 0, filter: "blur(10px)", scale: 0.99 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-8 lg:gap-14"
+              className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 lg:gap-10"
             >
               {/* Left Column: Details */}
-              <div className="space-y-4 sm:space-y-6 md:space-y-8 text-left flex-1 min-w-0 max-w-2xl">
+              <div className="space-y-3 sm:space-y-4 md:space-y-5 text-left flex-1 min-w-0 max-w-2xl">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-mono tracking-[0.25em] text-primary uppercase font-bold">
                     RECOMMENDED CINEMA
@@ -312,7 +312,7 @@ function SpotlightCard({ entry, setSelectedEntry, activeSlide, randomDeck, setAc
                 <div className="space-y-3 min-w-0">
                   <h2 
                     onClick={() => router.push(`/media/${entry.id}`)}
-                    className="text-2xl sm:text-4xl lg:text-6xl font-display font-bold tracking-tight leading-[1.05] cursor-pointer hover:text-primary transition-colors line-clamp-2 min-w-0"
+                    className="text-2xl sm:text-3xl lg:text-4xl font-display font-bold tracking-tight leading-[1.05] cursor-pointer hover:text-primary transition-colors line-clamp-2 min-w-0"
                   >
                     {entry.title}
                   </h2>
@@ -335,13 +335,13 @@ function SpotlightCard({ entry, setSelectedEntry, activeSlide, randomDeck, setAc
                 <div className="pt-1 sm:pt-2 flex flex-wrap gap-2.5">
                   <button
                     onClick={() => router.push(`/media/${entry.id}`)}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-foreground text-background hover:bg-foreground/90 transition px-5 py-2.5 sm:px-6.5 sm:py-3.5 text-[10px] uppercase font-display tracking-widest font-bold cursor-pointer active:scale-95 shadow-md"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-foreground text-background hover:bg-foreground/90 transition px-5 py-2.5 sm:px-6 sm:py-3 text-[10px] uppercase font-display tracking-widest font-bold cursor-pointer active:scale-95 shadow-md"
                   >
                     <Play size={12} className="fill-current" /> Quick Details
                   </button>
                   <Link
                     href="/collection"
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-foreground/5 hover:bg-foreground/10 text-foreground transition px-5 py-2.5 sm:px-6.5 sm:py-3.5 text-[10px] uppercase font-display tracking-widest font-bold cursor-pointer active:scale-95"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-foreground/15 bg-foreground/5 hover:bg-foreground/10 text-foreground transition px-5 py-2.5 sm:px-6 sm:py-3 text-[10px] uppercase font-display tracking-widest font-bold cursor-pointer active:scale-95"
                   >
                     Library
                   </Link>
@@ -365,7 +365,7 @@ function SpotlightCard({ entry, setSelectedEntry, activeSlide, randomDeck, setAc
                   </div>
 
                   {/* Desktop 3D Stacked Vinyl Deck */}
-                  <div className="hidden lg:flex relative w-[380px] h-[380px] items-center justify-center">
+                  <div className="hidden lg:flex relative w-[300px] h-[300px] items-center justify-center">
                     {/* Platter backing rim */}
                     <div className="absolute w-[84%] h-[84%] rounded-full border border-white/5 bg-black/40 backdrop-blur-md flex items-center justify-center shadow-2xl">
                       <div className="absolute inset-2 rounded-full border border-dashed border-white/10 opacity-20 animate-spin" style={{ animationDuration: '60s' }} />
