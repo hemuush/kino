@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useMedia } from '@/context/MediaContext';
-import { Trophy, CalendarDays, Calendar } from 'lucide-react';
+import { Trophy, CalendarDays, Calendar, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { SectionHeader } from '../ui/SectionHeader';
 
@@ -103,13 +103,34 @@ export function AchievementsManager() {
                 <SectionHeader
                     icon={<Calendar size={24} strokeWidth={2.5} />}
                     title="Your Wrapped"
-                    description="Relive your cinematic journey. Generate your interactive Kino Wrapped for the past week or month."
+                    description="Relive your cinematic journey. Generate your interactive Kino Wrapped for the week, month, or the whole year."
                     tone="purple"
                     compact
                 />
 
+                {/* Yearly Wrap — the flagship recap, given top billing and full width */}
+                <button
+                    onClick={() => router.push('/wraps?type=yearly')}
+                    className="relative w-full group overflow-hidden rounded-3xl border border-amber-500/25 bg-gradient-to-br from-amber-500/15 via-orange-500/5 to-transparent p-6 sm:p-8 text-left transition-all hover:border-amber-500/50 hover:shadow-[0_0_50px_rgba(245,158,11,0.18)] hover:-translate-y-1"
+                >
+                    <div className="absolute inset-0 bg-gradient-to-t from-amber-500/10 to-transparent translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500 ease-out" />
+                    <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity duration-500 group-hover:scale-110 transform origin-top-right">
+                        <Sparkles size={96} className="text-amber-500" />
+                    </div>
+                    <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+                        <div className="w-14 h-14 shrink-0 rounded-2xl bg-amber-500/20 flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.25)]">
+                            <Sparkles className="text-amber-500" size={28} strokeWidth={2.5} />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500">Flagship</span>
+                            <h4 className="text-2xl sm:text-3xl font-black font-display tracking-tight text-foreground">Yearly Wrap</h4>
+                            <p className="text-sm font-medium text-muted-foreground">Your whole year — hours watched, top genre, longest streak, and your standout title.</p>
+                        </div>
+                    </div>
+                </button>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <button 
+                    <button
                         onClick={() => router.push('/wraps?type=weekly')}
                         className="relative group overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 sm:p-8 text-left transition-all hover:border-primary/50 hover:shadow-[0_0_40px_rgba(var(--primary),0.15)] hover:-translate-y-1"
                     >

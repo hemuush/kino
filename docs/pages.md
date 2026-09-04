@@ -66,9 +66,9 @@ A tabbed identity page — **Overview** / **Achievements** / **Journal** — swi
 - **Achievements** (`src/components/profile/AchievementsManager.tsx`) — a fixed list of badges (`b.push({ id, name, desc, unlocked, icon, color })`), each `unlocked` computed inline from `entries` (counts of completed movies/shows/anime, perfect/high ratings, distinct genres used, favorites, franchise usage, total completions) — purely derived, nothing is persisted about badge state itself. Also hosts the two buttons that launch `/wraps?type=weekly|monthly`.
 - **Journal** (`src/components/profile/JournalManager.tsx`) — a composer (date picker defaulting to today + textarea) above a reverse-chronological list of entries (sorted by `date`, then `createdAt` as a tiebreaker for same-day entries), each editable/deletable inline. Talks only to `MediaContext`'s `journal`/`addJournalEntry`/`updateJournalEntry`/`deleteJournalEntry`.
 
-## `/wraps?type=weekly|monthly` — `src/app/wraps/page.tsx`
+## `/wraps?type=weekly|monthly|yearly` — `src/app/wraps/page.tsx`
 
-A thin wrapper: reads the `type` query param (redirects to `/settings` if it's missing/invalid — this route only makes sense arrived-at with a type), and renders `RecapModal` full-screen (`isOpen={true}` always, `onClose` calls `router.back()`). All the actual slide/stat logic lives in `RecapModal` — see [docs/components.md](components.md).
+A thin wrapper: reads the `type` query param (redirects to `/settings` if it's missing — this route only makes sense arrived-at with a type), and renders `RecapModal` full-screen (`isOpen={true}` always, `onClose` calls `router.back()`). `yearly` is the flagship recap — launched from the top-billed card in Profile → Achievements → Your Wrapped, above the Weekly/Monthly pair — and gets an extra "streak" slide the other two don't. All the actual slide/stat/pause logic lives in `RecapModal` — see [docs/components.md](components.md).
 
 ## `/share?d=<base64>` — `src/app/share/page.tsx`
 

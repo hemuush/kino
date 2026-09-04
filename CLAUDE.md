@@ -46,7 +46,7 @@ For the full request/response shape of the Drive sync (index file JSON, chunk na
 | `/sagas` | Franchise/saga chronological timelines. |
 | `/settings` | Tabbed, config-only: Data & Cloud (sync status, export/import, account migration, wipe), Appearance (accent color), Sagas, Genres. |
 | `/profile` | Tabbed identity page: **Overview** (watch time, badge tier, personality label, library mix, favorites), **Achievements** (badges + Wrapped recap launchers), **Journal** (private date-stamped notes). |
-| `/wraps?type=weekly\|monthly` | Full-screen animated recap slideshow, ends with a shareable link. |
+| `/wraps?type=weekly\|monthly\|yearly` | Full-screen animated recap slideshow (yearly is the flagship, with an extra streak slide), ends with a shareable link. |
 | `/share?d=<base64>` | **Public** — the shareable recap card decoded from the URL param. Must stay reachable while signed out. |
 | `/privacy`, `/terms` | **Public** legal pages (required public for Google OAuth consent-screen verification). |
 

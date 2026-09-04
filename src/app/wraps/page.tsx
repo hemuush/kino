@@ -9,7 +9,7 @@ function WrapsContent() {
   const { entries, genres } = useMedia();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const typeParam = searchParams.get('type') as 'weekly' | 'monthly' | null;
+  const typeParam = searchParams.get('type') as 'weekly' | 'monthly' | 'yearly' | null;
 
   useEffect(() => {
     if (!typeParam) {
