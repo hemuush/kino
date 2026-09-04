@@ -78,11 +78,6 @@ function matchesMood(entry: MediaEntry, genreNamesById: Map<string, string>, moo
   return entryGenreNames.some(name => keywords.some(kw => name.includes(kw)));
 }
 
-// Alternating tilt angles for The Vault's fanned record-crate list — fixed, not
-// random, so the layout is stable across renders (React 19 purity: no Math.random
-// during render).
-const VAULT_ANGLES = [-4, 3, -2, 4, -3, 2, -4, 3, -2, 4];
-
 // SVG stroke-dasharray/offset for a circular progress ring at the given radius.
 function progressRing(percent: number, radius: number) {
   const circumference = 2 * Math.PI * radius;
@@ -547,14 +542,14 @@ function DashboardContent() {
     Promise.resolve().then(() => setNowTimestamp(Date.now()));
   }, []);
 
-  // Release Radar: a chronological window of releases centered on "today" (rather than
-  // just the newest-dated 15), so the wave timeline has genuine past-to-future flow.
+  // Release Radar: newest-dated first (future releases lead, most-recently-past trail),
+  // windowed around "today" so the wave timeline still has genuine past/future flow.
   const timelineItems = useMemo(() => {
     const dated = [...entries]
       .filter(e => e.releaseDate)
-      .sort((a, b) => new Date(a.releaseDate!).getTime() - new Date(b.releaseDate!).getTime());
+      .sort((a, b) => new Date(b.releaseDate!).getTime() - new Date(a.releaseDate!).getTime());
     if (dated.length <= 15) return dated;
-    const todayIdx = dated.findIndex(e => new Date(e.releaseDate!).getTime() >= nowTimestamp);
+    const todayIdx = dated.findIndex(e => new Date(e.releaseDate!).getTime() <= nowTimestamp);
     const centerIdx = todayIdx === -1 ? dated.length - 1 : todayIdx;
     const start = Math.max(0, Math.min(centerIdx - 7, dated.length - 15));
     return dated.slice(start, start + 15);
@@ -563,7 +558,7 @@ function DashboardContent() {
   // Index at which "today" falls within timelineItems — only meaningful (and only
   // rendered as a marker) when it genuinely splits the visible window in two.
   const todaySplitIndex = useMemo(() => {
-    const idx = timelineItems.findIndex(e => new Date(e.releaseDate!).getTime() > nowTimestamp);
+    const idx = timelineItems.findIndex(e => new Date(e.releaseDate!).getTime() <= nowTimestamp);
     return idx > 0 && idx < timelineItems.length ? idx : -1;
   }, [timelineItems, nowTimestamp]);
 
@@ -812,7 +807,7 @@ function DashboardContent() {
                       onClick={() => router.push(`/media/${entry.id}`)}
                     >
                       <span className={`text-[9px] font-mono tracking-widest font-bold px-2 py-1 rounded-md border shadow-sm whitespace-nowrap ${isFuture ? 'text-primary bg-primary/10 border-primary/20' : 'text-muted-foreground bg-card border-border/60 opacity-70'}`}>
-                        {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })}
                       </span>
 
                       <div className={`w-full aspect-[3/4] rounded-xl overflow-hidden shadow-md border transition-all duration-300 relative bg-card group-hover:-translate-y-1.5 ${isFuture ? 'border-primary/40 group-hover:shadow-lg group-hover:shadow-primary/20' : 'border-border/40 opacity-70'}`}>
@@ -1122,13 +1117,13 @@ function DashboardContent() {
                 }
               />
 
-              <div data-lenis-prevent className="w-full overflow-x-auto hide-scrollbar scroll-smooth px-3 sm:px-8 lg:px-12" style={{ paddingTop: 24, paddingBottom: 16 }}>
-                <div className="flex items-center w-max">
+              <div data-lenis-prevent className="w-full overflow-x-auto hide-scrollbar scroll-smooth px-3 sm:px-8 lg:px-12" style={{ paddingTop: 20, paddingBottom: 20 }}>
+                <div className="flex items-start gap-4 sm:gap-5 w-max">
                   {completed.slice(0, 10).map((entry, i) => (
                     <div
                       key={entry.id}
-                      className="relative w-[120px] h-[120px] sm:w-[150px] sm:h-[150px] shrink-0 rounded-xl overflow-hidden border border-border/60 shadow-lg cursor-pointer hover:z-20 hover:!rotate-0 hover:scale-105 transition-transform duration-300"
-                      style={{ transform: `rotate(${VAULT_ANGLES[i % VAULT_ANGLES.length]}deg)`, marginRight: i === Math.min(completed.length, 10) - 1 ? 0 : -28, zIndex: i }}
+                      className="relative w-[110px] h-[110px] sm:w-[140px] sm:h-[140px] shrink-0 rounded-xl overflow-hidden border border-border/60 shadow-lg cursor-pointer hover:-translate-y-2 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300"
+                      style={{ transform: `translateY(${i % 2 === 0 ? 0 : 14}px)` }}
                       onClick={() => router.push(`/media/${entry.id}`)}
                     >
                       {entry.coverImage ? (
@@ -1137,7 +1132,7 @@ function DashboardContent() {
                         <div className="absolute inset-0" style={{ background: placeholderGradient(entry.title) }} />
                       )}
                       {entry.rating > 0 && (
-                        <div className="absolute -top-1.5 -right-1.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-foreground text-background flex items-center justify-center text-[9px] sm:text-[10px] font-display font-bold shadow-md">
+                        <div className="absolute top-2 right-2 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-foreground text-background flex items-center justify-center text-[9px] sm:text-[10px] font-display font-bold shadow-md">
                           {entry.rating}
                         </div>
                       )}
