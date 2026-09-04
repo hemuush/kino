@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { useMedia } from '@/context/MediaContext';
 import { Tag as DbTag } from '@/lib/db';
-import { Trash2, Edit2, Check, X, Plus } from 'lucide-react';
+import { Trash2, Edit2, Check, X, Plus, Tag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SettingsSectionHeader } from './SettingsSectionHeader';
 
 export function GenresManager() {
     const { genres, setGenres } = useMedia();
@@ -39,8 +40,11 @@ export function GenresManager() {
     return (
         <div className="flex flex-col h-full">
             <header className="mb-8">
-                <h3 className="font-display text-2xl sm:text-3xl font-black tracking-tight text-foreground">Genres Matrix</h3>
-                <p className="text-sm text-muted-foreground mt-2 font-medium">Manage your custom list of categories, themes, and genres.</p>
+                <SettingsSectionHeader
+                    icon={<Tag size={26} strokeWidth={2.5} />}
+                    title="Genres Matrix"
+                    description="Manage your custom list of categories, themes, and genres."
+                />
             </header>
 
             <form onSubmit={addNewGenre} className="flex flex-col sm:flex-row gap-3 mb-8">

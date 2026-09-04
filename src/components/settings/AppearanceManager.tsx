@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Palette, Check } from 'lucide-react';
 import { APP_COLORS } from '@/lib/colors';
+import { SettingsSectionHeader } from './SettingsSectionHeader';
 
 export function AppearanceManager() {
   const [activeColor, setActiveColor] = useState(() => {
@@ -25,15 +26,11 @@ export function AppearanceManager() {
 
   return (
     <section className="space-y-10">
-      <div className="flex items-center gap-4">
-        <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 backdrop-blur-xl rounded-2xl text-primary shadow-[0_0_30px_-5px_rgba(var(--primary),0.3)]">
-          <Palette size={26} strokeWidth={2.5} />
-        </div>
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-display font-black text-foreground tracking-tight">Appearance</h2>
-          <p className="text-sm text-muted-foreground mt-1 font-medium">Customize your Kino experience.</p>
-        </div>
-      </div>
+      <SettingsSectionHeader
+        icon={<Palette size={26} strokeWidth={2.5} />}
+        title="Appearance"
+        description="Customize your Kino experience."
+      />
 
       <div className="pt-6 border-t border-border/40">
         <h3 className="text-lg font-bold font-display uppercase tracking-widest text-foreground mb-4">Accent Color</h3>

@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { useMedia } from '@/context/MediaContext';
 import { Trophy, CalendarDays, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { SettingsSectionHeader } from './SettingsSectionHeader';
 
 export function AchievementsManager() {
     const { entries } = useMedia();
@@ -50,17 +51,12 @@ export function AchievementsManager() {
             {/* Badges Section */}
             <div className="space-y-8">
                 <div className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-1">
-                        <h3 className="text-2xl sm:text-3xl font-black font-display tracking-tight text-foreground flex items-center gap-3">
-                            <div className="p-2.5 bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 rounded-xl text-primary shadow-[0_0_20px_-5px_rgba(var(--primary),0.3)]">
-                                <Trophy size={24} strokeWidth={2.5} />
-                            </div>
-                            Achievements
-                        </h3>
-                        <p className="text-sm text-muted-foreground font-medium max-w-2xl mt-1">
-                            Track your milestones and earn badges based on your watch history and library curation.
-                        </p>
-                    </div>
+                    <SettingsSectionHeader
+                        icon={<Trophy size={24} strokeWidth={2.5} />}
+                        title="Achievements"
+                        description="Track your milestones and earn badges based on your watch history and library curation."
+                        compact
+                    />
 
                     {/* Overall Progress */}
                     <div className="w-full bg-black/20 dark:bg-black/40 border border-white/5 rounded-2xl p-5 flex flex-col gap-3">
@@ -104,17 +100,13 @@ export function AchievementsManager() {
 
             {/* Recaps Section */}
             <div className="space-y-8 pt-8 border-t border-border/30">
-                <div className="flex flex-col gap-1">
-                    <h3 className="text-2xl sm:text-3xl font-black font-display tracking-tight text-foreground flex items-center gap-3">
-                        <div className="p-2.5 bg-gradient-to-br from-purple-500/20 to-purple-500/5 border border-purple-500/20 rounded-xl text-purple-500 shadow-[0_0_20px_-5px_rgba(168,85,247,0.3)]">
-                            <Calendar className="text-purple-500" size={24} strokeWidth={2.5} />
-                        </div>
-                        Your Wrapped
-                    </h3>
-                    <p className="text-sm text-muted-foreground font-medium max-w-2xl mt-1">
-                        Relive your cinematic journey. Generate your interactive Kino Wrapped for the past week or month.
-                    </p>
-                </div>
+                <SettingsSectionHeader
+                    icon={<Calendar size={24} strokeWidth={2.5} />}
+                    title="Your Wrapped"
+                    description="Relive your cinematic journey. Generate your interactive Kino Wrapped for the past week or month."
+                    tone="purple"
+                    compact
+                />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <button 

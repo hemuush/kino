@@ -5,9 +5,10 @@ import JsonImporter from '@/components/settings/JsonImporter';
 import { useMedia } from '@/context/MediaContext';
 import { useAuth } from '@/context/AuthContext';
 import { getBackupMetadataFromDrive, BackupMetadata, TokenExpiredError } from '@/lib/googleDrive';
-import { Trash2, AlertTriangle, Database, RefreshCw, CheckCircle, Clock, AlertCircle, Cloud, Server, Box, Download, ArrowRightLeft } from 'lucide-react';
+import { Trash2, AlertTriangle, Database, RefreshCw, CheckCircle, Clock, AlertCircle, Cloud, Server, Box, Download, ArrowRightLeft, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { SettingsSectionHeader } from './SettingsSectionHeader';
 
 function formatBytes(bytes: number) {
   if (!bytes || bytes <= 0) return '0 B';
@@ -47,6 +48,7 @@ export function DataManager() {
   const { accessToken, logout } = useAuth();
   const [backupMetadata, setBackupMetadata] = useState<BackupMetadata | null>(null);
   const [isMetadataLoading, setIsMetadataLoading] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const localSize = formatLocalStorageSize();
   const entryCount = Object.keys(entries || {}).length;
@@ -126,15 +128,11 @@ export function DataManager() {
   return (
     <div className="flex flex-col flex-1 gap-8 pb-4">
       
-      <div className="flex items-center gap-4">
-        <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 backdrop-blur-xl rounded-2xl text-primary shadow-[0_0_30px_-5px_rgba(var(--primary),0.3)]">
-          <Database size={26} strokeWidth={2.5} />
-        </div>
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-display font-black text-foreground tracking-tight">Data & Cloud</h2>
-          <p className="text-sm text-muted-foreground mt-1 font-medium">Manage your local cache and Google Drive sync.</p>
-        </div>
-      </div>
+      <SettingsSectionHeader
+        icon={<Database size={26} strokeWidth={2.5} />}
+        title="Data & Cloud"
+        description="Manage your local cache and Google Drive sync."
+      />
 
       {/* Premium Dashboard Stats */}
       <motion.div 
@@ -241,34 +239,58 @@ export function DataManager() {
           </div>
         </div>
 
-        {/* File Breakdown List */}
+        {/* Advanced: raw chunk-file breakdown + manual restructure — collapsed by default, most users never need this */}
         {backupMetadata && backupMetadata.files && backupMetadata.files.length > 0 && (
-          <div className="mt-8 pt-8 border-t border-border/40">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-              <h4 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-                <Database size={16} className="text-blue-500" />
-                Raw Drive Files
-              </h4>
-              <button 
-                onClick={forceSync}
-                className="bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2 rounded-xl text-xs font-bold transition-colors border border-primary/20 flex items-center gap-2"
-              >
-                <RefreshCw size={14} className={isSyncing ? "animate-spin" : ""} />
-                Force Restructure Data
-              </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {backupMetadata.files.map((file, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 rounded-[14px] bg-background/50 border border-border/40">
-                  <span className="text-xs font-mono font-medium text-foreground/80 truncate mr-3" title={file.name}>
-                    {file.name}
-                  </span>
-                  <span className="text-xs font-bold text-primary shrink-0 bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20">
-                    {formatBytes(file.size)}
-                  </span>
-                </div>
-              ))}
-            </div>
+          <div className="mt-8 pt-6 border-t border-border/40">
+            <button
+              onClick={() => setShowAdvanced(v => !v)}
+              className="w-full flex items-center justify-between gap-4 text-left group"
+            >
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider group-hover:text-foreground transition-colors">
+                Advanced: Raw Drive Files & Manual Restructure
+              </span>
+              <ChevronDown size={16} className={`text-muted-foreground shrink-0 transition-transform duration-300 ${showAdvanced ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence initial={false}>
+              {showAdvanced && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                      <h4 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+                        <Database size={16} className="text-blue-500" />
+                        Raw Drive Files
+                      </h4>
+                      <button
+                        onClick={forceSync}
+                        className="bg-primary/10 hover:bg-primary/20 text-primary px-4 py-2 rounded-xl text-xs font-bold transition-colors border border-primary/20 flex items-center gap-2"
+                      >
+                        <RefreshCw size={14} className={isSyncing ? "animate-spin" : ""} />
+                        Force Restructure Data
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {backupMetadata.files.map((file, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 rounded-[14px] bg-background/50 border border-border/40">
+                          <span className="text-xs font-mono font-medium text-foreground/80 truncate mr-3" title={file.name}>
+                            {file.name}
+                          </span>
+                          <span className="text-xs font-bold text-primary shrink-0 bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20">
+                            {formatBytes(file.size)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </motion.section>
