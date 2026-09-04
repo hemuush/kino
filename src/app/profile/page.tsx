@@ -17,13 +17,16 @@ import {
   User,
   LayoutGrid,
   NotebookPen,
+  Share2,
+  BarChart3,
 } from "lucide-react";
 import Link from "next/link";
 import { isEpisodic, getWatchedRuntimeMinutes } from "@/lib/db";
 import { AmbientGlow } from "@/components/ui/AmbientGlow";
 import { AchievementsManager } from "@/components/profile/AchievementsManager";
 import { JournalManager } from "@/components/profile/JournalManager";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 type ProfileTab = 'overview' | 'achievements' | 'journal';
 
@@ -83,6 +86,38 @@ export default function ProfilePage() {
   const { entries, isLoading } = useMedia();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<ProfileTab>('overview');
+
+  // Deferred: anchors the trailing-6-month trend window without calling Date.now() during render.
+  const [nowTs, setNowTs] = useState(0);
+  useEffect(() => {
+    Promise.resolve().then(() => setNowTs(Date.now()));
+  }, []);
+
+  const monthlyTrend = useMemo(() => {
+    if (!nowTs) return [];
+    const base = new Date(nowTs);
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(base.getFullYear(), base.getMonth() - (5 - i), 1);
+      return { key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleDateString(undefined, { month: 'short' }), minutes: 0 };
+    });
+    const indexByKey = new Map(months.map((m, idx) => [m.key, idx]));
+    entries.forEach((e) => {
+      const d = new Date(e.updatedAt || e.createdAt);
+      const idx = indexByKey.get(`${d.getFullYear()}-${d.getMonth()}`);
+      if (idx !== undefined) months[idx].minutes += getWatchedRuntimeMinutes(e);
+    });
+    return months;
+  }, [entries, nowTs]);
+
+  const handleSharePersona = (personaName: string, personaIcon: string, personaTagline: string) => {
+    const payload = { p: personaName, pi: personaIcon, pt: personaTagline };
+    const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
+    const url = `${window.location.origin}/share?d=${encoded}`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url);
+      toast.success('Persona link copied!');
+    }
+  };
 
   const stats = useMemo(() => {
     let totalWatchMinutes = 0;
@@ -284,9 +319,16 @@ export default function ProfilePage() {
                       {badge.name}
                     </span>
                   </motion.div>
-                  <motion.p variants={fadeUp} custom={1.5} className="font-display text-base sm:text-lg font-bold text-foreground tracking-tight mb-1">
-                    <span aria-hidden="true">{personality.icon}</span> {personality.name}
-                    <span className="block sm:inline sm:ml-2 text-muted-foreground font-sans font-medium text-xs sm:text-sm">{personality.tagline}</span>
+                  <motion.p variants={fadeUp} custom={1.5} className="font-display text-base sm:text-lg font-bold text-foreground tracking-tight mb-1 flex flex-wrap items-center gap-x-2">
+                    <span><span aria-hidden="true">{personality.icon}</span> {personality.name}</span>
+                    <span className="text-muted-foreground font-sans font-medium text-xs sm:text-sm">{personality.tagline}</span>
+                    <button
+                      onClick={() => handleSharePersona(personality.name, personality.icon, personality.tagline)}
+                      className="inline-flex items-center gap-1 text-[10px] font-sans font-bold uppercase tracking-wider text-primary bg-primary/10 hover:bg-primary/20 px-2 py-1 rounded-full border border-primary/20 transition-colors"
+                      title="Copy a shareable link for your persona"
+                    >
+                      <Share2 size={10} /> Share
+                    </button>
                   </motion.p>
                   <motion.p variants={fadeUp} custom={2} className="text-muted-foreground text-sm truncate">
                     {user?.email || ""}
@@ -393,6 +435,43 @@ export default function ProfilePage() {
             />
           </div>
         </motion.section>
+
+        {/* ── Watch Time Trend ── */}
+        {monthlyTrend.length > 0 && monthlyTrend.some(m => m.minutes > 0) && (
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.5 }}
+            className="mb-6 rounded-[28px] border border-border/60 bg-card/60 backdrop-blur-xl shadow-sm p-6"
+          >
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-5">
+              <BarChart3 size={13} />
+              Watch Time — Last 6 Months
+            </div>
+            <div className="flex items-end justify-between gap-2 sm:gap-4 h-28">
+              {(() => {
+                const max = Math.max(...monthlyTrend.map(m => m.minutes), 1);
+                return monthlyTrend.map((m) => {
+                  const hours = Math.round((m.minutes / 60) * 10) / 10;
+                  const heightPct = Math.max(4, Math.round((m.minutes / max) * 100));
+                  return (
+                    <div key={m.key} className="flex-1 flex flex-col items-center gap-2 h-full justify-end" title={`${hours}h in ${m.label}`}>
+                      <motion.div
+                        initial={{ height: 0 }}
+                        whileInView={{ height: `${heightPct}%` }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.7, ease: "easeOut" }}
+                        className={`w-full max-w-[36px] rounded-t-lg ${m.minutes > 0 ? 'bg-primary' : 'bg-muted'}`}
+                      />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{m.label}</span>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </motion.section>
+        )}
 
         {/* ── Currently Watching + Library Breakdown ── */}
         <motion.section

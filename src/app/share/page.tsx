@@ -14,6 +14,10 @@ interface ShareData {
   c?: number | string;
   g?: string;
   tm?: string;
+  /** Persona share card fields (from Profile's "Share" button) — icon, name, tagline. */
+  pi?: string;
+  p?: string;
+  pt?: string;
 }
 
 function ShareContent() {
@@ -51,6 +55,49 @@ function ShareContent() {
 
   if (!data) {
     return <div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>;
+  }
+
+  if (data.p) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 sm:p-8 relative overflow-hidden">
+        <AmbientGlow glows={[
+          "top-[-10%] left-[-10%] w-[70%] h-[60%] bg-primary/20 blur-[140px]",
+          "bottom-[-10%] right-[-10%] w-[70%] h-[60%] bg-purple-500/20 blur-[140px]",
+        ]} />
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.6, type: "spring", bounce: 0.4 }}
+          className="w-full max-w-sm bg-gradient-to-b from-card/90 to-card/40 backdrop-blur-3xl border border-white/10 shadow-2xl rounded-4xl sm:rounded-[40px] p-8 sm:p-10 flex flex-col items-center text-center relative z-10 overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 via-transparent to-purple-500/10 pointer-events-none" />
+
+          <div className="relative z-10 inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold tracking-widest uppercase mb-6">
+            <Sparkles size={12} className="mr-1.5" />
+            Kino Persona
+          </div>
+          <div className="relative z-10 text-7xl mb-4" aria-hidden="true">{data.pi}</div>
+          <h1 className="relative z-10 text-3xl sm:text-4xl font-display font-black tracking-tight text-foreground leading-tight mb-3">{data.p}</h1>
+          <p className="relative z-10 text-muted-foreground text-base sm:text-lg font-medium max-w-xs">{data.pt}</p>
+
+          <div className="relative z-10 mt-8 pt-6 border-t border-white/5 w-full flex justify-center">
+            <KinoLogo />
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="mt-8 relative z-10 text-center"
+        >
+          <Link href="/" className="px-8 py-3.5 bg-foreground hover:bg-foreground/90 text-background font-bold font-display uppercase tracking-widest text-[10px] rounded-full transition-transform hover:scale-105 inline-block shadow-xl">
+            Build Your Own Tracker
+          </Link>
+        </motion.div>
+      </div>
+    );
   }
 
   return (
