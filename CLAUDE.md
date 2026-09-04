@@ -2,6 +2,8 @@
 
 Kino is a premium, single-user media tracker (movies/TV/anime) built as a **serverless PWA**. There is no backend server and no database of any kind (no IndexedDB, no SQL, no ORM) — the signed-in user's Google Drive `appDataFolder` *is* the database. Everything else is client-side React state. Keep this in mind before assuming a "backend" or "db layer" exists to modify.
 
+> ⚠️ **There is no undo for data loss here.** `src/lib/googleDrive.ts`'s `uploadBackupToDrive` has empty-state safety guards that exist because of a real incident where a transient Drive-listing glitch got treated as "empty account" and a subsequent write permanently deleted a user's whole library (Drive's delete bypasses trash). Read the guard's comments in that file and in [docs/data-and-sync.md](docs/data-and-sync.md) before touching anything in the sync path — do not remove or weaken them to "simplify" the code.
+
 ## Commands
 * Dev server: `npm run dev` (Turbopack)
 * Build: `npm run build`

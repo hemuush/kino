@@ -48,6 +48,13 @@ export function MediaProvider({ children }: { children: ReactNode }) {
   const uploadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const latestDataRef = useRef<{ entries: MediaEntry[]; genres: Tag[]; franchises: Tag[]; journal: JournalEntry[]; }>({ entries: [], genres: [], franchises: [], journal: [] });
   const hasFetchedFromDriveRef = useRef<boolean>(false);
+  // True once this session has legitimately observed non-empty data — let uploadBackupToDrive's
+  // empty-state guards tell "the user really did delete everything" apart from "local state
+  // never actually loaded." hasSeenRealEntriesRef is the critical one (protects the irrecoverable
+  // chunk files) and must only flip true for real entries, never for e.g. the default genre seed
+  // a fresh load applies regardless — see googleDrive.ts for why that distinction matters.
+  const hasSeenRealEntriesRef = useRef<boolean>(false);
+  const hasSeenRealDataRef = useRef<boolean>(false);
 
   // Warn before unload when upload is pending
   useEffect(() => {
@@ -67,14 +74,20 @@ export function MediaProvider({ children }: { children: ReactNode }) {
     if (newEntries !== undefined) {
       setEntries(newEntries);
       latestDataRef.current.entries = newEntries;
+      if (newEntries.length > 0) {
+        hasSeenRealEntriesRef.current = true;
+        hasSeenRealDataRef.current = true;
+      }
     }
     if (newGenres !== undefined) {
       setGenres(newGenres);
       latestDataRef.current.genres = newGenres;
+      if (newGenres.length > 0) hasSeenRealDataRef.current = true;
     }
     if (newFranchises !== undefined) {
       setFranchises(newFranchises);
       latestDataRef.current.franchises = newFranchises;
+      if (newFranchises.length > 0) hasSeenRealDataRef.current = true;
     }
     if (newJournal !== undefined) {
       setJournal(newJournal);
@@ -101,7 +114,7 @@ export function MediaProvider({ children }: { children: ReactNode }) {
           franchises: currentFranchises,
           journal: currentJournal,
           timestamp: Date.now()
-        });
+        }, { trustEmptyEntries: hasSeenRealEntriesRef.current, trustEmptyState: hasSeenRealDataRef.current });
         setSyncStatus('synced');
         setLastSyncedAt(Date.now());
         // Drive upload successful
@@ -113,6 +126,12 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         if (error instanceof TokenExpiredError || (error as Error).message?.includes('401')) {
           console.warn("Session expired during sync");
           logout(false);
+        } else if ((error as Error).message?.startsWith('Refusing to sync')) {
+          console.error("Drive sync blocked by safety guard:", error);
+          toast.error("Sync paused to protect your data", {
+            description: "Your library may not have finished loading. Refresh the page before making more changes.",
+            duration: 8000,
+          });
         } else {
           console.error("Drive sync error:", error);
         }
@@ -222,13 +241,20 @@ export function MediaProvider({ children }: { children: ReactNode }) {
         franchises: latestDataRef.current.franchises,
         journal: latestDataRef.current.journal,
         timestamp: Date.now()
-      });
+      }, { trustEmptyEntries: hasSeenRealEntriesRef.current, trustEmptyState: hasSeenRealDataRef.current });
       setSyncStatus('synced');
       setLastSyncedAt(Date.now());
       toast.success("Successfully synchronized to Drive.");
-    } catch (_error) {
+    } catch (error) {
       setSyncStatus('error');
-      toast.error("Failed to sync to Drive.");
+      if ((error as Error).message?.startsWith('Refusing to sync')) {
+        toast.error("Sync paused to protect your data", {
+          description: "Your library may not have finished loading. Refresh the page before forcing a sync.",
+          duration: 8000,
+        });
+      } else {
+        toast.error("Failed to sync to Drive.");
+      }
     }
   }, [accessToken]);
 

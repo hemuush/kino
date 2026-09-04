@@ -37,7 +37,7 @@ export function clearDriveCache() {
 
 interface DriveFile { id: string; name: string; size?: number; modifiedTime?: string; }
 
-async function listAllKinoFiles(accessToken: string): Promise<DriveFile[]> {
+async function listAllKinoFiles(accessToken: string, _isRetry = false): Promise<DriveFile[]> {
   const query = encodeURIComponent(`name contains 'kino-' and trashed=false`);
   const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}&spaces=appDataFolder&fields=files(id,name,size,modifiedTime)&orderBy=modifiedTime desc&t=${Date.now()}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -48,7 +48,18 @@ async function listAllKinoFiles(accessToken: string): Promise<DriveFile[]> {
   if (!response.ok) throw new Error(`Failed to query Drive files: Status ${response.status}`);
 
   const data = await response.json();
-  return (data.files || []).map((f: { id: string; name: string; size?: string }) => ({ ...f, size: Number(f.size || 0) }));
+  const files = (data.files || []).map((f: { id: string; name: string; size?: string }) => ({ ...f, size: Number(f.size || 0) }));
+
+  // Drive's listing can occasionally come back empty right after a real write elsewhere
+  // (eventual consistency), not because the account is actually empty. Treating that blip as
+  // "no backup exists" is exactly how a transient glitch turns into deleting a real library —
+  // one retry closes almost all of that gap before any caller acts on "no files."
+  if (files.length === 0 && !_isRetry) {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    return listAllKinoFiles(accessToken, true);
+  }
+
+  return files;
 }
 
 async function uploadMultipart(accessToken: string, content: string, fileName: string, fileId?: string): Promise<string> {
@@ -138,18 +149,51 @@ export async function getBackupMetadataFromDrive(accessToken: string): Promise<B
   };
 }
 
-export async function uploadBackupToDrive(accessToken: string, rawData: BackupData | MediaEntry[]): Promise<boolean> {
+export async function uploadBackupToDrive(
+  accessToken: string,
+  rawData: BackupData | MediaEntry[],
+  options?: { trustEmptyEntries?: boolean; trustEmptyState?: boolean }
+): Promise<boolean> {
   const data = Array.isArray(rawData) ? { entries: rawData, genres: [], franchises: [] } : rawData;
   const entries = data.entries || [];
-  
+  const genres = data.genres || [];
+  const franchises = data.franchises || [];
+
+  const existingFiles = await listAllKinoFiles(accessToken);
+  const existingChunkCount = existingFiles.filter(f => f.name.startsWith(CHUNK_PREFIX)).length;
+  const existingIndexFile = existingFiles.find(f => f.name === BACKUP_INDEX_NAME);
+
+  // Safety net #1 (the critical one): refuse to let an upload that thinks there are zero
+  // entries delete chunk files Drive still has — that deletion is permanent (files.delete
+  // bypasses trash), so this is the one guard that actually protects irrecoverable data.
+  // `trustEmptyEntries` must specifically reflect that THIS session has itself observed real
+  // (non-empty) entries at some point — not just "some field somewhere was non-empty" (a fresh
+  // session seeds default genres on load regardless, which must never count as trust here).
+  if (entries.length === 0 && existingChunkCount > 0 && !options?.trustEmptyEntries) {
+    throw new Error(
+      'Refusing to sync: local library shows zero entries but Drive still has existing chunk files. ' +
+      'This usually means the app has not finished loading your data yet — refresh instead of editing.'
+    );
+  }
+
+  // Safety net #2 (softer): the index file (genres/sagas) is overwritten, not deleted, so a
+  // stale revision is more likely recoverable — but still worth refusing when it looks like a
+  // session that never saw real data at all is about to blank it out.
+  if (entries.length === 0 && genres.length === 0 && franchises.length === 0 && existingIndexFile && !options?.trustEmptyState) {
+    throw new Error(
+      'Refusing to sync: local library is empty but Drive still has an existing backup. ' +
+      'This usually means the app has not finished loading your data yet — refresh instead of editing.'
+    );
+  }
+
   // 1. Partition entries and separate heavy images
   const chunks: MediaEntry[][] = [];
   const imageChunks: Record<string, string>[] = [];
-  
+
   for (let i = 0; i < entries.length; i += CHUNK_SIZE) {
     const chunkEntries = entries.slice(i, i + CHUNK_SIZE);
     const chunkMap: Record<string, string> = {};
-    
+
     const textEntries = chunkEntries.map(e => {
       if (e.coverImage) {
         chunkMap[String(e.id)] = e.coverImage;
@@ -157,13 +201,11 @@ export async function uploadBackupToDrive(accessToken: string, rawData: BackupDa
       const { coverImage: _coverImage, ...rest } = e;
       return rest as MediaEntry;
     });
-    
+
     chunks.push(textEntries);
     imageChunks.push(chunkMap);
   }
 
-  const existingFiles = await listAllKinoFiles(accessToken);
-  
   // 2. Upload chunks that changed
   for (let i = 0; i < chunks.length; i++) {
     const chunkName = `${CHUNK_PREFIX}${i}.json`;
