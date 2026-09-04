@@ -2,12 +2,12 @@
 
 import { useMemo } from 'react';
 import { useMedia } from '@/context/MediaContext';
-import { Trophy, CalendarDays, Calendar, Sparkles } from 'lucide-react';
+import { Trophy, CalendarDays, Calendar, Sparkles, Film } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { SectionHeader } from '../ui/SectionHeader';
 
 export function AchievementsManager() {
-    const { entries } = useMedia();
+    const { entries, franchises } = useMedia();
     const router = useRouter();
 
     const badges = useMemo(() => {
@@ -45,6 +45,27 @@ export function AchievementsManager() {
         
         return b;
     }, [entries]);
+
+    // Dynamic, per-saga completion badges — works for any franchise a user has tagged
+    // (Harry Potter, the MCU, whatever), not a hardcoded list of titles, since Sagas
+    // are already user-named. Requires 2+ titles so a single-entry "saga" doesn't count.
+    const sagaBadges = useMemo(() => {
+        return franchises
+            .map(f => {
+                const items = entries.filter(e => e.franchiseId === f.id);
+                if (items.length < 2) return null;
+                const completedCount = items.filter(e => e.status === 'Completed').length;
+                return {
+                    id: `saga-${f.id}`,
+                    name: f.name,
+                    total: items.length,
+                    completedCount,
+                    unlocked: completedCount === items.length,
+                };
+            })
+            .filter((b): b is { id: string; name: string; total: number; completedCount: number; unlocked: boolean } => b !== null)
+            .sort((a, b) => Number(b.unlocked) - Number(a.unlocked) || b.total - a.total);
+    }, [franchises, entries]);
 
     return (
         <section className="space-y-12">
@@ -97,6 +118,43 @@ export function AchievementsManager() {
                     ))}
                 </div>
             </div>
+
+            {/* Saga Completions — dynamic, one per franchise the user has tagged */}
+            {sagaBadges.length > 0 && (
+                <div className="space-y-8 pt-8 border-t border-border/30">
+                    <SectionHeader
+                        icon={<Film size={24} strokeWidth={2.5} />}
+                        title="Saga Completions"
+                        description="Finish every title in one of your Sagas — Harry Potter, the MCU, or anything else you've tagged — to unlock it."
+                        tone="primary"
+                        compact
+                    />
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+                        {sagaBadges.map((badge) => (
+                            <div
+                                key={badge.id}
+                                className={`group relative overflow-hidden rounded-3xl border-2 p-5 sm:p-6 flex flex-col items-center text-center transition-all duration-500 ${
+                                    badge.unlocked
+                                        ? 'bg-gradient-to-b from-card/80 to-card/40 bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/20 shadow-[0_8px_30px_rgb(0,0,0,0.08)] backdrop-blur-xl hover:-translate-y-2 hover:shadow-[0_15px_40px_rgb(0,0,0,0.12)] hover:border-fuchsia-500/40 cursor-pointer'
+                                        : 'bg-muted/10 border-dashed border-border/20 opacity-60 hover:opacity-90 transition-all duration-500'
+                                }`}
+                            >
+                                {badge.unlocked && (
+                                    <div className="absolute -inset-24 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 group-hover:animate-[spin_4s_linear_infinite] transition-opacity duration-500 z-0" />
+                                )}
+                                <div className={`relative z-10 w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-3xl sm:text-4xl mb-4 shadow-inner transition-transform duration-500 group-hover:scale-110 ${badge.unlocked ? 'bg-fuchsia-500/30 bg-background/50' : 'bg-muted/30'}`}>
+                                    {badge.unlocked ? '🏆' : '🎬'}
+                                </div>
+                                <span className="relative z-10 text-[13px] sm:text-[14px] font-black uppercase tracking-widest text-foreground leading-tight mb-1 line-clamp-2">{badge.name}</span>
+                                <span className="relative z-10 text-[10px] sm:text-[11px] text-muted-foreground font-semibold leading-snug">
+                                    {badge.unlocked ? `Saga completed · ${badge.total} titles` : `${badge.completedCount}/${badge.total} completed`}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Recaps Section */}
             <div className="space-y-8 pt-8 border-t border-border/30">
