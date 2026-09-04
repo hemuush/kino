@@ -370,6 +370,43 @@ export async function downloadBackupFromDrive(
   };
 }
 
+export interface DriveRevision {
+  id: string;
+  modifiedTime?: string;
+  size: number;
+}
+
+/** Prior revisions of a single Drive file (e.g. kino-index.json), newest first. Used by the
+ * Data & Cloud recovery panel to check whether an overwritten backup is still recoverable —
+ * `files.update` (what every upload here uses) creates a new revision rather than replacing
+ * history outright, so a bad overwrite is often still sitting in an older revision. */
+export async function listFileRevisions(accessToken: string, fileId: string): Promise<DriveRevision[]> {
+  const response = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${fileId}/revisions?fields=revisions(id,modifiedTime,size)`,
+    { headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store' }
+  );
+  if (response.status === 401) throw new TokenExpiredError();
+  if (!response.ok) throw new Error(`Failed to list revisions: Status ${response.status}`);
+  const data = await response.json();
+  const revisions: DriveRevision[] = (data.revisions || []).map((r: { id: string; modifiedTime?: string; size?: string }) => ({
+    id: r.id,
+    modifiedTime: r.modifiedTime,
+    size: Number(r.size || 0),
+  }));
+  return revisions.reverse(); // API returns oldest first
+}
+
+/** Raw content of one specific revision of a file. */
+export async function getRevisionContent(accessToken: string, fileId: string, revisionId: string): Promise<string> {
+  const response = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${fileId}/revisions/${revisionId}?alt=media`,
+    { headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store' }
+  );
+  if (response.status === 401) throw new TokenExpiredError();
+  if (!response.ok) throw new Error(`Failed to fetch revision content: Status ${response.status}`);
+  return await response.text();
+}
+
 export async function deleteBackupFromDrive(accessToken: string): Promise<boolean> {
   const existingFiles = await listAllKinoFiles(accessToken);
   // Delete sequentially to avoid rate limits

@@ -5,10 +5,11 @@ import JsonImporter from '@/components/settings/JsonImporter';
 import { useMedia } from '@/context/MediaContext';
 import { useAuth } from '@/context/AuthContext';
 import { getBackupMetadataFromDrive, BackupMetadata, TokenExpiredError } from '@/lib/googleDrive';
-import { Trash2, AlertTriangle, Database, RefreshCw, CheckCircle, Clock, AlertCircle, Cloud, Server, Box, Download, ArrowRightLeft, ChevronDown } from 'lucide-react';
+import { Trash2, AlertTriangle, Database, RefreshCw, CheckCircle, Clock, AlertCircle, Cloud, Server, Box, Download, ArrowRightLeft, ChevronDown, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SectionHeader } from '../ui/SectionHeader';
+import { RecoveryPanel } from './RecoveryPanel';
 
 function formatBytes(bytes: number) {
   if (!bytes || bytes <= 0) return '0 B';
@@ -286,6 +287,14 @@ export function DataManager() {
                           </span>
                         </div>
                       ))}
+                    </div>
+
+                    <div className="mt-8 pt-6 border-t border-border/40">
+                      <h4 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2 mb-4">
+                        <History size={16} className="text-amber-500" />
+                        Recover From a Prior Backup
+                      </h4>
+                      <RecoveryPanel indexFileId={backupMetadata.id} />
                     </div>
                   </div>
                 </motion.div>
