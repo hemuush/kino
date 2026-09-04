@@ -3,7 +3,7 @@
 import { ReactNode, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { Play, ChevronRight, Sparkles, Filter, Clock, X } from "lucide-react";
+import { Play, ChevronRight, Sparkles, Filter, Clock, X, History, Star, NotebookPen, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useMedia } from "@/context/MediaContext";
 import { MediaEntry, formatRuntime, isEpisodic } from "@/lib/db";
@@ -93,6 +93,55 @@ function SectionHeading({ eyebrow, title, action }: SectionHeadingProps) {
       </div>
       {action}
     </div>
+  );
+}
+
+// Deferred: computed once mounted via the same Promise.resolve().then() pattern used
+// elsewhere, never `new Date()` during render.
+function todayISO(d: Date): string {
+  return d.toISOString().split('T')[0];
+}
+
+function QuickJournalNote() {
+  const { addJournalEntry } = useMedia();
+  const [text, setText] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [today, setToday] = useState('');
+
+  useEffect(() => {
+    Promise.resolve().then(() => setToday(todayISO(new Date())));
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!text.trim() || isSaving) return;
+    setIsSaving(true);
+    await addJournalEntry(today, text.trim());
+    setText('');
+    setIsSaving(false);
+    toast.success("Note saved to your Journal.");
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="h-full flex flex-col rounded-2xl border border-border/60 bg-card/50 backdrop-blur-xl p-4">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1.5 mb-2">
+        <NotebookPen size={11} /> Quick Note
+      </p>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="What's on your mind about what you're watching?"
+        rows={2}
+        className="flex-1 w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none resize-none"
+      />
+      <button
+        type="submit"
+        disabled={!text.trim() || isSaving}
+        className="self-end mt-2 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-foreground text-background text-[11px] font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+      >
+        <Send size={11} /> {isSaving ? 'Saving...' : 'Save to Journal'}
+      </button>
+    </form>
   );
 }
 
@@ -472,10 +521,39 @@ function DashboardContent() {
     Promise.resolve().then(() => setNowTimestamp(Date.now()));
   }, []);
 
-  // Date logic for displaying recap triggers
-  const now = new Date();
-  const isEarlyMonth = now.getDate() >= 1 && now.getDate() <= 5;
-  const isSunday = now.getDay() === 0;
+  // Date logic for displaying recap triggers — derived from the deferred nowTimestamp
+  // above, never a bare `new Date()` during render.
+  const isEarlyMonth = nowTimestamp > 0 && new Date(nowTimestamp).getDate() >= 1 && new Date(nowTimestamp).getDate() <= 5;
+  const isSunday = nowTimestamp > 0 && new Date(nowTimestamp).getDay() === 0;
+
+  // "On This Day": surfaces something completed/updated on this exact month+day in a past year.
+  const onThisDay = useMemo(() => {
+    if (!nowTimestamp) return null;
+    const today = new Date(nowTimestamp);
+    const todayMonth = today.getMonth();
+    const todayDate = today.getDate();
+    const todayYear = today.getFullYear();
+
+    const matches = entries.filter(e => {
+      const ts = e.updatedAt || e.createdAt;
+      if (!ts) return false;
+      const d = new Date(ts);
+      return d.getMonth() === todayMonth && d.getDate() === todayDate && d.getFullYear() < todayYear;
+    });
+    if (matches.length === 0) return null;
+
+    matches.sort((a, b) => {
+      const aCompleted = a.status === 'Completed' ? 1 : 0;
+      const bCompleted = b.status === 'Completed' ? 1 : 0;
+      if (aCompleted !== bCompleted) return bCompleted - aCompleted;
+      if ((b.rating || 0) !== (a.rating || 0)) return (b.rating || 0) - (a.rating || 0);
+      return new Date(b.updatedAt || b.createdAt).getFullYear() - new Date(a.updatedAt || a.createdAt).getFullYear();
+    });
+
+    const entry = matches[0];
+    const yearsAgo = todayYear - new Date(entry.updatedAt || entry.createdAt).getFullYear();
+    return { entry, yearsAgo };
+  }, [entries, nowTimestamp]);
 
   // Handle automatic weekly and monthly recap popup
   useEffect(() => {
@@ -592,6 +670,39 @@ function DashboardContent() {
           </motion.section>
         )}
 
+
+        {/* On This Day + Quick Journal Note */}
+        <div className={`w-full px-3 sm:px-8 lg:px-12 grid grid-cols-1 gap-4 ${onThisDay ? 'lg:grid-cols-2' : ''}`}>
+            {onThisDay && (
+              <button
+                onClick={() => setSelectedEntry(onThisDay.entry)}
+                className="flex items-center gap-4 p-4 rounded-2xl border border-border/60 bg-card/50 backdrop-blur-xl hover:border-primary/40 transition-all text-left"
+              >
+                <div className="w-12 h-16 rounded-lg overflow-hidden shrink-0 bg-muted flex items-center justify-center">
+                  {onThisDay.entry.coverImage ? (
+                    <img src={onThisDay.entry.coverImage} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <History size={16} className="text-muted-foreground/40" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1.5">
+                    <History size={11} /> On This Day
+                  </p>
+                  <p className="text-sm font-semibold text-foreground mt-0.5 leading-snug">
+                    {onThisDay.yearsAgo} {onThisDay.yearsAgo === 1 ? 'year' : 'years'} ago, you {onThisDay.entry.status === 'Completed' ? 'finished' : 'were watching'}{' '}
+                    <span className="text-primary">{onThisDay.entry.title}</span>
+                  </p>
+                </div>
+                {onThisDay.entry.rating > 0 && (
+                  <div className="flex items-center gap-1 text-amber-400 text-xs font-bold shrink-0">
+                    <Star size={12} className="fill-amber-400" /> {onThisDay.entry.rating}
+                  </div>
+                )}
+              </button>
+            )}
+            <QuickJournalNote />
+        </div>
 
         {/* Interactive Release Calendar */}
         {timelineItems.length > 0 && (
