@@ -16,6 +16,7 @@ No I/O happens in this file. Everything is a pure function of its arguments, whi
   - `genreIds?: string[]` / `franchiseId?: string` — the current, normalized way to reference tags. `genre?: string[]` / `franchise?: string` are the **legacy** shape produced by older exports/imports; `MediaContext.importData` maps these to IDs on the way in and deletes the legacy fields (see below).
   - `episodes?: EpisodeInfo[]` — only present once a user has touched per-episode tracking; before that, progress is tracked purely via `episodesWatched`/`episodesTotal` (see `materializeEpisodes` below for how the two representations are reconciled).
   - `runtime?: number` — for a movie, the total runtime. For anything episodic, this is the **per-episode** runtime (the field is dual-purpose; `MediaForm` labels it "Avg Time / Ep" when episodic).
+  - `rewatchCount?: number` / `rewatchDates?: number[]` — logged via the "Log Rewatch" action on `Completed` entries (`MediaDetailModal` and `/media/[id]`), never editable by hand. `rewatchDates` is append-only, oldest first.
 - **`JournalEntry`** — `{ id, date, text, createdAt, updatedAt? }`. `date` is a `YYYY-MM-DD` string picked by the user (the day the entry is *about*, not necessarily the day it was written). Lives entirely separate from `MediaEntry.review` — the Journal is freeform/date-stamped notes, not tied to any one title.
 
 ### `isEpisodic(entry)`
@@ -25,6 +26,9 @@ No I/O happens in this file. Everything is a pure function of its arguments, whi
 - **`sortEpisodes(episodes)`** — stable sort by `(season ?? 1, number ?? 1)`. Returns a new array.
 - **`getSeasonNumbers(episodes)`** — the distinct sorted season numbers present, via a `Set`.
 - **`materializeEpisodes(entry)`** — the key reconciliation function. If `entry.episodes` has any items, returns a copy of it. Otherwise, if the entry only has scalar `episodesTotal`/`episodesWatched` (the "legacy"/simple tracking mode), it **synthesizes** a placeholder `EpisodeInfo[]` of length `episodesTotal`, named `Episode 1..N`, marking the first `episodesWatched` as `watched: true`. This is what lets `/media/[id]`, `MediaDetailModal`, and Sagas' timeline all render a per-episode list even for entries that were only ever tracked by two numbers.
+
+### Rewatch tracking
+**`incrementRewatch(entry, timestamp)`** — the one pure helper both "Log Rewatch" call sites (`MediaDetailModal`, `/media/[id]`) go through: returns `{ rewatchCount: (entry.rewatchCount ?? 0) + 1, rewatchDates: [...(entry.rewatchDates ?? []), timestamp] }` without mutating its input. The caller supplies `timestamp` (from an event handler, e.g. `Date.now()`) rather than the helper calling it itself, keeping the helper pure and testable — see the `db.test.ts` cases for it, including a property test asserting it never mutates the entry it's given.
 
 ### Runtime calculation
 Both of these treat "how long is a single episode" the same way: if `entry.episodes` has any items with a known `runtime`, average those known runtimes; otherwise fall back to the scalar `entry.runtime` field.

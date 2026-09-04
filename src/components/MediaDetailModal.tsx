@@ -3,9 +3,9 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import { useState, useEffect, useMemo } from 'react';
-import { MediaEntry, EpisodeInfo, safeDateFormat, isEpisodic, formatRuntime, getWatchedRuntimeMinutes, getTotalRuntimeMinutes, getSeasonNumbers, materializeEpisodes } from '@/lib/db';
+import { MediaEntry, EpisodeInfo, safeDateFormat, isEpisodic, formatRuntime, getWatchedRuntimeMinutes, getTotalRuntimeMinutes, getSeasonNumbers, materializeEpisodes, incrementRewatch } from '@/lib/db';
 import { fireConfetti, fireEpicConfetti } from '@/lib/confetti';
-import { X, Edit2, Trash2, Calendar, Star, Heart, Plus, Minus, Clock, Film, CheckCircle2, PlayCircle } from 'lucide-react';
+import { X, Edit2, Trash2, Calendar, Star, Heart, Plus, Minus, Clock, Film, CheckCircle2, PlayCircle, Repeat } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/Badge';
 import { useMedia } from '@/context/MediaContext';
@@ -280,6 +280,13 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
   const handleSetRating = async (rating: number) => {
     await handleSave({ ...entry, rating, updatedAt: getTimestamp() });
     toast.success(`Rated ${rating}/10 ⭐`, { duration: 2000 });
+  };
+
+  const handleLogRewatch = async () => {
+    const rewatch = incrementRewatch(entry, getTimestamp());
+    await handleSave({ ...entry, ...rewatch, updatedAt: getTimestamp() });
+    fireConfetti();
+    toast.success(`Logged rewatch #${rewatch.rewatchCount} of "${entry.title}" 🔁`);
   };
 
   const handleEdit = () => {
@@ -638,6 +645,33 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
                             Total series: {formatRuntime(totalRawRuntime)}
                           </p>
                         )}
+                      </div>
+                    )}
+
+                    {/* Rewatch tracker — only meaningful once you've actually finished it */}
+                    {entry.status === 'Completed' && (
+                      <div className="rounded-3xl border border-border/60 bg-card/65 dark:bg-[#0c0c0d]/80 backdrop-blur-xl p-5 shadow-sm flex items-center justify-between gap-4">
+                        <div>
+                          <h3 className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                            <Repeat size={11} /> Rewatches
+                          </h3>
+                          {entry.rewatchCount ? (
+                            <p className="text-sm font-semibold text-foreground">
+                              Watched again <span className="text-primary">{entry.rewatchCount}×</span>
+                              {entry.rewatchDates?.length ? (
+                                <span className="text-muted-foreground font-normal"> · last {safeDateFormat(new Date(entry.rewatchDates[entry.rewatchDates.length - 1]).toISOString())}</span>
+                              ) : null}
+                            </p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">Haven&apos;t rewatched this yet.</p>
+                          )}
+                        </div>
+                        <button
+                          onClick={handleLogRewatch}
+                          className="shrink-0 flex items-center gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-xs font-bold px-3.5 py-2 rounded-full transition-colors cursor-pointer"
+                        >
+                          <Repeat size={13} /> Log Rewatch
+                        </button>
                       </div>
                     )}
 

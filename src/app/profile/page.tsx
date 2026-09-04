@@ -19,6 +19,7 @@ import {
   NotebookPen,
   Share2,
   BarChart3,
+  Repeat,
 } from "lucide-react";
 import Link from "next/link";
 import { isEpisodic, getWatchedRuntimeMinutes } from "@/lib/db";
@@ -171,6 +172,9 @@ export default function ProfilePage() {
     const reviewRate = completedCount > 0 ? reviewedCount / completedCount : 0;
     const backlogRate = total > 0 ? planToWatchCount / total : 0;
 
+    const totalRewatches = entries.reduce((sum, e) => sum + (e.rewatchCount || 0), 0);
+    const mostRewatched = [...entries].sort((a, b) => (b.rewatchCount || 0) - (a.rewatchCount || 0))[0];
+
     let personality = { name: "The Voyager", tagline: "A balanced taste across every kind of screen.", icon: "🧭" };
     if (total < 3) {
       personality = { name: "The Newcomer", tagline: "Your watching story starts here.", icon: "🌱" };
@@ -202,6 +206,8 @@ export default function ProfilePage() {
       showCount,
       animeCount,
       total,
+      totalRewatches,
+      mostRewatched: mostRewatched && (mostRewatched.rewatchCount || 0) > 0 ? mostRewatched : null,
     };
   }, [entries]);
 
@@ -233,6 +239,8 @@ export default function ProfilePage() {
     showCount,
     animeCount,
     total,
+    totalRewatches,
+    mostRewatched,
   } = stats;
 
   return (
@@ -433,7 +441,21 @@ export default function ProfilePage() {
               value={showCount + animeCount}
               accent="text-cyan-500"
             />
+            {totalRewatches > 0 && (
+              <StatPill
+                index={5}
+                icon={<Repeat size={20} />}
+                label="Rewatches"
+                value={totalRewatches}
+                accent="text-rose-500"
+              />
+            )}
           </div>
+          {mostRewatched && (
+            <p className="mt-3 text-xs text-muted-foreground font-medium px-1">
+              Most rewatched: <span className="text-foreground font-semibold">{mostRewatched.title}</span> ({mostRewatched.rewatchCount}×)
+            </p>
+          )}
         </motion.section>
 
         {/* ── Watch Time Trend ── */}

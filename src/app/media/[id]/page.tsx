@@ -3,11 +3,11 @@
 import React, { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMedia } from '@/context/MediaContext';
-import { MediaEntry, isEpisodic, EpisodeInfo, getTotalRuntimeMinutes, sortEpisodes, getSeasonNumbers, materializeEpisodes } from '@/lib/db';
+import { MediaEntry, isEpisodic, EpisodeInfo, getTotalRuntimeMinutes, sortEpisodes, getSeasonNumbers, materializeEpisodes, incrementRewatch, safeDateFormat } from '@/lib/db';
 import { fireConfetti, fireEpicConfetti } from '@/lib/confetti';
 import { PageLoader } from '@/components/ui/Loader';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Star, Clock, Calendar, Edit3, Plus, Check, Heart, Film, CheckCircle2, Trash2, Info, Upload } from 'lucide-react';
+import { ArrowLeft, Star, Clock, Calendar, Edit3, Plus, Check, Heart, Film, CheckCircle2, Trash2, Info, Upload, Repeat } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function MediaDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -341,6 +341,14 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
     router.push('/');
   };
 
+  const handleLogRewatch = async () => {
+    const timestamp = Date.now();
+    const rewatch = incrementRewatch(entry, timestamp);
+    await updateEntry({ ...entry, ...rewatch });
+    fireConfetti();
+    toast.success(`Logged rewatch #${rewatch.rewatchCount} of "${entry.title}" 🔁`);
+  };
+
   return (
     <div className="absolute inset-0 bg-background text-foreground overflow-y-auto overflow-x-hidden hide-scrollbar">
       
@@ -534,6 +542,32 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
               )}
             </div>
             
+            {entry.status === 'Completed' && (
+              <div className="w-full mb-8 bg-foreground/5 border border-border/60 rounded-2xl p-5 flex items-center justify-between gap-4">
+                <div className="text-left">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 flex items-center gap-2 mb-1.5">
+                    <Repeat size={14} /> Rewatches
+                  </h3>
+                  {entry.rewatchCount ? (
+                    <p className="text-sm font-semibold text-foreground">
+                      Watched again <span className="text-primary">{entry.rewatchCount}×</span>
+                      {entry.rewatchDates?.length ? (
+                        <span className="text-muted-foreground font-normal"> · last {safeDateFormat(new Date(entry.rewatchDates[entry.rewatchDates.length - 1]).toISOString())}</span>
+                      ) : null}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Haven&apos;t rewatched this yet.</p>
+                  )}
+                </div>
+                <button
+                  onClick={handleLogRewatch}
+                  className="shrink-0 flex items-center gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-xs font-bold px-3.5 py-2 rounded-full transition-colors cursor-pointer"
+                >
+                  <Repeat size={13} /> Log Rewatch
+                </button>
+              </div>
+            )}
+
             <div className="text-left w-full space-y-3">
               <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70 flex items-center gap-2">
                 <Info size={14} /> Review & Notes

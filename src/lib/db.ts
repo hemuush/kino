@@ -46,6 +46,19 @@ export interface MediaEntry {
   episodes?: EpisodeInfo[];
   imdbId?: string;
   lastRefreshedAt?: number;
+
+  /** Times watched again after the first completion. Undefined/0 means never rewatched. */
+  rewatchCount?: number;
+  /** Timestamp of each logged rewatch, oldest first. */
+  rewatchDates?: number[];
+}
+
+/** Pure: the field updates for logging one rewatch. Caller supplies `timestamp` (e.g. Date.now() from an event handler, never from inside a pure helper). */
+export function incrementRewatch(entry: Pick<MediaEntry, 'rewatchCount' | 'rewatchDates'>, timestamp: number): { rewatchCount: number; rewatchDates: number[] } {
+  return {
+    rewatchCount: (entry.rewatchCount || 0) + 1,
+    rewatchDates: [...(entry.rewatchDates || []), timestamp],
+  };
 }
 
 export interface JournalEntry {
