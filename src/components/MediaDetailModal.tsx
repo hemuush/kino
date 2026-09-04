@@ -5,7 +5,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { MediaEntry, EpisodeInfo, safeDateFormat, isEpisodic, formatRuntime, getWatchedRuntimeMinutes, getTotalRuntimeMinutes, getSeasonNumbers, materializeEpisodes, incrementRewatch } from '@/lib/db';
 import { fireConfetti, fireEpicConfetti } from '@/lib/confetti';
-import { X, Edit2, Trash2, Calendar, Star, Heart, Plus, Minus, Clock, Film, CheckCircle2, PlayCircle, Repeat } from 'lucide-react';
+import { X, Edit2, Trash2, Calendar, Star, Plus, Minus, Clock, Film, CheckCircle2, PlayCircle, Repeat } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/Badge';
 import { useMedia } from '@/context/MediaContext';
@@ -271,22 +271,25 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
     });
   };
 
-  const handleToggleFavorite = async () => {
-    const newFav = !entry.favorite;
-    await handleSave({ ...entry, favorite: newFav, updatedAt: getTimestamp() });
-    toast.success(newFav ? '❤️ Added to favorites!' : 'Removed from favorites.', { duration: 2000 });
-  };
-
   const handleSetRating = async (rating: number) => {
     await handleSave({ ...entry, rating, updatedAt: getTimestamp() });
     toast.success(`Rated ${rating}/10 ⭐`, { duration: 2000 });
   };
 
   const handleLogRewatch = async () => {
+    const previousCount = entry.rewatchCount || 0;
+    const previousDates = entry.rewatchDates || [];
     const rewatch = incrementRewatch(entry, getTimestamp());
     await handleSave({ ...entry, ...rewatch, updatedAt: getTimestamp() });
     fireConfetti();
-    toast.success(`Logged rewatch #${rewatch.rewatchCount} of "${entry.title}" 🔁`);
+    toast.success(`Logged rewatch #${rewatch.rewatchCount} of "${entry.title}" 🔁`, {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          handleSave({ ...entry, rewatchCount: previousCount, rewatchDates: previousDates, updatedAt: getTimestamp() });
+        },
+      },
+    });
   };
 
   const handleEdit = () => {
@@ -373,9 +376,6 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
               {entry.status && entry.status !== 'Completed' && (
                 <Badge variant={entry.status === 'Watching' ? 'accent' : 'muted'}>{entry.status}</Badge>
               )}
-              {entry.favorite && (
-                <Badge variant="primary" className="hidden sm:inline-flex">❤️ Fav</Badge>
-              )}
               {syncStatus === 'syncing' && (
                 <span className="hidden sm:flex items-center gap-1.5 ml-2 text-[10px] uppercase font-bold text-primary tracking-widest bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
                   <span className="w-2 h-2 border-[1.5px] border-primary/30 border-t-primary rounded-full animate-spin" /> Saving
@@ -388,14 +388,6 @@ export function MediaDetailModal({ entry, onClose, onSave, onDelete }: MediaDeta
               )}
             </div>
             <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-              <button
-                onClick={handleToggleFavorite}
-                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all border shadow-sm backdrop-blur-sm cursor-pointer ${entry.favorite ? 'bg-red-500/10 border-red-500/30 text-red-500' : 'bg-card/50 border-border/60 hover:text-foreground hover:bg-card/80'}`}
-                title={entry.favorite ? 'Remove from favorites' : 'Add to favorites'}
-                aria-label={entry.favorite ? 'Remove from favorites' : 'Add to favorites'}
-              >
-                <Heart size={14} className={entry.favorite ? 'fill-red-500' : ''} />
-              </button>
               <button
                 onClick={handleEdit}
                 className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-card/50 border border-border/60 shadow-sm backdrop-blur-sm flex items-center justify-center hover:bg-card/80 transition-colors cursor-pointer hover:text-primary"

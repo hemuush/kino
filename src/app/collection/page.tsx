@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, useMemo, useRef, useCallback } from 'rea
 import { useMedia } from '@/context/MediaContext';
 import MediaCard from '@/components/MediaCard';
 import { MediaDetailModal } from '@/components/MediaDetailModal';
-import { Plus, Film, Heart, Shuffle, Search, Settings, LayoutGrid, List, SlidersHorizontal } from 'lucide-react';
+import { Plus, Film, Shuffle, Search, Settings, LayoutGrid, List, SlidersHorizontal } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MediaEntry, isEpisodic } from '@/lib/db';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -25,7 +25,6 @@ function CollectionContent() {
     const [filter, setFilter] = useState<'All' | 'Movie' | 'Series' | 'Anime'>(typeParam || 'All');
 
     const [statusFilter, setStatusFilter] = useState<'All' | 'Completed' | 'Watching' | 'Plan to Watch'>('All');
-    const [favoritesOnly, setFavoritesOnly] = useState(false);
     const [genreFilter, setGenreFilter] = useState<string>('All');
     const [sagaFilter, setSagaFilter] = useState<string>('All');
     const [sortBy, setSortBy] = useState<'Recent' | 'Updated' | 'ReleaseDate' | 'Rating' | 'Title'>('Recent');
@@ -49,7 +48,6 @@ function CollectionContent() {
             if (filter !== 'All' && filter !== 'Series' && e.type !== filter) return false;
 
             if (statusFilter !== 'All' && e.status !== statusFilter) return false;
-            if (favoritesOnly && !e.favorite) return false;
             if (genreFilter !== 'All' && !(e.genreIds || []).includes(genreFilter)) return false;
             if (sagaFilter !== 'All' && e.franchiseId !== sagaFilter) return false;
             if (searchQuery.trim()) {
@@ -82,7 +80,7 @@ function CollectionContent() {
             }
             return b.createdAt - a.createdAt;
         });
-    }, [entries, filter, statusFilter, searchQuery, favoritesOnly, genreFilter, sagaFilter, sortBy, genres, franchises]);
+    }, [entries, filter, statusFilter, searchQuery, genreFilter, sagaFilter, sortBy, genres, franchises]);
 
     // Infinite Scroll Observer
     const observerRef = useRef<IntersectionObserver | null>(null);
@@ -216,7 +214,7 @@ function CollectionContent() {
                             <Search size={32} className="text-muted-foreground/30 mb-4" />
                             <h3 className="text-lg font-bold mb-1">No Matches Found</h3>
                             <p className="text-muted-foreground text-sm">Try adjusting your filters or search query.</p>
-                            <button onClick={() => { setFilter('All'); setStatusFilter('All'); setFavoritesOnly(false); setGenreFilter('All'); setSagaFilter('All'); router.push('/collection'); }} className="mt-6 font-bold text-sm text-primary hover:underline">
+                            <button onClick={() => { setFilter('All'); setStatusFilter('All'); setGenreFilter('All'); setSagaFilter('All'); router.push('/collection'); }} className="mt-6 font-bold text-sm text-primary hover:underline">
                                 Clear all filters
                             </button>
                         </div>
@@ -235,7 +233,6 @@ function CollectionContent() {
                                             <MediaCard
                                                 entry={entry}
                                                 onClick={() => router.push(`/media/${entry.id}`)}
-                                                onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })}
                                                 onIncrementWatched={() => handleIncrementWatched(entry)}
                                                 onStatusChange={(newStatus) => updateEntry({ ...entry, status: newStatus })}
                                                 index={i}
@@ -273,9 +270,6 @@ function CollectionContent() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center justify-end gap-2 sm:gap-3 w-full sm:w-auto mt-2 sm:mt-0" onClick={(e) => e.stopPropagation()}>
-                                                <button onClick={() => updateEntry({ ...entry, favorite: !entry.favorite })} className={`p-2.5 rounded-full border transition-all ${entry.favorite ? 'border-red-500/30 bg-red-500/10 text-red-500' : 'border-border/80 bg-background hover:bg-muted text-muted-foreground'}`}>
-                                                    <Heart size={16} className={entry.favorite ? "fill-red-500" : ""} />
-                                                </button>
                                                 {isEpisodic(entry) && (
                                                     <button onClick={(e) => handleIncrementWatched(entry, e)} className="px-4 py-2.5 text-xs font-bold rounded-full border border-border/80 bg-background hover:bg-muted transition-colors flex items-center gap-1">
                                                         <Plus size={14} /> Ep {entry.episodesWatched || 0}
@@ -391,13 +385,6 @@ function CollectionContent() {
                                             <option value="Rating">Highest Rated</option>
                                             <option value="Title">Alphabetical</option>
                                         </select>
-
-                                        <button
-                                            onClick={() => setFavoritesOnly(!favoritesOnly)}
-                                            className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold transition-all border ${favoritesOnly ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
-                                        >
-                                            <Heart size={14} className={favoritesOnly ? "fill-red-500 text-red-500" : ""} /> Favorites
-                                        </button>
                                     </div>
                                 </div>
 

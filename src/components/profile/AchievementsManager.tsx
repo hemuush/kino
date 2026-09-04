@@ -18,7 +18,7 @@ export function AchievementsManager() {
         const perfectScores = entries.filter(e => e.rating === 10).length;
         const highScores = entries.filter(e => e.rating >= 9).length;
         const hasFranchise = entries.some(e => e.franchiseId);
-        const hasFavorites = entries.filter(e => e.favorite).length;
+        const totalRewatches = entries.reduce((sum, e) => sum + (e.rewatchCount || 0), 0);
         const totalCompleted = entries.filter(e => e.status === 'Completed').length;
         
         const uniqueGenresUsed = new Set<string>();
@@ -39,7 +39,7 @@ export function AchievementsManager() {
         b.push({ id: 'elite_taste', name: 'Elite Taste', desc: 'Rated 10 items 9+', unlocked: highScores >= 10, icon: '🍷', color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' });
         b.push({ id: 'perfectionist', name: 'Perfectionist', desc: 'Rated 5 items 10/10', unlocked: perfectScores >= 5, icon: '⭐', color: 'bg-amber-500/10 text-amber-500 border-amber-500/20' });
         b.push({ id: 'saga_master', name: 'Saga Master', desc: 'Tracked a Franchise', unlocked: hasFranchise, icon: '📚', color: 'bg-orange-500/10 text-orange-500 border-orange-500/20' });
-        b.push({ id: 'superfan', name: 'Superfan', desc: 'Favorited 5 items', unlocked: hasFavorites >= 5, icon: '❤️', color: 'bg-red-500/10 text-red-500 border-red-500/20' });
+        b.push({ id: 'rewatcher', name: 'Rewatcher', desc: 'Logged 5 rewatches', unlocked: totalRewatches >= 5, icon: '🔁', color: 'bg-rose-500/10 text-rose-500 border-rose-500/20' });
         b.push({ id: 'completionist', name: 'Completionist', desc: 'Completed 100 items', unlocked: totalCompleted >= 100, icon: '🏆', color: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' });
         b.push({ id: 'grandmaster', name: 'Grandmaster', desc: 'Completed 500 items', unlocked: totalCompleted >= 500, icon: '👑', color: 'bg-yellow-400/10 text-yellow-400 border-yellow-400/20' });
         

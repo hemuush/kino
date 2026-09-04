@@ -191,7 +191,6 @@ export default function JsonImporter() {
     "runtime": 166,
     "releaseDate": "2024-03-01",
     "review": "A cinematic masterpiece. Incredible visuals.",
-    "favorite": true,
     "franchise": "Dune Collection",
     "genre": ["Sci-Fi", "Adventure", "Drama"]
   },
@@ -220,7 +219,6 @@ export default function JsonImporter() {
     "animeType": "Show",
     "status": "Plan to Watch",
     "episodesTotal": 89,
-    "favorite": true,
     "genre": ["Action", "Dark Fantasy"]
   }
 ]`}

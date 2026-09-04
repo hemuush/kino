@@ -7,7 +7,7 @@ import { MediaEntry, isEpisodic, EpisodeInfo, getTotalRuntimeMinutes, sortEpisod
 import { fireConfetti, fireEpicConfetti } from '@/lib/confetti';
 import { PageLoader } from '@/components/ui/Loader';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Star, Clock, Calendar, Edit3, Plus, Check, Heart, Film, CheckCircle2, Trash2, Info, Upload, Repeat } from 'lucide-react';
+import { ArrowLeft, Star, Clock, Calendar, Edit3, Plus, Check, Film, CheckCircle2, Trash2, Info, Upload, Repeat } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function MediaDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -342,11 +342,19 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
   };
 
   const handleLogRewatch = async () => {
-    const timestamp = Date.now();
-    const rewatch = incrementRewatch(entry, timestamp);
+    const previousCount = entry.rewatchCount || 0;
+    const previousDates = entry.rewatchDates || [];
+    const rewatch = incrementRewatch(entry, Date.now());
     await updateEntry({ ...entry, ...rewatch });
     fireConfetti();
-    toast.success(`Logged rewatch #${rewatch.rewatchCount} of "${entry.title}" 🔁`);
+    toast.success(`Logged rewatch #${rewatch.rewatchCount} of "${entry.title}" 🔁`, {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          updateEntry({ ...entry, rewatchCount: previousCount, rewatchDates: previousDates });
+        },
+      },
+    });
   };
 
   return (
@@ -426,12 +434,6 @@ export default function MediaDetailPage({ params }: { params: Promise<{ id: stri
               </div>
             </div>
 
-            {/* Favorite Floating Badge */}
-            {entry.favorite && (
-              <div className="absolute -top-3 -right-3 w-10 h-10 bg-red-500 rounded-full flex items-center justify-center shadow-lg border-2 border-background z-20">
-                <Heart className="fill-white text-foreground" size={16} />
-              </div>
-            )}
           </motion.div>
         </div>
 

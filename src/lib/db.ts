@@ -37,7 +37,6 @@ export interface MediaEntry {
 
   rating: number;
   review?: string;
-  favorite?: boolean;
   createdAt: number;
   updatedAt?: number;
   episodesWatched?: number;

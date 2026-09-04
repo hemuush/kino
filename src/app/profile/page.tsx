@@ -5,7 +5,6 @@ import { useAuth } from "@/context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   PlayCircle,
-  Heart,
   Clock,
   ArrowLeft,
   Trophy,
@@ -135,7 +134,10 @@ export default function ProfilePage() {
       totalWatchMinutes += getWatchedRuntimeMinutes(e);
     });
 
-    const favorites = entries.filter((e) => e.favorite).slice(0, 6);
+    const topRated = [...entries]
+      .filter((e) => e.status === "Completed" && e.rating > 0)
+      .sort((a, b) => b.rating - a.rating)
+      .slice(0, 6);
     const currentlyWatching = entries
       .filter((e) => e.status === "Watching")
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
@@ -163,12 +165,12 @@ export default function ProfilePage() {
 
     // Personality — a permanent, always-current identity read on *how* you watch,
     // not just how much. Computed entirely from data already tracked above.
-    const favoritesCount = entries.filter((e) => e.favorite).length;
     const reviewedCount = entries.filter((e) => e.review && e.review.trim()).length;
+    const highlyRatedCount = entries.filter((e) => e.status === "Completed" && e.rating >= 8).length;
     const movieShare = total > 0 ? movieCount / total : 0;
     const episodicShare = total > 0 ? (showCount + animeCount) / total : 0;
     const completionRate = total > 0 ? completedCount / total : 0;
-    const favoriteRate = total > 0 ? favoritesCount / total : 0;
+    const highRatedShare = completedCount > 0 ? highlyRatedCount / completedCount : 0;
     const reviewRate = completedCount > 0 ? reviewedCount / completedCount : 0;
     const backlogRate = total > 0 ? planToWatchCount / total : 0;
 
@@ -186,8 +188,8 @@ export default function ProfilePage() {
       personality = { name: "The Marathoner", tagline: "Seasons don't scare you — you binge to the finale.", icon: "📺" };
     } else if (movieShare >= 0.6 && total >= 5) {
       personality = { name: "The Cinephile", tagline: "Two hours, a story, and the credits roll — that's home.", icon: "🎞️" };
-    } else if (favoriteRate >= 0.3 && total >= 5) {
-      personality = { name: "The Curator", tagline: "You watch selectively, and you remember what you love.", icon: "💎" };
+    } else if (highRatedShare >= 0.5 && completedCount >= 5) {
+      personality = { name: "The Curator", tagline: "You rate generously — your top picks say it all.", icon: "💎" };
     } else if (backlogRate >= 0.5 && total >= 5) {
       personality = { name: "The Collector", tagline: "Your watchlist is a growing archive of good taste.", icon: "🗂️" };
     }
@@ -195,7 +197,7 @@ export default function ProfilePage() {
     return {
       daysWatched,
       hoursWatched,
-      favorites,
+      topRated,
       currentlyWatching,
       badge,
       personality,
@@ -228,7 +230,7 @@ export default function ProfilePage() {
   const {
     daysWatched,
     hoursWatched,
-    favorites,
+    topRated,
     currentlyWatching,
     badge,
     personality,
@@ -632,37 +634,37 @@ export default function ProfilePage() {
             {/* Section header */}
             <div className="flex items-center justify-between px-6 sm:px-8 pt-6 sm:pt-7 pb-5 border-b border-border/40">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-rose-500/15 flex items-center justify-center border border-rose-500/20">
-                  <Heart size={14} className="text-rose-500" />
+                <div className="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center border border-amber-500/20">
+                  <Star size={14} className="text-amber-500" />
                 </div>
                 <div>
                   <h2 className="font-display font-bold text-sm sm:text-base uppercase tracking-wider text-foreground">
                     Hall of Fame
                   </h2>
-                  <p className="text-[10px] text-muted-foreground font-medium">Your top favorites</p>
+                  <p className="text-[10px] text-muted-foreground font-medium">Your highest-rated titles</p>
                 </div>
               </div>
-              {favorites.length > 0 && (
+              {topRated.length > 0 && (
                 <span className="text-[10px] font-bold text-muted-foreground bg-muted/60 px-3 py-1.5 rounded-full border border-border/40">
-                  {favorites.length} {favorites.length === 1 ? "pick" : "picks"}
+                  {topRated.length} {topRated.length === 1 ? "pick" : "picks"}
                 </span>
               )}
             </div>
 
             <div className="p-6 sm:p-8 pt-5 sm:pt-6">
-              {favorites.length > 0 ? (
+              {topRated.length > 0 ? (
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-4">
-                  {favorites.map((fav, i) => (
+                  {topRated.map((entry, i) => (
                     <motion.div
-                      key={fav.id}
+                      key={entry.id}
                       variants={scaleIn}
                       custom={i + 1}
                       className="aspect-[2/3] rounded-2xl overflow-hidden relative group bg-muted border border-border/50 shadow-sm cursor-pointer"
                     >
-                      {fav.coverImage ? (
+                      {entry.coverImage ? (
                         <img
-                          src={fav.coverImage}
-                          alt={fav.title}
+                          src={entry.coverImage}
+                          alt={entry.title}
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
                       ) : (
@@ -673,13 +675,14 @@ export default function ProfilePage() {
                       {/* Title overlay on hover */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-2.5 pointer-events-none">
                         <span className="text-white text-[10px] font-bold line-clamp-2 leading-tight drop-shadow-md">
-                          {fav.title}
+                          {entry.title}
                         </span>
                       </div>
-                      {/* Heart badge on hover */}
+                      {/* Rating badge on hover */}
                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                        <div className="w-5 h-5 rounded-full bg-rose-500 flex items-center justify-center shadow-md">
-                          <Heart size={10} className="text-white fill-white" />
+                        <div className="flex items-center gap-0.5 px-1.5 h-5 rounded-full bg-amber-500 shadow-md">
+                          <Star size={9} className="text-white fill-white" />
+                          <span className="text-[9px] font-bold text-white leading-none">{entry.rating}</span>
                         </div>
                       </div>
                     </motion.div>
@@ -687,12 +690,12 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <div className="py-14 flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/50 bg-muted/20">
-                  <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-4">
-                    <Heart size={24} className="text-rose-500/40" />
+                  <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4">
+                    <Star size={24} className="text-amber-500/40" />
                   </div>
-                  <p className="text-foreground font-bold text-base mb-1">No favorites yet</p>
+                  <p className="text-foreground font-bold text-base mb-1">No rated titles yet</p>
                   <p className="text-muted-foreground text-sm text-center max-w-xs font-medium">
-                    Mark entries as favorites in your collection to fill your Hall of Fame.
+                    Rate completed titles in your collection to fill your Hall of Fame.
                   </p>
                   <Link
                     href="/collection"

@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { MediaType, WatchStatus, AnimeType, EpisodeInfo, MediaEntry, Tag, isEpisodic, getWatchedRuntimeMinutes } from '@/lib/db';
-import { X, Check, Image as ImageIcon, Star, Heart, Upload, Clock, Film, ListPlus, Search, CheckCircle2 } from 'lucide-react';
+import { X, Check, Image as ImageIcon, Star, Upload, Clock, Film, ListPlus, Search, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMedia } from '@/context/MediaContext';
 import { toast } from 'sonner';
@@ -43,7 +43,6 @@ export function MediaForm({ onCancel, onSave, initialData, hideEpisodesTab }: Me
   const [runtime, setRuntime] = useState<number | ''>(initialData?.runtime || '');
   const [rating, setRating] = useState<number>(initialData?.rating || 8);
   const [review, setReview] = useState<string>(initialData?.review || '');
-  const [favorite, setFavorite] = useState<boolean>(initialData?.favorite || false);
 
   const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>(initialData?.genreIds || []);
   const [selectedFranchiseId, setSelectedFranchiseId] = useState<string | null>(initialData?.franchiseId || null);
@@ -235,7 +234,6 @@ export function MediaForm({ onCancel, onSave, initialData, hideEpisodesTab }: Me
       genreIds: selectedGenreIds,
       rating: status === 'Completed' ? rating : 0,
       review: review.trim(),
-      favorite,
       episodesWatched: finalEpisodesWatched,
       episodesTotal: finalEpisodesTotal,
       seasonsCount: currentIsEpisodic && seasonsCount !== '' ? Number(seasonsCount) : undefined,
@@ -569,32 +567,25 @@ export function MediaForm({ onCancel, onSave, initialData, hideEpisodesTab }: Me
                 )}
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-6 items-stretch">
-                <div className="flex-1 flex items-center justify-between bg-card border border-border px-4 sm:px-6 py-4 rounded-2xl shadow-sm hover:border-primary/40 transition-colors">
-                  <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2"><Heart size={16} /> Favorite</span>
-                  <button type="button" onClick={() => setFavorite(!favorite)} className={`p-2.5 rounded-xl transition-all border cursor-pointer ${favorite ? 'bg-red-500/15 text-red-500 border-red-500/30 shadow-sm' : 'bg-muted/50 text-muted-foreground border-border/50 hover:bg-muted'}`}><Heart size={20} className={favorite ? 'fill-red-500' : ''} /></button>
-                </div>
-
-                <AnimatePresence>
-                  {status === 'Completed' && (
-                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="flex-[2] min-w-0 bg-card border border-border px-4 sm:px-6 py-4 rounded-2xl shadow-sm">
-                      <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3 min-w-0">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 shrink-0"><Star size={16} /> Rating</span>
-                          <span className="text-lg sm:text-xl font-bold text-primary tabular-nums whitespace-nowrap">{displayRating}/10</span>
-                        </div>
-                        <div className="grid grid-cols-5 sm:flex sm:items-center gap-1 sm:gap-0.5 shrink-0">
-                          {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
-                            <button key={value} type="button" onClick={() => setRating(value)} onMouseEnter={() => setHoveredStar(value)} onMouseLeave={() => setHoveredStar(null)} className="p-1 sm:p-0.5 transition-transform hover:scale-110 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-md">
-                              <Star className={`w-4.5 h-4.5 sm:w-5 sm:h-5 transition-colors ${value <= displayRating ? 'text-amber-400 fill-amber-400 drop-shadow-sm' : 'text-muted-foreground/20'}`} />
-                            </button>
-                          ))}
-                        </div>
+              <AnimatePresence>
+                {status === 'Completed' && (
+                  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-card border border-border px-4 sm:px-6 py-4 rounded-2xl shadow-sm">
+                    <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-3 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2 shrink-0"><Star size={16} /> Rating</span>
+                        <span className="text-lg sm:text-xl font-bold text-primary tabular-nums whitespace-nowrap">{displayRating}/10</span>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                      <div className="grid grid-cols-5 sm:flex sm:items-center gap-1 sm:gap-0.5 shrink-0">
+                        {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => (
+                          <button key={value} type="button" onClick={() => setRating(value)} onMouseEnter={() => setHoveredStar(value)} onMouseLeave={() => setHoveredStar(null)} className="p-1 sm:p-0.5 transition-transform hover:scale-110 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-md">
+                            <Star className={`w-4.5 h-4.5 sm:w-5 sm:h-5 transition-colors ${value <= displayRating ? 'text-amber-400 fill-amber-400 drop-shadow-sm' : 'text-muted-foreground/20'}`} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <FieldWrapper label="Review / Notes">
                 <textarea value={review} onChange={(e) => setReview(e.target.value)} placeholder="What did you think?" className="w-full bg-black/5 dark:bg-black/40 shadow-inner rounded-2xl px-5 py-4 text-foreground text-sm border border-border/50 focus:border-primary/50 outline-none transition-all focus:ring-1 focus:ring-primary/50 backdrop-blur-md placeholder:text-muted-foreground/50 resize-none min-h-[180px]" />

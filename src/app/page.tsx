@@ -798,7 +798,6 @@ function DashboardContent() {
                           entry={entry}
                           index={i}
                           onClick={() => router.push(`/media/${entry.id}`)}
-                          onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })}
                           onIncrementWatched={() => {
                             if (isEpisodic(entry)) {
                               const max = entry.episodesTotal || 9999;
@@ -924,7 +923,6 @@ function DashboardContent() {
                         entry={entry}
                         index={i}
                         onClick={() => router.push(`/media/${entry.id}`)}
-                        onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })}
                         onIncrementWatched={() => {}}
                         onStatusChange={(newStatus) => updateEntry({ ...entry, status: newStatus })}
                       />
@@ -962,7 +960,6 @@ function DashboardContent() {
                         entry={entry}
                         index={i}
                         onClick={() => router.push(`/media/${entry.id}`)}
-                        onFavoriteToggle={() => updateEntry({ ...entry, favorite: !entry.favorite })}
                         onIncrementWatched={() => {}}
                         onStatusChange={(newStatus) => updateEntry({ ...entry, status: newStatus })}
                       />

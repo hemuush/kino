@@ -5,13 +5,12 @@ import React, { useState } from "react";
 import { isEpisodic, MediaEntry } from "@/lib/db";
 import { fireConfetti, fireEpicConfetti } from "@/lib/confetti";
 import { hueFromTitle } from "@/lib/colors";
-import { ImageOff, Heart, Plus, Star, Check, Play } from "lucide-react";
+import { ImageOff, Plus, Star, Check, Play } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface MediaCardProps {
   entry: MediaEntry;
   onClick: () => void;
-  onFavoriteToggle: () => Promise<void> | void;
   onIncrementWatched: () => void;
   onStatusChange: (newStatus: MediaEntry["status"]) => Promise<void> | void;
   index: number;
@@ -20,7 +19,6 @@ interface MediaCardProps {
 function MediaCard({
   entry,
   onClick,
-  onFavoriteToggle,
   onIncrementWatched,
   onStatusChange,
   index,
@@ -69,15 +67,6 @@ function MediaCard({
 
         {/* Dark subtle gradient bottom up on hover */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10" />
-
-        {/* Favorite Icon (Top Right) */}
-        <button
-          onClick={(e) => { e.stopPropagation(); onFavoriteToggle(); }}
-          className={`absolute top-2.5 right-2.5 z-30 transition-all duration-300 ${entry.favorite ? 'opacity-100 scale-100' : 'opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100'}`}
-          title={entry.favorite ? "Remove from favorites" : "Add to favorites"}
-        >
-          <Heart size={16} className={entry.favorite ? "fill-rose-500 text-rose-500 drop-shadow" : "text-white/80 hover:text-white drop-shadow-md"} />
-        </button>
 
         {/* Rating Pill (Top Left) */}
         {entry.status === 'Completed' && entry.rating > 0 && (
