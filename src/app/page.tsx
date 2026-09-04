@@ -2,7 +2,7 @@
 
 import { ReactNode, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Play, ChevronRight, Sparkles, Filter, Clock, X, History, Star, NotebookPen, Send } from "lucide-react";
 import { toast } from "sonner";
 import { useMedia } from "@/context/MediaContext";
@@ -13,6 +13,7 @@ import { PageLoader } from "@/components/ui/Loader";
 import { Skeleton, MediaCardSkeleton } from "@/components/ui/Skeleton";
 import { KinoLogo } from "@/components/KinoLogo";
 import { AmbientGlow } from "@/components/ui/AmbientGlow";
+import { CinematicBackdrop } from "@/components/dashboard/CinematicBackdrop";
 import { ReactLenis } from "lenis/react";
 import { hueFromTitle } from "@/lib/colors";
 import { useRouter } from "next/navigation";
@@ -478,6 +479,22 @@ function DashboardContent() {
 
   const genreNamesById = useMemo(() => new Map(genres.map(g => [g.id, g.name])), [genres]);
 
+  // Ambient background waypoints — one hue per section, top to bottom, so the page's
+  // "mood lighting" drifts to match whatever shelf is currently in view.
+  const sectionHues = useMemo(() => {
+    return [featured, watching[0], planned[0], completed[0]]
+      .filter((e): e is MediaEntry => !!e)
+      .map((e) => hueFromTitle(e.title));
+  }, [featured, watching, planned, completed]);
+
+  // Shared shelf-entrance motion — a subtle forward tilt (like pulling a record off a
+  // shelf) instead of a flat fade-up, disabled entirely under prefers-reduced-motion.
+  const prefersReducedMotion = useReducedMotion();
+  const shelfInitial = prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 50, rotateX: -14 };
+  const shelfAnimate = prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, rotateX: 0 };
+  const shelfTransition = { duration: 0.7, ease: [0.16, 1, 0.3, 1] as const };
+  const shelfStyle = prefersReducedMotion ? undefined : { transformPerspective: 1000, transformOrigin: "center top" };
+
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickDuration, setPickDuration] = useState<QuickPickDuration>('Any');
   const [pickMood, setPickMood] = useState<QuickPickMood>('Any');
@@ -612,11 +629,8 @@ function DashboardContent() {
 
   return (
     <ReactLenis root={false} className="absolute inset-0 overflow-y-auto bg-background text-foreground hide-scrollbar pb-28 md:pb-20">
-      {/* Decorative ambient background glows */}
-      <AmbientGlow glows={[
-        "top-0 right-0 w-[55%] h-[40%] bg-primary/3 blur-[160px]",
-        "bottom-[20%] left-0 w-[45%] h-[35%] bg-purple-500/3 blur-[140px]",
-      ]} />
+      {/* Decorative ambient background glow — drifts hue between section colors as you scroll */}
+      <CinematicBackdrop hues={sectionHues} />
 
       {/* Main Narrative Container (Apple/Nothing Scroll tour layout style) */}
       <div className="mx-auto w-full max-w-[2400px] py-5 sm:py-10 space-y-12 sm:space-y-20 lg:space-y-24">
@@ -768,10 +782,11 @@ function DashboardContent() {
           {/* Shelf 1: Continue Watching */}
           {watching.length > 0 && (
             <motion.section 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={shelfInitial}
+              whileInView={shelfAnimate}
               viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.6 }}
+              transition={shelfTransition}
+              style={shelfStyle}
               className="space-y-6 w-full text-left"
             >
               <SectionHeading
@@ -837,10 +852,11 @@ function DashboardContent() {
           {/* Shelf 2: Watchlist */}
           {planned.length > 0 && (
             <motion.section 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={shelfInitial}
+              whileInView={shelfAnimate}
               viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.6 }}
+              transition={shelfTransition}
+              style={shelfStyle}
               className="space-y-6 w-full text-left"
             >
               <SectionHeading
@@ -936,10 +952,11 @@ function DashboardContent() {
           {/* Shelf 3: Recently Completed */}
           {completed.length > 0 && (
             <motion.section 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={shelfInitial}
+              whileInView={shelfAnimate}
               viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.6 }}
+              transition={shelfTransition}
+              style={shelfStyle}
               className="space-y-6 w-full text-left"
             >
               <SectionHeading

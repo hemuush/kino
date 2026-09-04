@@ -7,6 +7,14 @@ export function hueFromTitle(title?: string): number {
   return hash % 360;
 }
 
+// Shortest-path hue interpolation (e.g. 350 -> 10 blends forward through 360/0,
+// not backward across the whole wheel) — used to smoothly drift an ambient
+// background color between waypoints, e.g. as the page scrolls.
+export function lerpHue(a: number, b: number, t: number): number {
+  const diff = ((b - a + 540) % 360) - 180;
+  return (a + diff * t + 360) % 360;
+}
+
 export const APP_COLORS = [
   { id: 'red', name: 'Kino Classic', hex: '#D71921', hover: '#a11319' },
   { id: 'ocean', name: 'Deep Ocean', hex: '#0ea5e9', hover: '#0284c7' },
