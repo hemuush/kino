@@ -17,8 +17,8 @@ The authenticated home. `DashboardContent` (wrapped in a `Suspense` because it r
 ## `/collection` — `src/app/collection/page.tsx`
 
 The full library browser. `CollectionContent` (also `Suspense`-wrapped for `useSearchParams`) combines:
-- **Filtering**: type (`All`/`Movie`/`Series`/`Anime`, synced to `?type=`), status, favorites-only, free-text search (`?q=`, matched token-by-token against a haystack built from title/type/status/year/review/resolved-genre-names/resolved-franchise-name — every token in the query must appear somewhere in the haystack, not just the whole phrase).
-- **Sort**: Newest First / Highest Rated / Alphabetical.
+- **Filtering**: type (`All`/`Movie`/`Series`/`Anime`, synced to `?type=`), status, favorites-only, genre (`genreFilter`, matched against `genreIds`), saga (`sagaFilter`, matched against `franchiseId`), free-text search (`?q=`, matched token-by-token against a haystack built from title/type/status/year/review/resolved-genre-names/resolved-franchise-name — every token in the query must appear somewhere in the haystack, not just the whole phrase). Genre/saga filters only render if the user has at least one genre/saga defined.
+- **Sort**: Newest Added / Recently Updated / Release Date / Highest Rated / Alphabetical.
 - **View mode**: poster grid or a dense list row (`viewMode`).
 - **Infinite scroll**: `visibleCount` starts at 60 and grows by 60 whenever an `IntersectionObserver` (via `loadMoreRef`, `rootMargin: '400px'`) sees the trailing sentinel enter the viewport — there is no "Load More" button anywhere in this app.
 - **Cmd+K / Ctrl+K command palette**: a small fixed action list (Add New Media, Jump to Sagas, View Settings, Pick Random Watch) filterable by typing, navigable with arrow keys + Enter. "Pick Random Watch" here is the *simple* fully-random version (no duration/mood filters) — the smarter version lives only on the Dashboard's Watchlist shelf.

@@ -26,7 +26,9 @@ function CollectionContent() {
 
     const [statusFilter, setStatusFilter] = useState<'All' | 'Completed' | 'Watching' | 'Plan to Watch'>('All');
     const [favoritesOnly, setFavoritesOnly] = useState(false);
-    const [sortBy, setSortBy] = useState<'Recent' | 'Rating' | 'Title'>('Recent');
+    const [genreFilter, setGenreFilter] = useState<string>('All');
+    const [sagaFilter, setSagaFilter] = useState<string>('All');
+    const [sortBy, setSortBy] = useState<'Recent' | 'Updated' | 'ReleaseDate' | 'Rating' | 'Title'>('Recent');
     const [viewMode, setViewMode] = useState<'poster' | 'list'>('poster');
     const [visibleCount, setVisibleCount] = useState(60);
 
@@ -48,6 +50,8 @@ function CollectionContent() {
 
             if (statusFilter !== 'All' && e.status !== statusFilter) return false;
             if (favoritesOnly && !e.favorite) return false;
+            if (genreFilter !== 'All' && !(e.genreIds || []).includes(genreFilter)) return false;
+            if (sagaFilter !== 'All' && e.franchiseId !== sagaFilter) return false;
             if (searchQuery.trim()) {
                 const query = searchQuery.trim().toLowerCase();
                 const year = e.releaseDate?.slice(0, 4) || '';
@@ -70,9 +74,15 @@ function CollectionContent() {
         return filtered.sort((a, b) => {
             if (sortBy === 'Rating') return (b.rating || 0) - (a.rating || 0);
             if (sortBy === 'Title') return a.title.localeCompare(b.title);
+            if (sortBy === 'Updated') return (b.updatedAt ?? b.createdAt) - (a.updatedAt ?? a.createdAt);
+            if (sortBy === 'ReleaseDate') {
+                const aTime = a.releaseDate ? new Date(a.releaseDate).getTime() : -Infinity;
+                const bTime = b.releaseDate ? new Date(b.releaseDate).getTime() : -Infinity;
+                return bTime - aTime;
+            }
             return b.createdAt - a.createdAt;
         });
-    }, [entries, filter, statusFilter, searchQuery, favoritesOnly, sortBy, genres, franchises]);
+    }, [entries, filter, statusFilter, searchQuery, favoritesOnly, genreFilter, sagaFilter, sortBy, genres, franchises]);
 
     // Infinite Scroll Observer
     const observerRef = useRef<IntersectionObserver | null>(null);
@@ -206,7 +216,7 @@ function CollectionContent() {
                             <Search size={32} className="text-muted-foreground/30 mb-4" />
                             <h3 className="text-lg font-bold mb-1">No Matches Found</h3>
                             <p className="text-muted-foreground text-sm">Try adjusting your filters or search query.</p>
-                            <button onClick={() => { setFilter('All'); setStatusFilter('All'); setFavoritesOnly(false); router.push('/collection'); }} className="mt-6 font-bold text-sm text-primary hover:underline">
+                            <button onClick={() => { setFilter('All'); setStatusFilter('All'); setFavoritesOnly(false); setGenreFilter('All'); setSagaFilter('All'); router.push('/collection'); }} className="mt-6 font-bold text-sm text-primary hover:underline">
                                 Clear all filters
                             </button>
                         </div>
@@ -372,14 +382,16 @@ function CollectionContent() {
                                     <div className="flex flex-wrap gap-2">
                                         <select
                                             value={sortBy}
-                                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSortBy(e.target.value as "Title" | "Recent" | "Rating")}
+                                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSortBy(e.target.value as "Title" | "Recent" | "Updated" | "ReleaseDate" | "Rating")}
                                             className="bg-muted/30 text-foreground border border-border/50 rounded-full px-5 py-2 text-xs font-bold outline-none cursor-pointer appearance-none hover:bg-muted/50 transition-colors"
                                         >
                                             <option value="Recent">Newest First</option>
+                                            <option value="Updated">Recently Updated</option>
+                                            <option value="ReleaseDate">Release Date</option>
                                             <option value="Rating">Highest Rated</option>
                                             <option value="Title">Alphabetical</option>
                                         </select>
-                                        
+
                                         <button
                                             onClick={() => setFavoritesOnly(!favoritesOnly)}
                                             className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold transition-all border ${favoritesOnly ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
@@ -388,6 +400,38 @@ function CollectionContent() {
                                         </button>
                                     </div>
                                 </div>
+
+                                {(genres.length > 0 || franchises.length > 0) && (
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                                        <span className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-widest w-16">Genre / Saga</span>
+                                        <div className="flex flex-wrap gap-2">
+                                            {genres.length > 0 && (
+                                                <select
+                                                    value={genreFilter}
+                                                    onChange={(e) => setGenreFilter(e.target.value)}
+                                                    className={`border rounded-full px-5 py-2 text-xs font-bold outline-none cursor-pointer appearance-none transition-colors ${genreFilter !== 'All' ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-muted/30 border-border/50 text-foreground hover:bg-muted/50'}`}
+                                                >
+                                                    <option value="All">All Genres</option>
+                                                    {[...genres].sort((a, b) => a.name.localeCompare(b.name)).map(g => (
+                                                        <option key={g.id} value={g.id}>{g.name}</option>
+                                                    ))}
+                                                </select>
+                                            )}
+                                            {franchises.length > 0 && (
+                                                <select
+                                                    value={sagaFilter}
+                                                    onChange={(e) => setSagaFilter(e.target.value)}
+                                                    className={`border rounded-full px-5 py-2 text-xs font-bold outline-none cursor-pointer appearance-none transition-colors ${sagaFilter !== 'All' ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-muted/30 border-border/50 text-foreground hover:bg-muted/50'}`}
+                                                >
+                                                    <option value="All">All Sagas</option>
+                                                    {[...franchises].sort((a, b) => a.name.localeCompare(b.name)).map(f => (
+                                                        <option key={f.id} value={f.id}>{f.name}</option>
+                                                    ))}
+                                                </select>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </motion.div>
                         )}
                     </AnimatePresence>
