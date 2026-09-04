@@ -321,29 +321,42 @@ export async function downloadBackupFromDrive(
     return null;
   }
 
-  // Read chunks sequentially for text (for instant UI render), images concurrently
+  // Issue every chunk/image download at once — only the order onChunkLoaded fires in needs to
+  // stay sequential (chunk 0 first, so the UI can render immediately), not the network requests
+  // themselves. A library with several chunks used to pay their round-trip latency one at a
+  // time; starting them together and only awaiting-in-order to process results cuts that down
+  // to roughly one round-trip regardless of chunk count.
+  const chunkCount = indexData.chunkCount || 0;
+  const chunkTextPromises: (Promise<string> | null)[] = [];
+  const imgTextPromises: (Promise<string> | null)[] = [];
+
+  for (let i = 0; i < chunkCount; i++) {
+    const chunkFile = existingFiles.find(f => f.name === `${CHUNK_PREFIX}${i}.json`);
+    const imgFile = existingFiles.find(f => f.name === `kino-images-${i}.json`);
+    chunkTextPromises.push(chunkFile ? downloadFileContent(accessToken, chunkFile.id) : null);
+    imgTextPromises.push(imgFile ? downloadFileContent(accessToken, imgFile.id) : null);
+  }
+
   let allEntries: MediaEntry[] = [];
   const imagePromises: Promise<void>[] = [];
 
-  for (let i = 0; i < (indexData.chunkCount || 0); i++) {
+  for (let i = 0; i < chunkCount; i++) {
     const chunkName = `${CHUNK_PREFIX}${i}.json`;
     const imgChunkName = `kino-images-${i}.json`;
-    
-    const chunkFile = existingFiles.find(f => f.name === chunkName);
-    const imgFile = existingFiles.find(f => f.name === imgChunkName);
-    
-    let textEntries: MediaEntry[] = [];
-    if (chunkFile) {
-      const text = await downloadFileContent(accessToken, chunkFile.id);
+
+    const textPromise = chunkTextPromises[i];
+    if (textPromise) {
+      const text = await textPromise;
       chunkHashes[chunkName] = cyrb53(text);
-      textEntries = JSON.parse(text);
-      
+      const textEntries: MediaEntry[] = JSON.parse(text);
+
       allEntries = allEntries.concat(textEntries);
       if (onChunkLoaded) onChunkLoaded(textEntries, i === 0);
     }
 
-    if (imgFile) {
-      const p = downloadFileContent(accessToken, imgFile.id).then(text => {
+    const imgTextPromise = imgTextPromises[i];
+    if (imgTextPromise) {
+      const p = imgTextPromise.then(text => {
         chunkHashes[imgChunkName] = cyrb53(text);
         const images = JSON.parse(text);
         if (onImagesLoaded) onImagesLoaded(images);
